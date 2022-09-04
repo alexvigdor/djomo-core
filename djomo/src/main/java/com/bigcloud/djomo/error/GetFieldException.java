@@ -16,6 +16,7 @@
 package com.bigcloud.djomo.error;
 
 public class GetFieldException extends ModelException{
+	private static final long serialVersionUID = 8130940072942010272L;
 
 	public GetFieldException(String msg, Throwable e) {
 		super(msg, e);

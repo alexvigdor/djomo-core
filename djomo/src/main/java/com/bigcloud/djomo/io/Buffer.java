@@ -20,6 +20,8 @@ import java.io.Reader;
 import java.io.Writer;
 import java.util.Arrays;
 
+import com.bigcloud.djomo.error.ModelException;
+
 public class Buffer extends Writer {
 	private final Reader source;
 	public char[] buffer;
@@ -40,6 +42,9 @@ public class Buffer extends Writer {
 		final var buf = buffer;
 		if (buf.length > target) {
 			return buf;
+		}
+		if (target > 268435456) {
+			throw new ModelException("Target string length " + target + " is too large, the input is suspicious");
 		}
 		int nbl = buf.length * 2;
 		while (nbl < target) {

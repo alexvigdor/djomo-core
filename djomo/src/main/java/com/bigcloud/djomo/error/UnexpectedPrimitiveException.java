@@ -16,6 +16,7 @@
 package com.bigcloud.djomo.error;
 
 public class UnexpectedPrimitiveException extends ModelException{
+	private static final long serialVersionUID = -7125997085091316143L;
 
 	public UnexpectedPrimitiveException(String msg) {
 		super(msg);

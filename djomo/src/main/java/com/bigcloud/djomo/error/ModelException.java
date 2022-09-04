@@ -16,6 +16,7 @@
 package com.bigcloud.djomo.error;
 
 public class ModelException extends RuntimeException {
+	private static final long serialVersionUID = -4644606363044519690L;
 
 	public ModelException(String msg) {
 		super(msg);

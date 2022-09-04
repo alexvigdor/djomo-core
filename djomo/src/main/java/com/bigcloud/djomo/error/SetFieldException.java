@@ -16,6 +16,8 @@
 package com.bigcloud.djomo.error;
 
 public class SetFieldException extends ModelException {
+	private static final long serialVersionUID = 1786228500886259764L;
+
 	public SetFieldException(String msg, Throwable e) {
 		super(msg, e);
 	}
