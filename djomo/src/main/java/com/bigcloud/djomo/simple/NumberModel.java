@@ -44,6 +44,8 @@ public class NumberModel<N extends Number> extends BaseSimpleModel<N> {
 	public N parse(Buffer input, Buffer overflow) throws IOException {
 		// numeric
 		char[] buffer = input.buffer;
+		char[] out = overflow.buffer;
+		int op = 0;
 		int rp = input.readPosition;
 		int wp = input.writePosition;
 		if (rp == wp) {
@@ -53,127 +55,105 @@ public class NumberModel<N extends Number> extends BaseSimpleModel<N> {
 			wp = input.writePosition;
 			rp = 0;
 		}
-		int ch = buffer[rp++];
 		boolean negative = false;
-		if (ch == 45) {
-			negative = true;
-			if (rp == wp) {
-				if (!input.refill()) {
-					throw new NumberFormatException(input.describe());
+		boolean decimal = false;
+		boolean exponent = false;
+		long value = 0;
+		char[] expected = null;
+		int ep = 0;
+		int start = rp;
+		// loop: we may need to refill the buffer mid-parse
+		PARSE_LOOP: while (true) {
+			for (; rp < wp; rp++) {
+				int ch = buffer[rp];
+				if (expected != null) {
+					if (ep == expected.length) {
+						break PARSE_LOOP;
+					}
+					char ex = expected[ep++];
+					if (ch != ex) {
+						throw new NumberFormatException(input.describe());
+					}
+					continue;
 				}
-				wp = input.writePosition;
-				rp = 0;
+				if (ch >= 48 && ch <= 57) {
+					if (!decimal) {
+						value = value * 10 + (ch - 48);
+					}
+					continue;
+				}
+				if (ch == '.') {
+					// decimal, we stop our calculation and just buffer for Double.parse
+					decimal = true;
+					continue;
+				}
+				if (ch == '-') {
+					if (!exponent && (rp != start || op != 0)) {
+						throw new NumberFormatException(input.describe());
+					}
+					negative = true;
+					continue;
+				}
+				if (ch == '+') {
+					if (!exponent && (rp != start || op != 0)) {
+						throw new NumberFormatException(input.describe());
+					}
+					continue;
+				}
+				if (ch == 'e' || ch == 'E') {
+					if (!decimal || exponent) {
+						throw new NumberFormatException(input.describe());
+					}
+					exponent = true;
+					continue;
+				}
+				if (ch == 'N') {
+					expected = new char[] { 'a', 'N' };
+					decimal = true;
+					continue;
+				}
+				if (ch != 'I') {
+					// only remaining valid case is Infinity
+					break PARSE_LOOP;
+				}
+				expected = new char[] { 'n', 'f', 'i', 'n', 'i', 't', 'y' };
+				decimal = true;
 			}
-			ch = buffer[rp++];
+			// if we get here, copy contents to overflow and refill buffer
+			int len = rp - start;
+			System.arraycopy(buffer, start, out, op, len);
+			if (!input.refill()) {
+				break PARSE_LOOP;
+			}
+			op += len;
+			if (op > 26) {
+				// all supported numbers should fit in 26 characters or less
+				throw new NumberFormatException("Number is too long " + op + " " + input.describe());
+			}
+			start = rp = 0;
+			wp = input.writePosition;
 		}
-		long val = 0;
-		while (ch >= 48 && ch <= 57) {
-			val = 10 * val + (ch - 48);
-			if (rp == wp) {
-				if (!input.refill()) {
-					ch = 0;
-					wp = -1;
-					break;
+		input.readPosition = rp;
+		if (decimal) {
+			String dstr;
+			if (op == 0) {
+				dstr = new String(buffer, start, rp - start);
+			} else {
+				if (rp > 0) {
+					System.arraycopy(buffer, 0, out, op, rp);
+					op += rp;
 				}
-				wp = input.writePosition;
-				rp = 0;
+				dstr = new String(out, 0, op);
 			}
-			ch = buffer[rp++];
+			return convert(Double.parseDouble(dstr));
 		}
-		if (ch == 46) {
-			// floating
-			double dval = 0, mult = 0.1;
-			if (rp == wp) {
-				if (!input.refill()) {
-					rp = -1;
-					wp = -1;
-				}
-				else {
-					wp = input.writePosition;
-					rp = 0;
-				}
-			}
-			if(rp >= 0) {
-				ch = buffer[rp++];
-				while (ch >= 48 && ch <= 57) {
-					dval += (ch - 48) * mult;
-					mult /= 10;
-					if (rp == wp) {
-						if (!input.refill()) {
-							ch = 0;
-							wp = -1;
-							break;
-						}
-						wp = input.writePosition;
-						rp = 0;
-					}
-					ch = buffer[rp++];
-				}
-			}
-			dval += val;
-			if (negative) {
-				dval = -dval;
-			}
-			// look for exponential notation here
-			if (ch == 'e' || ch == 'E') {
-				int exponent = 0;
-				boolean inverse = false;
-				if (rp == wp) {
-					if (!input.refill()) {
-						return convertNumber(dval);
-					}
-					wp = input.writePosition;
-					rp = 0;
-				}
-				ch = buffer[rp++];
-				if (ch == '-' || ch == '+') {
-					if (ch == '-') {
-						inverse = true;
-					}
-					if (rp == wp) {
-						if (!input.refill()) {
-							ch = 0;
-							wp = -1;
-						} else {
-							wp = input.writePosition;
-							ch = buffer[0];
-							rp = 1;
-						}
-					} else {
-						ch = buffer[rp++];
-					}
-				}
-				while (ch >= 48 && ch <= 57) {
-					exponent = 10 * exponent + (ch - 48);
-					if (rp == wp) {
-						if (!input.refill()) {
-							ch = 0;
-							wp = -1;
-							break;
-						}
-						wp = input.writePosition;
-						rp = 0;
-					}
-					ch = buffer[rp++];
-				}
-				if (inverse) {
-					exponent = -exponent;
-				}
-				dval = dval * Math.pow(10, exponent);
-			}
-			input.readPosition = rp - 1;
-			input.writePosition = wp;
-			return convertNumber(dval);
-		}
-		input.readPosition = rp - 1;
-		input.writePosition = wp;
 		if (negative) {
-			val = -val;
+			value = -value;
 		}
-		if (val < Integer.MAX_VALUE && val > Integer.MIN_VALUE) {
-			return convertNumber((int) val);
+		if (value < Integer.MAX_VALUE && value > Integer.MIN_VALUE) {
+			return convertNumber((int) value);
 		}
-		return convertNumber(val);
+		return convertNumber(value);
 	}
 
 	@Override
@@ -192,7 +172,7 @@ public class NumberModel<N extends Number> extends BaseSimpleModel<N> {
 
 	public N parse(String str) {
 		try (StringReader sr = new StringReader(str);) {
-			return parse(new Buffer(parseBuffer.get(), sr), null);
+			return parse(new Buffer(parseBuffer.get(), sr), new Buffer(new char[26]));
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}

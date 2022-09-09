@@ -117,6 +117,9 @@ public class DoubleModel extends NumberModel<Double>{
 			return;
 		}
 		if (value.isInfinite()) {
+			if(value.doubleValue() == Double.NEGATIVE_INFINITY) {
+				out.raw("-");
+			}
 			out.raw("Infinity");
 			return;
 		}

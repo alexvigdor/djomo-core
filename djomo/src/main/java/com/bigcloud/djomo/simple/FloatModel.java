@@ -116,6 +116,9 @@ public class FloatModel extends NumberModel<Float> {
 			return;
 		}
 		if (value.isInfinite()) {
+			if(value.floatValue() == Float.NEGATIVE_INFINITY) {
+				out.raw("-");
+			}
 			out.raw("Infinity");
 			return;
 		}

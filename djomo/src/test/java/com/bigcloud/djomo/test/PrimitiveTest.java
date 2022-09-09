@@ -92,11 +92,10 @@ public class PrimitiveTest {
 	@Test
 	public void testNumberBuffer() throws IOException {
 		Models models = new Models();
-		Map<String, Number> samples = Map.of("-387.2498e+13", -387.2498e+13, "-387.2498e+", -387.2498, "-387.2498e",
-				-387.2498, "-387.2", -387.2, "-387.", -387.0, "-3", -3.0);
+		Map<String, Number> samples = Map.of("-387.2498e+13", -387.2498e+13, "-387.2498e+0", -387.2498, "-387.2", -387.2, "-387.", -387.0, "-3", -3.0);
 		samples.forEach((str, num) -> {
 			try {
-				Double val = models.doubleModel.parse(new Buffer(new char[1], new StringReader(str)), null);
+				Double val = models.doubleModel.parse(new Buffer(new char[1], new StringReader(str)), new Buffer(new char[26]));
 				Assert.assertEquals(val, num);
 			} catch (IOException e) {
 				throw new RuntimeException(e);
@@ -106,7 +105,7 @@ public class PrimitiveTest {
 		for (int bufsize : new int[] { 1, 2, 3, 4 }) {
 			samples.forEach((str, num) -> {
 				List<Double> val = listDoubleModel.parse(
-						new JsonParser(models, new Buffer(new char[bufsize], new StringReader("[" + str + "]")), null));
+						new JsonParser(models, new Buffer(new char[bufsize], new StringReader("[" + str + "]")), new Buffer(new char[26])));
 				Assert.assertEquals(val.get(0), num);
 			});
 		}
@@ -114,27 +113,27 @@ public class PrimitiveTest {
 
 	@Test(expectedExceptions = NumberFormatException.class)
 	public void testBadNumber() throws IOException {
-		Double val = new Models().doubleModel.parse(new Buffer(new char[1], new StringReader("-")), null);
+		Double val = new Models().doubleModel.parse(new Buffer(new char[1], new StringReader("-1..0")), new Buffer(new char[26]));
 	}
 
 	@Test(expectedExceptions = NumberFormatException.class)
 	public void testEmptyNumber() throws IOException {
-		Double val = new Models().doubleModel.parse(new Buffer(new char[1], new StringReader("")), null);
+		Double val = new Models().doubleModel.parse(new Buffer(new char[1], new StringReader("")), new Buffer(new char[26]));
 	}
 
 	@Test(expectedExceptions = NumberFormatException.class)
 	public void testBadDoubleString() throws IOException {
-		((NumberModel<Double>) new Models().doubleModel).parse("-");
+		((NumberModel<Double>) new Models().doubleModel).parse("-1..0");
 	}
 
 	@Test(expectedExceptions = NumberFormatException.class)
 	public void testBadNumberString() throws IOException {
-		((NumberModel<Number>) new Models().numberModel).parse("-");
+		((NumberModel<Number>) new Models().numberModel).parse("-1..0");
 	}
 
 	@Test
 	public void testNumberString() throws IOException {
-		Object val = ((NumberModel<Number>) new Models().numberModel).parse("1.234e-");
+		Object val = ((NumberModel<Number>) new Models().numberModel).parse("1.234e-0");
 		Assert.assertEquals(val, 1.234);
 	}
 
