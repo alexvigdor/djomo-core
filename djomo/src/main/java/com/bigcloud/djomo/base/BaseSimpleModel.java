@@ -46,24 +46,22 @@ public abstract class BaseSimpleModel<T> extends BaseModel<T> implements SimpleM
 		return inStr;
 	}
 	
-	public final String parseString(Buffer input, Buffer overflow) throws IOException {
-		var readBuffer = input;
-		var writeBuffer = overflow;
+	public final String parseString(Buffer readBuffer, Buffer writeBuffer) throws IOException {
 		//happy path
 		int rp = readBuffer.readPosition, start = rp;
 		int wp = readBuffer.writePosition;
 		char[] rb = readBuffer.buffer;
-		char r;
+		char r = 0;
 		for(;rp<wp;rp++) {
 			r = rb[rp];
-			if(r == '"') {
-				//System.out.println("FOUND HAPPY QUOTED STRING "+readBuffer.toString(start, rp-start));
-				readBuffer.readPosition = rp+1;
-				return readBuffer.toString(start, rp-start);
-			}
-			if(r == '\\') {
+			if(r == '"' || r == '\\') {
 				break;
 			}
+		}
+		if(r == '"') {
+			//System.out.println("FOUND HAPPY QUOTED STRING "+readBuffer.toString(start, rp-start));
+			readBuffer.readPosition = rp+1;
+			return new String(rb, start, rp-start);
 		}
 		writeBuffer.writePosition = 0;
 		OUTER:
