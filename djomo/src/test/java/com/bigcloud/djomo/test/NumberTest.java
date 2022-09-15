@@ -80,11 +80,9 @@ public class NumberTest {
 	@Test
 	public void testMaxMin() throws IOException {
 		Json json = new Json();
-		Long max = Long.MAX_VALUE;
-		Long parsed = json.fromString(max.toString(), Long.class);
-		Assert.assertEquals(parsed, max);
-		Long min = Long.MIN_VALUE;
-		parsed = json.fromString(min.toString(), Long.class);
-		Assert.assertEquals(parsed, min);
+		for(Long testCase: new Long[] {Long.MAX_VALUE, Long.MAX_VALUE-1, Long.MIN_VALUE, Long.MIN_VALUE+1} ) {
+			Long parsed = json.fromString(testCase.toString(), Long.class);
+			Assert.assertEquals(parsed, testCase);
+		}
 	}
 }

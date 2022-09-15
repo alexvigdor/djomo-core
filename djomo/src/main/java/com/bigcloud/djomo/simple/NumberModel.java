@@ -111,7 +111,6 @@ public class NumberModel<N extends Number> extends BaseSimpleModel<N> {
 			op += rp;
 		}
 		if (integral) {
-			// TODO negative accumulation
 			long value = 0;
 			char[] buf = buffer;
 			int begin = start;
@@ -138,10 +137,8 @@ public class NumberModel<N extends Number> extends BaseSimpleModel<N> {
 			String dstr;
 			if (op == 0) {
 				dstr = new String(buffer, start, rp - start);
-				// System.out.println("Parsing double A from "+dstr+" = "+Double.parseDouble(dstr)+" = "+ convert(Double.parseDouble(dstr)));
 			} else {
 				dstr = new String(out, 0, op);
-				// System.out.println("Parsing double B from "+dstr);
 			}
 			return convertDouble(Double.parseDouble(dstr));
 		}
