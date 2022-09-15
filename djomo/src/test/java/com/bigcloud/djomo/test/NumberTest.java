@@ -43,7 +43,7 @@ public class NumberTest {
 						Double round = Double.valueOf(ds);
 						Assert.assertEquals(round, d);
 						Double parsed = json.fromString(ds, Double.class);
-						Assert.assertEquals(parsed, d);
+						Assert.assertEquals(parsed, round);
 					}
 				}
 			}
@@ -75,5 +75,16 @@ public class NumberTest {
 				}
 			}
 		}
+	}
+
+	@Test
+	public void testMaxMin() throws IOException {
+		Json json = new Json();
+		Long max = Long.MAX_VALUE;
+		Long parsed = json.fromString(max.toString(), Long.class);
+		Assert.assertEquals(parsed, max);
+		Long min = Long.MIN_VALUE;
+		parsed = json.fromString(min.toString(), Long.class);
+		Assert.assertEquals(parsed, min);
 	}
 }

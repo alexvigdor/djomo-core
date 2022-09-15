@@ -23,14 +23,16 @@ import java.math.BigInteger;
 
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Printer;
+
 /**
- * The double printing code here is borrowed from the "ryu" library.  https://github.com/ulfjack/ryu
+ * The double printing code here is borrowed from the "ryu" library.
+ * https://github.com/ulfjack/ryu
  * 
  * @author Alex Vigdor
  * @author Ulf Adams
  *
  */
-public class DoubleModel extends NumberModel<Double>{
+public class DoubleModel extends NumberModel<Double> {
 
 	private static final int DOUBLE_MANTISSA_BITS = 52;
 	private static final long DOUBLE_MANTISSA_MASK = (1L << DOUBLE_MANTISSA_BITS) - 1;
@@ -96,7 +98,7 @@ public class DoubleModel extends NumberModel<Double>{
 	public DoubleModel(Type type, ModelContext context) {
 		super(type, context);
 	}
-	
+
 	@Override
 	public Double parse(String str) {
 		return Double.valueOf(str);
@@ -104,7 +106,25 @@ public class DoubleModel extends NumberModel<Double>{
 
 	@Override
 	protected Double convertNumber(Number n) {
+		if (n instanceof Double d) {
+			return d;
+		}
 		return n.doubleValue();
+	}
+
+	@Override
+	protected Double convertDouble(double value) {
+		return value;
+	}
+
+	@Override
+	protected Double convertInt(int value) {
+		return (double) value;
+	}
+
+	@Override
+	protected Double convertLong(long value) {
+		return (double) value;
 	}
 
 	@Override
@@ -117,7 +137,7 @@ public class DoubleModel extends NumberModel<Double>{
 			return;
 		}
 		if (value.isInfinite()) {
-			if(value.doubleValue() == Double.NEGATIVE_INFINITY) {
+			if (value.doubleValue() == Double.NEGATIVE_INFINITY) {
 				out.raw("-");
 			}
 			out.raw("Infinity");
@@ -318,7 +338,8 @@ public class DoubleModel extends NumberModel<Double>{
 			result[index++] = (char) ('0' + exp % 10);
 			out.raw(result, 0, index);
 		} else {
-			// Otherwise follow the Java spec for values in the interval [1E-3, 1E7). CPD-OFF
+			// Otherwise follow the Java spec for values in the interval [1E-3, 1E7).
+			// CPD-OFF
 			if (exp < 0) {
 				// Decimal dot is before any of the digits.
 				result[index++] = '0';

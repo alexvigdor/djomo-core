@@ -23,8 +23,10 @@ import java.math.BigInteger;
 
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Printer;
+
 /**
- * The float printing code here is borrowed from the "ryu" library.  https://github.com/ulfjack/ryu
+ * The float printing code here is borrowed from the "ryu" library.
+ * https://github.com/ulfjack/ryu
  * 
  * @author Alex Vigdor
  * @author Ulf Adams
@@ -107,6 +109,21 @@ public class FloatModel extends NumberModel<Float> {
 	}
 
 	@Override
+	protected Float convertDouble(double value) {
+		return (float) value;
+	}
+
+	@Override
+	protected Float convertInt(int value) {
+		return (float) value;
+	}
+
+	@Override
+	protected Float convertLong(long value) {
+		return (float) value;
+	}
+
+	@Override
 	public void print(Float value, Printer out) {
 		// Step 1: Decode the floating point number, and unify normalized and subnormal
 		// cases.
@@ -116,7 +133,7 @@ public class FloatModel extends NumberModel<Float> {
 			return;
 		}
 		if (value.isInfinite()) {
-			if(value.floatValue() == Float.NEGATIVE_INFINITY) {
+			if (value.floatValue() == Float.NEGATIVE_INFINITY) {
 				out.raw("-");
 			}
 			out.raw("Infinity");
@@ -295,7 +312,8 @@ public class FloatModel extends NumberModel<Float> {
 			}
 			result[index++] = (char) ('0' + exp % 10);
 		} else {
-			// Otherwise follow the Java spec for values in the interval [1E-3, 1E7). CPD-OFF
+			// Otherwise follow the Java spec for values in the interval [1E-3, 1E7).
+			// CPD-OFF
 			if (exp < 0) {
 				// Decimal dot is before any of the digits.
 				result[index++] = '0';

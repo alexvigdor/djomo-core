@@ -18,6 +18,7 @@ package com.bigcloud.djomo.simple;
 import java.io.IOException;
 import java.io.StringReader;
 import java.lang.reflect.Type;
+import java.util.Arrays;
 
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Printer;
@@ -30,6 +31,21 @@ public class NumberModel<N extends Number> extends BaseSimpleModel<N> {
 			return new char[256];
 		}
 	};
+
+	private enum CharType {
+		DIGIT, FLOATING, NaN
+	}
+
+	private static final CharType[] charTypes;
+
+	static {
+		charTypes = new CharType[128];
+		Arrays.fill(charTypes, CharType.NaN);
+		"+-.EeNaInfity".chars().forEach(c -> charTypes[c] = CharType.FLOATING);
+		for (int i = '0'; i <= '9'; i++) {
+			charTypes[i] = CharType.DIGIT;
+		}
+	}
 
 	public NumberModel(Type type, ModelContext context) {
 		super(type, context);
@@ -45,9 +61,9 @@ public class NumberModel<N extends Number> extends BaseSimpleModel<N> {
 		// numeric
 		char[] buffer = input.buffer;
 		char[] out = overflow.buffer;
-		int op = 0;
 		int rp = input.readPosition;
 		int wp = input.writePosition;
+		int start = rp;
 		if (rp == wp) {
 			if (!input.refill()) {
 				throw new NumberFormatException(input.describe());
@@ -55,105 +71,80 @@ public class NumberModel<N extends Number> extends BaseSimpleModel<N> {
 			wp = input.writePosition;
 			rp = 0;
 		}
-		boolean negative = false;
-		boolean decimal = false;
-		boolean exponent = false;
-		long value = 0;
-		char[] expected = null;
-		int ep = 0;
-		int start = rp;
-		// loop: we may need to refill the buffer mid-parse
+		boolean negative = buffer[rp] == '-';
+		if (negative) {
+			rp++;
+		}
+		int op = 0;
+		boolean integral = true;
 		PARSE_LOOP: while (true) {
 			for (; rp < wp; rp++) {
 				int ch = buffer[rp];
-				if (expected != null) {
-					if (ep == expected.length) {
-						break PARSE_LOOP;
-					}
-					char ex = expected[ep++];
-					if (ch != ex) {
-						throw new NumberFormatException(input.describe());
-					}
-					continue;
-				}
-				if (ch >= 48 && ch <= 57) {
-					if (!decimal) {
-						value = value * 10 + (ch - 48);
-					}
-					continue;
-				}
-				if (ch == '.') {
-					// decimal, we stop our calculation and just buffer for Double.parse
-					decimal = true;
-					continue;
-				}
-				if (ch == '-') {
-					if (!exponent && (rp != start || op != 0)) {
-						throw new NumberFormatException(input.describe());
-					}
-					negative = true;
-					continue;
-				}
-				if (ch == '+') {
-					if (!exponent && (rp != start || op != 0)) {
-						throw new NumberFormatException(input.describe());
-					}
-					continue;
-				}
-				if (ch == 'e' || ch == 'E') {
-					if (!decimal || exponent) {
-						throw new NumberFormatException(input.describe());
-					}
-					exponent = true;
-					continue;
-				}
-				if (ch == 'N') {
-					expected = new char[] { 'a', 'N' };
-					decimal = true;
-					continue;
-				}
-				if (ch != 'I') {
-					// only remaining valid case is Infinity
+				if (ch > 127) {
 					break PARSE_LOOP;
 				}
-				expected = new char[] { 'n', 'f', 'i', 'n', 'i', 't', 'y' };
-				decimal = true;
+				CharType ct = charTypes[ch];
+				if (ct == CharType.FLOATING) {
+					integral = false;
+				} else if (ct == CharType.NaN) {
+					break PARSE_LOOP;
+				}
 			}
 			// if we get here, copy contents to overflow and refill buffer
 			int len = rp - start;
 			System.arraycopy(buffer, start, out, op, len);
-			if (!input.refill()) {
-				break PARSE_LOOP;
-			}
 			op += len;
 			if (op > 26) {
 				// all supported numbers should fit in 26 characters or less
 				throw new NumberFormatException("Number is too long " + op + " " + input.describe());
 			}
-			start = rp = 0;
+			rp = 0;
+			if (!input.refill()) {
+				break PARSE_LOOP;
+			}
+			start = 0;
 			wp = input.writePosition;
 		}
 		input.readPosition = rp;
-		if (decimal) {
+		if (op > 0 && rp > 0) {
+			System.arraycopy(buffer, start, out, op, rp);
+			op += rp;
+		}
+		if (integral) {
+			// TODO negative accumulation
+			long value = 0;
+			char[] buf = buffer;
+			int begin = start;
+			int end = rp;
+			if (op > 0) {
+				buf = out;
+				begin = 0;
+				end = op;
+			}
+			if (negative) {
+				begin += 1;
+			}
+			for (int i = begin; i < end; i++) {
+				value = value * 10 + (buf[i] - 48);
+			}
+			if (negative) {
+				value = -value;
+			}
+			if (value < Integer.MAX_VALUE && value > Integer.MIN_VALUE) {
+				return convertInt((int) value);
+			}
+			return convertLong(value);
+		} else {
 			String dstr;
 			if (op == 0) {
 				dstr = new String(buffer, start, rp - start);
+				// System.out.println("Parsing double A from "+dstr+" = "+Double.parseDouble(dstr)+" = "+ convert(Double.parseDouble(dstr)));
 			} else {
-				if (rp > 0) {
-					System.arraycopy(buffer, 0, out, op, rp);
-					op += rp;
-				}
 				dstr = new String(out, 0, op);
+				// System.out.println("Parsing double B from "+dstr);
 			}
-			return convert(Double.parseDouble(dstr));
+			return convertDouble(Double.parseDouble(dstr));
 		}
-		if (negative) {
-			value = -value;
-		}
-		if (value < Integer.MAX_VALUE && value > Integer.MIN_VALUE) {
-			return convertNumber((int) value);
-		}
-		return convertNumber(value);
 	}
 
 	@Override
@@ -178,8 +169,20 @@ public class NumberModel<N extends Number> extends BaseSimpleModel<N> {
 		}
 	}
 
-	protected N convertNumber(Number n) {
-		return (N) n;
+	protected N convertNumber(Number value) {
+		return (N) value;
+	}
+
+	protected N convertDouble(double value) {
+		return (N) Double.valueOf(value);
+	}
+
+	protected N convertInt(int value) {
+		return (N) Integer.valueOf(value);
+	}
+
+	protected N convertLong(long value) {
+		return (N) Long.valueOf(value);
 	}
 
 }

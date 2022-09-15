@@ -20,12 +20,12 @@ import java.lang.reflect.Type;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Printer;
 
-public class LongModel extends NumberModel<Long>{
+public class LongModel extends NumberModel<Long> {
 
 	public LongModel(Type type, ModelContext context) {
 		super(type, context);
 	}
-	
+
 	@Override
 	public Long parse(String str) {
 		return Long.valueOf(str);
@@ -33,7 +33,25 @@ public class LongModel extends NumberModel<Long>{
 
 	@Override
 	public Long convertNumber(Number n) {
+		if (n instanceof Long l) {
+			return l;
+		}
 		return n.longValue();
+	}
+
+	@Override
+	protected Long convertDouble(double value) {
+		return (long) value;
+	}
+
+	@Override
+	protected Long convertInt(int value) {
+		return (long) value;
+	}
+
+	@Override
+	protected Long convertLong(long value) {
+		return value;
 	}
 
 	@Override
