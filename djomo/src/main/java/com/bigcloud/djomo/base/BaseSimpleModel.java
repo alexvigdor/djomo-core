@@ -194,6 +194,12 @@ public abstract class BaseSimpleModel<T> extends BaseModel<T> implements SimpleM
 				}
 				start=rp;
 			}
+			for(;rp<wp;rp++) {
+				r = rb[rp];
+				if(r == '"' || r == '\\') {
+					break;
+				}
+			}
 		}
 		
 	}
