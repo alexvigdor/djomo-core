@@ -164,15 +164,24 @@ public class JsonParser extends BaseParser implements Parser {
 		M maker = maker(definition);
 		Model<I> valdef = definition.itemModel();
 		Consumer<I> it = maker::item;
-		final var buf = this.input;
+		final var input = this.input;
+		final var buf = this.input.buffer;
 		final var t = this.parser;
 		try {
+			int rp = input.readPosition;
+			int wp = input.writePosition;
 			LOOP:
 			while (true) {
-				switch (buf.read()) {
-					case -1:
-						throw new ModelException("Model incomplete at "+buf.describe());
+				if(rp==wp) {
+					if (!input.refill()) {
+						throw new ModelException("Model incomplete at "+input.describe());
+					}
+					rp = 0;
+					wp = input.writePosition;
+				}
+				switch (buf[rp]) {
 					case ']':
+						input.readPosition = rp+1;
 						break LOOP;
 					case ' ':
 					case '\t':
@@ -180,10 +189,13 @@ public class JsonParser extends BaseParser implements Parser {
 					case '\r':
 					case '\f':
 					case ',':
+						++rp;
 						break;
 					default:
-						buf.unread();
+						input.readPosition = rp;
 						t.parseListItem(valdef, it);
+						rp = input.readPosition;
+						wp = input.writePosition;
 				}
 			}
 		}
