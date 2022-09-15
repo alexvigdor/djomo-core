@@ -37,6 +37,21 @@ public class ByteModel extends NumberModel<Byte> {
 	}
 
 	@Override
+	protected Byte convertDouble(double value) {
+		return (byte) value;
+	}
+
+	@Override
+	protected Byte convertInt(int value) {
+		return (byte) value;
+	}
+
+	@Override
+	protected Byte convertLong(long value) {
+		return (byte) value;
+	}
+
+	@Override
 	public void print(Byte obj, Printer out) {
 		int l = obj.byteValue();
 		boolean negative = l < 0;

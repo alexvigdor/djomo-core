@@ -20,12 +20,12 @@ import java.lang.reflect.Type;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Printer;
 
-public class ShortModel extends NumberModel<Short>{
+public class ShortModel extends NumberModel<Short> {
 
 	public ShortModel(Type type, ModelContext context) {
 		super(type, context);
 	}
-	
+
 	@Override
 	public Short parse(String str) {
 		return Short.valueOf(str);
@@ -34,6 +34,21 @@ public class ShortModel extends NumberModel<Short>{
 	@Override
 	protected Short convertNumber(Number n) {
 		return n.shortValue();
+	}
+
+	@Override
+	protected Short convertDouble(double value) {
+		return (short) value;
+	}
+
+	@Override
+	protected Short convertInt(int value) {
+		return (short) value;
+	}
+
+	@Override
+	protected Short convertLong(long value) {
+		return (short) value;
 	}
 
 	@Override
