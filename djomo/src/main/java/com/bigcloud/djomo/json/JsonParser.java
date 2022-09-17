@@ -49,21 +49,39 @@ public class JsonParser extends BaseParser implements Parser {
 	@Override
 	public <T> T parse(Model<T> definition) {
 		try {
-			final var buf = this.input;
+			final var input = this.input;
+			final var buf = input.buffer;
 			final var t = this.parser;
-			while(true) {
-				switch (buf.read()) {
-					case -1:
-						throw new ModelException("Model incomplete at "+buf.describe());
+			int rp = input.readPosition;
+			int wp = input.writePosition;
+			while (true) {
+				if (rp == wp) {
+					if (!input.refill()) {
+						throw new ModelException("Model incomplete at " + input.describe());
+					}
+					rp = 0;
+					wp = input.writePosition;
+				}
+				switch (buf[rp]) {
 					case '{':
+						input.readPosition = rp + 1;
 						return parseObjectModel(definition);
 					case '[':
+						input.readPosition = rp + 1;
 						return parseListModel(definition);
 					case '"':
-						boolean fixQuote = !(definition instanceof StringBasedModel) && !(definition instanceof StringModel);
+						input.readPosition = rp + 1;
 						T o = (T) parseStringModel(definition);
-						if(fixQuote && buf.read() != '"') {
-							buf.unread();
+						if (!(definition instanceof StringBasedModel) && !(definition instanceof StringModel)) {
+							rp = input.readPosition;
+							wp = input.writePosition;
+							if (rp == wp && input.refill()) {
+								rp = 0;
+								wp = input.writePosition;
+							}
+							if (rp < wp && buf[rp] == '"') {
+								input.readPosition = rp + 1;
+							}
 						}
 						return o;
 					case ' ':
@@ -71,69 +89,82 @@ public class JsonParser extends BaseParser implements Parser {
 					case '\n':
 					case '\r':
 					case '\f':
+						rp++;
 						break;
 					case 't':
 					case 'f':
-						buf.unread();
+						input.readPosition = rp;
 						return (T) t.parseSimple(models.booleanModel);
 					case 'n':
-						buf.unread();
+						input.readPosition = rp;
 						return (T) t.parseNull();
 					default:
-						buf.unread();
+						input.readPosition = rp;
 						return parseNumberModel(definition);
 				}
 			}
-		}
-		catch(IOException e) {
+		} catch (IOException e) {
 			throw new ModelException("Error parsing JSON", e);
 		}
 	}
 
 	@Override
-	public <O, M extends ObjectMaker<O, F, V>, F extends Field<O,?,V>, V> M parseObject(ObjectModel<O, M, F, ?, V> model) {
+	public <O, M extends ObjectMaker<O, F, V>, F extends Field<O, ?, V>, V> M parseObject(
+			ObjectModel<O, M, F, ?, V> model) {
 		final M maker = maker(model);
 		final BiConsumer<F, V> consumer = maker::field;
-		final var buf = this.input;
+		final var input = this.input;
+		final var buf = input.buffer;
 		final var t = this.parser;
 		final var o = this.overflow;
 		final var s = models.stringModel;
 		try {
+			int rp = input.readPosition;
+			int wp = input.writePosition;
 			while (true) {
-				switch (buf.read()) {
-					case -1:
-						throw new ModelException("Model incomplete at "+buf.describe());
+				if (rp == wp) {
+					if (!input.refill()) {
+						throw new ModelException("Model incomplete at " + input.describe());
+					}
+					rp = 0;
+					wp = input.writePosition;
+				}
+				switch (buf[rp]) {
 					case '"':
-						t.parseObjectField(model, s.parse(buf, o), consumer);
+						input.readPosition = rp + 1;
+						t.parseObjectField(model, s.parse(input, o), consumer);
+						rp = input.readPosition;
+						wp = input.writePosition;
 						break;
 					case '}':
+						input.readPosition = rp + 1;
 						return maker;
 					case ' ':
 					case '\t':
 					case '\n':
 					case '\r':
 					case '\f':
-					case ',' :
+					case ',':
+						rp++;
 						break;
 					default:
-						throw new ModelException("Unexpected character at "+buf.describe());
+						throw new ModelException("Unexpected character at " + input.describe());
 				}
 			}
-		}
-		catch(IOException e) {
+		} catch (IOException e) {
 			throw new ModelException("Error parsing object fields", e);
 		}
 	}
-	
+
 	@Override
-	public <O, M extends ObjectMaker<O, F, V>, F extends Field<O,?,V>, V> void parseObjectField(ObjectModel<O, M, F, ?, V> model, String field, BiConsumer<F, V> consumer) {
-	//public <O, M extends Maker<O>> void parseObjectField(ObjectModel<O, M, ?, ?> definition, String name, BiConsumer<Field<O,?,?>, Object> consumer) {
+	public <O, M extends ObjectMaker<O, F, V>, F extends Field<O, ?, V>, V> void parseObjectField(
+			ObjectModel<O, M, F, ?, V> model, String field, BiConsumer<F, V> consumer) {
 		try {
 			final var buf = this.input;
 			while (true) {
 				switch (buf.read()) {
 					case -1:
-						throw new ModelException("Model incomplete at "+buf.describe());
+						throw new ModelException("Model incomplete at " + buf.describe());
 					case ' ':
 					case '\t':
 					case '\n':
@@ -142,19 +173,17 @@ public class JsonParser extends BaseParser implements Parser {
 						break;
 					case ':':
 						F mfield = model.getField(field);
-						if(mfield!=null) {
+						if (mfield != null) {
 							consumer.accept(mfield, parseFieldValue(mfield));
-						}
-						else {
+						} else {
 							parser.parse(models.anyModel);
 						}
 						return;
 					default:
-						throw new ModelException("Unexpected character at "+buf.describe());
+						throw new ModelException("Unexpected character at " + buf.describe());
 				}
 			}
-		}
-		catch(IOException e) {
+		} catch (IOException e) {
 			throw new ModelException("Error parsing object fields", e);
 		}
 	}
@@ -164,15 +193,23 @@ public class JsonParser extends BaseParser implements Parser {
 		M maker = maker(definition);
 		Model<I> valdef = definition.itemModel();
 		Consumer<I> it = maker::item;
-		final var buf = this.input;
+		final var input = this.input;
+		final var buf = input.buffer;
 		final var t = this.parser;
 		try {
-			LOOP:
-			while (true) {
-				switch (buf.read()) {
-					case -1:
-						throw new ModelException("Model incomplete at "+buf.describe());
+			int rp = input.readPosition;
+			int wp = input.writePosition;
+			LOOP: while (true) {
+				if (rp == wp) {
+					if (!input.refill()) {
+						throw new ModelException("Model incomplete at " + input.describe());
+					}
+					rp = 0;
+					wp = input.writePosition;
+				}
+				switch (buf[rp]) {
 					case ']':
+						input.readPosition = rp + 1;
 						break LOOP;
 					case ' ':
 					case '\t':
@@ -180,14 +217,16 @@ public class JsonParser extends BaseParser implements Parser {
 					case '\r':
 					case '\f':
 					case ',':
+						++rp;
 						break;
 					default:
-						buf.unread();
+						input.readPosition = rp;
 						t.parseListItem(valdef, it);
+						rp = input.readPosition;
+						wp = input.writePosition;
 				}
 			}
-		}
-		catch(IOException e) {
+		} catch (IOException e) {
 			throw new ModelException("Error parsing list items", e);
 		}
 		return maker;
@@ -197,8 +236,7 @@ public class JsonParser extends BaseParser implements Parser {
 	public <T> T parseSimple(SimpleModel<T> definition) {
 		try {
 			return definition.parse(this.input, this.overflow);
-		}
-		catch(IOException e) {
+		} catch (IOException e) {
 			throw new ModelException("Error parsing value", e);
 		}
 	}
@@ -208,11 +246,10 @@ public class JsonParser extends BaseParser implements Parser {
 		var b = this.input;
 		int c;
 		try {
-			if((c= b.read()) != 'n' || (c = b.read()) != 'u' || (c = b.read()) != 'l' || (c = b.read())!='l') {
-				throw new UnexpectedPrimitiveException("Unexepected character in null "+(char)c);
+			if ((c = b.read()) != 'n' || (c = b.read()) != 'u' || (c = b.read()) != 'l' || (c = b.read()) != 'l') {
+				throw new UnexpectedPrimitiveException("Unexepected character in null " + (char) c);
 			}
-		}
-		catch(IOException e) {
+		} catch (IOException e) {
 			throw new ModelException("Error parsing null", e);
 		}
 		return null;
