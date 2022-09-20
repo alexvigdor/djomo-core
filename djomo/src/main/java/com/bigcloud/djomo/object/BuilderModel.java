@@ -62,7 +62,7 @@ public class BuilderModel<T> extends ObjectMethodsModel<T, BuilderMaker<T>> {
 	}
 
 	@Override
-	protected Map<String, BeanField<T, Object>> initFields(ModelContext context) throws IllegalAccessException {
+	protected Map<CharSequence, BeanField<T, Object>> initFields(ModelContext context) throws IllegalAccessException {
 		MethodHandles.Lookup lookup = MethodHandles.lookup();
 		var fields = new ConcurrentHashMap<String, BeanField.Builder<T, Object>>();
 		Function<String, BeanField.Builder<T, Object>> fieldLookup = (name) -> fields.computeIfAbsent(name,

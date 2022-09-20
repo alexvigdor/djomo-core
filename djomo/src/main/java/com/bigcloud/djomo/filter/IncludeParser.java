@@ -52,7 +52,7 @@ public class IncludeParser<T> extends FilterParser {
 		final List<Field> fieldList = List.of(resolved.toArray(new Field[0]));
 		includeModel = new FilterObjectModel(om) {
 			@Override
-			public Field getField(String name) {
+			public Field getField(CharSequence name) {
 				return fieldsByName.get(name);
 			}
 			@Override

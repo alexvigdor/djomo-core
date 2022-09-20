@@ -31,7 +31,7 @@ import java.util.function.BiConsumer;
  */
 public interface ObjectModel<T, M extends ObjectMaker<T, F, V>, F extends Field<T, K, V>, K, V> extends ComplexModel<T, M> {
 	void forEachField(T t, BiConsumer<K, V> consumer);
-	F getField(String name);
+	F getField(CharSequence name);
 	/**
 	 * return iterable if set of fields is fixed and known; otherwise return null to indicate dynamic field model
 	 * @return

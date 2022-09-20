@@ -48,7 +48,7 @@ public class EnumMapModel<T extends EnumMap<E, V>, E extends Enum<E>, V>
 		}
 	}
 
-	protected Map<String, EnumMapField<T, E, V>> initFields(ModelContext context) {
+	protected Map<CharSequence, EnumMapField<T, E, V>> initFields(ModelContext context) {
 		if (typeArgs == null) {
 			return Collections.emptyMap();
 		}
@@ -64,7 +64,7 @@ public class EnumMapModel<T extends EnumMap<E, V>, E extends Enum<E>, V>
 		Model<V> valueModel = (Model<V>) context.get(valueType);
 		try {
 			E[] values = (E[]) enumClass.getDeclaredMethod("values").invoke(null);
-			Map<String, EnumMapField<T, E, V>> rval = Arrays.stream(values)
+			Map<CharSequence, EnumMapField<T, E, V>> rval = Arrays.stream(values)
 					.collect(Collectors.toMap(E::name,
 							f -> new EnumMapField<T, E, V>(f, valueModel)));
 			return rval;

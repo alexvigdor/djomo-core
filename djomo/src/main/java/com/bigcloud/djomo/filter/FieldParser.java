@@ -81,10 +81,10 @@ public class FieldParser<T> extends FilterParser {
 
 	@Override
 	public <O, M extends ObjectMaker<O, F, V>, F extends Field<O, ?, V>, V> void parseObjectField(
-			ObjectModel<O, M, F, ?, V> model, String field, BiConsumer<F, V> consumer) {
+			ObjectModel<O, M, F, ?, V> model, CharSequence field, BiConsumer<F, V> consumer) {
 		Parser op = parser;
 		Parser dest;
-		if (typeMatch && this.field.equals(field)) {
+		if (typeMatch && field.equals(this.field)) {
 			parser = dest = filterParser;
 		} else {
 			parser = dest = target;

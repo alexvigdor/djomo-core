@@ -23,6 +23,7 @@ import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Printer;
 import com.bigcloud.djomo.base.BaseSimpleModel;
 import com.bigcloud.djomo.error.ModelException;
+import com.bigcloud.djomo.internal.CharSequenceParser;
 import com.bigcloud.djomo.io.Buffer;
 
 public class StringBasedModel<T> extends BaseSimpleModel<T> {
@@ -50,7 +51,7 @@ public class StringBasedModel<T> extends BaseSimpleModel<T> {
 
 	@Override
 	public T parse(Buffer input, Buffer overflow) throws IOException {
-		String s = parseString(input, overflow);
+		String s = CharSequenceParser.parse(input, overflow).toString();
 		try {
 			return (T) constructor.invoke(s);
 		} catch (Throwable e) {

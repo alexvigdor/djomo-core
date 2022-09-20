@@ -32,6 +32,7 @@ import com.bigcloud.djomo.base.BaseParser;
 import com.bigcloud.djomo.error.ModelException;
 import com.bigcloud.djomo.error.UnexpectedPrimitiveException;
 import com.bigcloud.djomo.filter.FilterParser;
+import com.bigcloud.djomo.internal.CharSequenceParser;
 import com.bigcloud.djomo.io.Buffer;
 import com.bigcloud.djomo.simple.StringBasedModel;
 import com.bigcloud.djomo.simple.StringModel;
@@ -117,7 +118,6 @@ public class JsonParser extends BaseParser implements Parser {
 		final var buf = input.buffer;
 		final var t = this.parser;
 		final var o = this.overflow;
-		final var s = models.stringModel;
 		try {
 			int rp = input.readPosition;
 			int wp = input.writePosition;
@@ -132,7 +132,7 @@ public class JsonParser extends BaseParser implements Parser {
 				switch (buf[rp]) {
 					case '"':
 						input.readPosition = rp + 1;
-						t.parseObjectField(model, s.parse(input, o), consumer);
+						t.parseObjectField(model, CharSequenceParser.parse(input, o), consumer);
 						rp = input.readPosition;
 						wp = input.writePosition;
 						break;
@@ -158,8 +158,9 @@ public class JsonParser extends BaseParser implements Parser {
 
 	@Override
 	public <O, M extends ObjectMaker<O, F, V>, F extends Field<O, ?, V>, V> void parseObjectField(
-			ObjectModel<O, M, F, ?, V> model, String field, BiConsumer<F, V> consumer) {
+			ObjectModel<O, M, F, ?, V> model, CharSequence field, BiConsumer<F, V> consumer) {
 		try {
+			F mfield = model.getField(field);
 			final var buf = this.input;
 			while (true) {
 				switch (buf.read()) {
@@ -172,7 +173,6 @@ public class JsonParser extends BaseParser implements Parser {
 					case '\f':
 						break;
 					case ':':
-						F mfield = model.getField(field);
 						if (mfield != null) {
 							consumer.accept(mfield, parseFieldValue(mfield));
 						} else {

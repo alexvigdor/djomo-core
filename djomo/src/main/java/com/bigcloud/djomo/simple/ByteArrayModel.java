@@ -21,6 +21,7 @@ import java.util.Base64;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Printer;
 import com.bigcloud.djomo.base.BaseSimpleModel;
+import com.bigcloud.djomo.internal.CharSequenceParser;
 import com.bigcloud.djomo.io.Buffer;
 
 public class ByteArrayModel extends BaseSimpleModel<byte[]> {
@@ -44,7 +45,7 @@ public class ByteArrayModel extends BaseSimpleModel<byte[]> {
 
 	@Override
 	public byte[] parse(Buffer input, Buffer overflow) throws IOException {
-		return Base64.getDecoder().decode(parseString(input, overflow));
+		return Base64.getDecoder().decode(CharSequenceParser.parse(input, overflow).toString());
 	}
 
 	@Override

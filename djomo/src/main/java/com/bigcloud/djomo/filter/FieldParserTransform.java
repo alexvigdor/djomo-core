@@ -68,8 +68,8 @@ public abstract class FieldParserTransform<T, S, F> extends FilterParser {
 
 	@Override
 	public <O, M extends ObjectMaker<O, D, V>, D extends Field<O, ?, V>, V> void parseObjectField(
-			ObjectModel<O, M, D, ?, V> model, String field, BiConsumer<D, V> consumer) {
-		if (typeMatch && this.field.equals(field)) {
+			ObjectModel<O, M, D, ?, V> model, CharSequence field, BiConsumer<D, V> consumer) {
+		if (typeMatch && field.equals(this.field)) {
 			var passthrough = consumer;
 			consumer = (def, val) -> {
 				if (val != null && sourceType.isInstance(val) && fieldType.isAssignableFrom(def.model().getType())) {

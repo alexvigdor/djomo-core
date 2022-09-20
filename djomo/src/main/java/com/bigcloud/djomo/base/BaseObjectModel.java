@@ -48,7 +48,7 @@ import com.bigcloud.djomo.object.BeanField;
  * @param <V>
  */
 public abstract class BaseObjectModel<T, M extends ObjectMaker<T, F, V>, F extends Field<T, K, V>, K, V> extends BaseComplexModel<T, M> implements ObjectModel<T, M, F, K, V> {
-	protected final Map<String, F> fields;
+	protected final Map<CharSequence, F> fields;
 	protected final F[] sortedFields;
 	protected final Models models;
 	protected final List<F> fieldList;
@@ -91,7 +91,7 @@ public abstract class BaseObjectModel<T, M extends ObjectMaker<T, F, V>, F exten
 		this.fieldList = List.of(sortedFields);
 	}
 	
-	protected abstract Map<String, F> initFields(ModelContext context) throws IllegalAccessException;
+	protected abstract Map<CharSequence, F> initFields(ModelContext context) throws IllegalAccessException;
 
 	@Override
 	public M maker(T obj) {
@@ -125,7 +125,7 @@ public abstract class BaseObjectModel<T, M extends ObjectMaker<T, F, V>, F exten
 		}
 	}
 	@Override
-	public F getField(String name) {
+	public F getField(CharSequence name) {
 		return fields.get(name);
 	}
 	@Override

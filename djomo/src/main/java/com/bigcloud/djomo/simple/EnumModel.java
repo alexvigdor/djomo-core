@@ -21,6 +21,7 @@ import java.lang.reflect.Type;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Printer;
 import com.bigcloud.djomo.base.BaseSimpleModel;
+import com.bigcloud.djomo.internal.CharSequenceParser;
 import com.bigcloud.djomo.io.Buffer;
 
 public class EnumModel<T extends Enum<T>> extends BaseSimpleModel<T> {
@@ -36,7 +37,7 @@ public class EnumModel<T extends Enum<T>> extends BaseSimpleModel<T> {
 
 	@Override
 	public T parse(Buffer input, Buffer overflow) throws IOException {
-		return (T) Enum.valueOf(getType(), parseString(input, overflow));
+		return (T) Enum.valueOf(getType(), CharSequenceParser.parse(input, overflow).toString());
 	}
 
 	@SuppressWarnings("unchecked")

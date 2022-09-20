@@ -28,7 +28,7 @@ import com.bigcloud.djomo.Models;
 public interface Parser {
 	<T> T parse(Model<T> model);
 	<O, M extends ObjectMaker<O, F, V>, F extends Field<O,?,V>, V> M parseObject(ObjectModel<O, M, F, ?, V> model);
-	<O, M extends ObjectMaker<O, F, V>, F extends Field<O,?,V>, V> void parseObjectField(ObjectModel<O, M, F, ?, V> model, String field, BiConsumer<F, V> consumer);
+	<O, M extends ObjectMaker<O, F, V>, F extends Field<O,?,V>, V> void parseObjectField(ObjectModel<O, M, F, ?, V> model, CharSequence field, BiConsumer<F, V> consumer);
 	<L, M extends ListMaker<L, I>, I> M parseList(ListModel<L, M, I> model);
 	<T> void parseListItem(Model<T> model, Consumer<T> consumer);
 	<T> T parseSimple(SimpleModel<T> model);

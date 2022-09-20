@@ -21,6 +21,7 @@ import java.lang.reflect.Type;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Printer;
 import com.bigcloud.djomo.base.BaseSimpleModel;
+import com.bigcloud.djomo.internal.CharSequenceParser;
 import com.bigcloud.djomo.io.Buffer;
 
 public class CharModel extends BaseSimpleModel<Character>{
@@ -47,6 +48,6 @@ public class CharModel extends BaseSimpleModel<Character>{
 
 	@Override
 	public Character parse(Buffer input, Buffer overflow) throws IOException {
-		return parseString(input, overflow).charAt(0);
+		return CharSequenceParser.parse(input, overflow).charAt(0);
 	}
 }

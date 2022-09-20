@@ -92,7 +92,7 @@ public class ModelParser extends BaseParser implements Parser{
 
 	@Override
 	public <O, M extends ObjectMaker<O, F, V>, F extends Field<O, ?, V>, V> void parseObjectField(
-			ObjectModel<O, M, F,?,V> model, String field, BiConsumer<F, V> consumer) {
+			ObjectModel<O, M, F,?,V> model, CharSequence field, BiConsumer<F, V> consumer) {
 		F mf = model.getField(field);
 		if(mf!=null) {
 			var v = parseFieldValue(mf);

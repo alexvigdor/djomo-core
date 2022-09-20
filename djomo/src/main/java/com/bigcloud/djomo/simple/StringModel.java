@@ -20,6 +20,7 @@ import java.io.IOException;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Printer;
 import com.bigcloud.djomo.base.BaseSimpleModel;
+import com.bigcloud.djomo.internal.CharSequenceParser;
 import com.bigcloud.djomo.io.Buffer;
 
 public class StringModel extends BaseSimpleModel<String> {
@@ -43,7 +44,7 @@ public class StringModel extends BaseSimpleModel<String> {
 
 	@Override
 	public final String parse(Buffer input, Buffer overflow) throws IOException {
-		return parseString(input, overflow);
+		return CharSequenceParser.parse(input, overflow).toString();
 	}
 	
 }

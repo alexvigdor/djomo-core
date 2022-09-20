@@ -80,9 +80,9 @@ public class PathParser extends FilterParser {
 
 	@Override
 	public <O, M extends ObjectMaker<O, F, V>, F extends Field<O, ?, V>, V> void parseObjectField(
-			ObjectModel<O, M, F, ?, V> model, String field, BiConsumer<F, V> consumer) {
+			ObjectModel<O, M, F, ?, V> model, CharSequence field, BiConsumer<F, V> consumer) {
 		final var parent = path;
-		path = new FieldElement(parent, field);
+		path = new FieldElement(parent, field.toString());
 		filterStack().parseObjectField(model, field, consumer);
 		path = parent;
 	}
