@@ -18,7 +18,6 @@ package com.bigcloud.djomo.simple;
 import java.io.IOException;
 import java.io.StringReader;
 import java.lang.reflect.Type;
-import java.util.Arrays;
 
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Printer;
@@ -31,21 +30,6 @@ public class NumberModel<N extends Number> extends BaseSimpleModel<N> {
 			return new char[256];
 		}
 	};
-
-	private enum CharType {
-		DIGIT, FLOATING, NaN
-	}
-
-	private static final CharType[] charTypes;
-
-	static {
-		charTypes = new CharType[128];
-		Arrays.fill(charTypes, CharType.NaN);
-		"+-.EeNaInfity".chars().forEach(c -> charTypes[c] = CharType.FLOATING);
-		for (int i = '0'; i <= '9'; i++) {
-			charTypes[i] = CharType.DIGIT;
-		}
-	}
 
 	public NumberModel(Type type, ModelContext context) {
 		super(type, context);
@@ -76,18 +60,30 @@ public class NumberModel<N extends Number> extends BaseSimpleModel<N> {
 			rp++;
 		}
 		int op = 0;
+		long value = 0;
 		boolean integral = true;
 		PARSE_LOOP: while (true) {
+			int ch;
 			for (; rp < wp; rp++) {
-				int ch = buffer[rp];
-				if (ch > 127) {
-					break PARSE_LOOP;
-				}
-				CharType ct = charTypes[ch];
-				if (ct == CharType.FLOATING) {
-					integral = false;
-				} else if (ct == CharType.NaN) {
-					break PARSE_LOOP;
+				ch = buffer[rp];
+				switch (ch) {
+					case '0': case '1': case '2': case '3': case '4':
+					case '5': case '6': case '7': case '8': case '9':
+						if(integral) {
+							value = value * 10 + (ch - 48);
+						}
+						break;
+					case '+': case '-':
+					case '.':
+					case 'N':
+					case 'I':
+					case 'E': case 'e':
+					case 'a':
+					case 'n': case 'f': case 'i': case 't': case 'y':
+						integral = false;
+						break;
+					default:
+						break PARSE_LOOP;
 				}
 			}
 			// if we get here, copy contents to overflow and refill buffer
@@ -106,26 +102,7 @@ public class NumberModel<N extends Number> extends BaseSimpleModel<N> {
 			wp = input.writePosition;
 		}
 		input.readPosition = rp;
-		if (op > 0 && rp > 0) {
-			System.arraycopy(buffer, start, out, op, rp);
-			op += rp;
-		}
-		if (integral) {
-			long value = 0;
-			char[] buf = buffer;
-			int begin = start;
-			int end = rp;
-			if (op > 0) {
-				buf = out;
-				begin = 0;
-				end = op;
-			}
-			if (negative) {
-				begin += 1;
-			}
-			for (int i = begin; i < end; i++) {
-				value = value * 10 + (buf[i] - 48);
-			}
+		if(integral) {
 			if (negative) {
 				value = -value;
 			}
@@ -133,15 +110,18 @@ public class NumberModel<N extends Number> extends BaseSimpleModel<N> {
 				return convertInt((int) value);
 			}
 			return convertLong(value);
-		} else {
-			String dstr;
-			if (op == 0) {
-				dstr = new String(buffer, start, rp - start);
-			} else {
-				dstr = new String(out, 0, op);
-			}
-			return convertDouble(Double.parseDouble(dstr));
 		}
+		String dstr;
+		if (op == 0) {
+			dstr = new String(buffer, start, rp - start);
+		} else {
+			if (rp > 0) {
+				System.arraycopy(buffer, start, out, op, rp);
+				op += rp;
+			}
+			dstr = new String(out, 0, op);
+		}
+		return convertDouble(Double.parseDouble(dstr));
 	}
 
 	@Override
