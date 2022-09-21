@@ -32,6 +32,7 @@ module com.bigcloud.djomo {
 	exports com.bigcloud.djomo.filter;
 	exports com.bigcloud.djomo.error;
 	exports com.bigcloud.djomo.simple;
+	exports com.bigcloud.djomo.internal to com.bigcloud.djomo.test;
 
 	uses com.bigcloud.djomo.api.ModelFactory;
 }

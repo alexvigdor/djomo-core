@@ -24,7 +24,6 @@ public class CharArraySequence implements CharSequence {
 	private final char[] buffer;
 	private final int start;
 	private final int len;
-	int hashCount;
 
 	public CharArraySequence(char[] buffer, int start, int len) {
 		this.buffer = buffer;
@@ -50,8 +49,8 @@ public class CharArraySequence implements CharSequence {
 	public int hashCode() {
 		char[] b = buffer;
 		int h = 0;
-		int end = start+len;
-		for (int i = start; i < end; i++) {
+		int i = start, end = i+len;
+		for (; i < end; i++) {
 			h = 31 * h + b[i];
 		}
 		return h;
