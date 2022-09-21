@@ -29,7 +29,7 @@ import com.bigcloud.djomo.api.ObjectModel;
  *
  */
 public class RenameParser extends FilterParser {
-	private final ConcurrentHashMap<String, String> nameMappings;
+	private final ConcurrentHashMap<CharSequence, CharSequence> nameMappings;
 
 	public RenameParser(String... args) {
 		this.nameMappings = new ConcurrentHashMap<>();
@@ -44,7 +44,7 @@ public class RenameParser extends FilterParser {
 
 	@Override
 	public <O, M extends ObjectMaker<O, F, V>, F extends Field<O, ?, V>, V> void parseObjectField(
-			ObjectModel<O, M, F, ?, V> model, String field, BiConsumer<F, V> consumer) {
+			ObjectModel<O, M, F, ?, V> model, CharSequence field, BiConsumer<F, V> consumer) {
 		parser.parseObjectField(model, nameMappings.getOrDefault(field, field), consumer);
 	}
 

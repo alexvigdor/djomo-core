@@ -20,6 +20,7 @@ import java.io.IOException;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Printer;
 import com.bigcloud.djomo.base.BaseSimpleModel;
+import com.bigcloud.djomo.internal.CharSequenceParser;
 import com.bigcloud.djomo.io.Buffer;
 
 public class CharArrayModel extends BaseSimpleModel<char[]> {
@@ -35,7 +36,13 @@ public class CharArrayModel extends BaseSimpleModel<char[]> {
 
 	@Override
 	public char[] parse(Buffer input, Buffer overflow) throws IOException {
-		return parseString(input, overflow).toCharArray();
+		CharSequence cs = CharSequenceParser.parse(input, overflow);
+		int len = cs.length();
+		char[] rval = new char[len];
+		for(int i=0; i< len; i++) {
+			rval[i] = cs.charAt(i);
+		}
+		return rval;
 	}
 
 	@Override

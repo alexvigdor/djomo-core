@@ -88,13 +88,13 @@ public class MapModel<T extends Map<K, V>, K, V> extends BaseComplexModel<T, Map
 		t.forEach(consumer);
 	}
 	@Override
-	public MapField<T, K, V> getField(String name) {
+	public MapField<T, K, V> getField(CharSequence name) {
 		K key;
 		if(keyModel!=null) {
 			key = keyModel.convert(name);
 		}
 		else {
-			key = (K) name;
+			key = (K) name.toString();
 		}
 		return new MapField<T, K, V>(key, valueModel);
 	}

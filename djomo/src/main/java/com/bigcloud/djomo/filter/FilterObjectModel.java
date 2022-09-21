@@ -57,7 +57,7 @@ public class FilterObjectModel<T, M extends ObjectMaker<T, F, V>, F extends Fiel
 	}
 
 	@Override
-	public F getField(String name) {
+	public F getField(CharSequence name) {
 		return objectModel.getField(name);
 	}
 

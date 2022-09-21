@@ -35,6 +35,7 @@ import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.ObjectMaker;
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.internal.CharArrayLookup;
 import com.bigcloud.djomo.object.BeanField;
 /**
  * Common baseline behavior for Object Models with a predefined set of fields
@@ -48,7 +49,7 @@ import com.bigcloud.djomo.object.BeanField;
  * @param <V>
  */
 public abstract class BaseObjectModel<T, M extends ObjectMaker<T, F, V>, F extends Field<T, K, V>, K, V> extends BaseComplexModel<T, M> implements ObjectModel<T, M, F, K, V> {
-	protected final Map<String, F> fields;
+	protected final CharArrayLookup<F> fields;
 	protected final F[] sortedFields;
 	protected final Models models;
 	protected final List<F> fieldList;
@@ -56,9 +57,10 @@ public abstract class BaseObjectModel<T, M extends ObjectMaker<T, F, V>, F exten
 	public BaseObjectModel(Type type, ModelContext context) throws IllegalAccessException {
 		super(type, context);
 		this.models = context.models();
-		this.fields = initFields(context);
+		var fieldMap = initFields(context);
+		this.fields = new CharArrayLookup<>(fieldMap);
 		@SuppressWarnings("unchecked")
-		F[] sortedFields = fields.values().toArray((F[]) new Field[0]);
+		F[] sortedFields = fieldMap.values().toArray((F[]) new Field[0]);
 		Order order = this.type.getAnnotation(Order.class);
 		if(order!=null && order.value()!=null && order.value().length>0) {
 			final String[] declared = order.value();
@@ -91,7 +93,7 @@ public abstract class BaseObjectModel<T, M extends ObjectMaker<T, F, V>, F exten
 		this.fieldList = List.of(sortedFields);
 	}
 	
-	protected abstract Map<String, F> initFields(ModelContext context) throws IllegalAccessException;
+	protected abstract Map<CharSequence, F> initFields(ModelContext context) throws IllegalAccessException;
 
 	@Override
 	public M maker(T obj) {
@@ -125,7 +127,7 @@ public abstract class BaseObjectModel<T, M extends ObjectMaker<T, F, V>, F exten
 		}
 	}
 	@Override
-	public F getField(String name) {
+	public F getField(CharSequence name) {
 		return fields.get(name);
 	}
 	@Override
