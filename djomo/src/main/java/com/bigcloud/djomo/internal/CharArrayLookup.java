@@ -21,138 +21,121 @@ import java.util.Map;
  *
  * @param <T>
  */
-public class CharArrayLookup<T>  {
-	LookupNode<T> lookup;
+public class CharArrayLookup<T> {
+
+	private CharArrayLookup() {
+
+	}
 
 	public CharArrayLookup(Map<CharSequence, T> data) {
-		lookup = new LookupNode();
-		data.forEach((k, t) -> lookup.set(k, 0, t));
+		data.forEach((k, t) -> set(k, 0, t));
 	}
 
-	/**
-	 * Algorithm: use binary search to find any key starting with the same
-	 * character. Keep matching characters until one doesn't match, and use diff to
-	 * decide to search up or down keys sequentially.
-	 * 
-	 * @param key
-	 * @return
-	 */
-	public T get(CharSequence key) {
-		return lookup.get(key,0);
-	}
+	private char[] prefix = null;
+	// todo would it be worth the add-time expense of copying array contents to make
+	// this field final?
+	private CharArrayLookup<T>[] children = new CharArrayLookup[95];
+	private T data;
 
-	public static class LookupNode<T> {
-		char[] prefix = null;
-		//todo would it be worth the add-time expense of copying array contents to make this field final?
-		LookupNode<T>[] children = new LookupNode[95];
-		T data;
-
-		void set(CharSequence cs, int pos, T data) {
-			//System.out.println("Lookup.set("+cs+", "+pos+") to "+this);
-			int csl = cs.length();
-			if(prefix == null) {
-				// this node is empty, fill the prefix and data
-				prefix = new char[csl - pos];
-				for (int i = pos; i < csl; i++) {
-					char c = cs.charAt(i);
-					if (c < 32 || c > 126) {
-						throw new IllegalArgumentException("Character out of range for CharArrayLookup " + c);
-					}
-					prefix[i - pos] = c;
+	private void set(CharSequence cs, int pos, T data) {
+		// System.out.println("Lookup.set("+cs+", "+pos+") to "+this);
+		int csl = cs.length();
+		if (prefix == null) {
+			// this node is empty, fill the prefix and data
+			prefix = new char[csl - pos];
+			for (int i = pos; i < csl; i++) {
+				char c = cs.charAt(i);
+				if (c < 32 || c > 126) {
+					throw new IllegalArgumentException("Character out of range for CharArrayLookup " + c);
 				}
-				this.data = data;
-				return;
+				prefix[i - pos] = c;
 			}
-			if (prefix.length > 0) {
-				int pm = 0;
-				for (; pm < prefix.length && pos < csl; pm++) {
-					if (prefix[pm] != cs.charAt(pos)) {
-						break;
-					}
-					pos++;
-				}
-				if (pm == prefix.length) {
-					if (pos == csl) {
-						// this is the right destination for the data
-						this.data = data;
-						return;
-					} 
-				} else {
-					// we need to split this prefix apart
-					LookupNode<T> split = new LookupNode();
-					split.children = this.children;
-					this.children =  new LookupNode[95];
-					split.prefix = Arrays.copyOfRange(prefix, pm+1, prefix.length);
-					split.data = this.data;
-					this.children[prefix[pm] - ' '] = split;
-					prefix = Arrays.copyOfRange(prefix, 0, pm);
-					if (pos == csl) {
-						// we need to capture this value on the first half of the split
-						this.data = data;
-						return;
-					}
-					this.data = null;
-				}
-			}
-			char first = cs.charAt(pos++);
-			if (first < 32 || first > 126) {
-				throw new IllegalArgumentException("Character out of range for CharArrayLookup " + first);
-			}
-			LookupNode<T> dest = children[first - ' '];
-			if(dest == null) {
-				dest = new LookupNode<>();
-				children[first-' ']=dest;
-			}
-			dest.set(cs, pos, data);
+			this.data = data;
+			return;
 		}
-		
-		T get(CharSequence cs, int pos) {
-			//System.out.println("Lookup.get("+cs+", "+pos+") from "+this);
-			int csl = cs.length();
-			if (prefix.length > 0) {
+		if (prefix.length > 0) {
+			int pm = 0;
+			for (; pm < prefix.length && pos < csl; pm++) {
+				if (prefix[pm] != cs.charAt(pos)) {
+					break;
+				}
+				pos++;
+			}
+			if (pm == prefix.length) {
+				if (pos == csl) {
+					// this is the right destination for the data
+					this.data = data;
+					return;
+				}
+			} else {
+				// we need to split this prefix apart
+				CharArrayLookup<T> split = new CharArrayLookup<>();
+				split.children = this.children;
+				this.children = new CharArrayLookup[95];
+				split.prefix = Arrays.copyOfRange(prefix, pm + 1, prefix.length);
+				split.data = this.data;
+				this.children[prefix[pm] - ' '] = split;
+				prefix = Arrays.copyOfRange(prefix, 0, pm);
+				if (pos == csl) {
+					// we need to capture this value on the first half of the split
+					this.data = data;
+					return;
+				}
+				this.data = null;
+			}
+		}
+		char first = cs.charAt(pos++);
+		if (first < 32 || first > 126) {
+			throw new IllegalArgumentException("Character out of range for CharArrayLookup " + first);
+		}
+		CharArrayLookup<T> dest = children[first - ' '];
+		if (dest == null) {
+			dest = new CharArrayLookup<>();
+			children[first - ' '] = dest;
+		}
+		dest.set(cs, pos, data);
+	}
+
+	public T get(CharSequence cs) {
+		int pos = 0;
+		//System.out.println("Lookup.get("+cs+", "+pos+") from "+this);
+		int csl = cs.length();
+		CharArrayLookup<T> node = this;
+		while (node != null) {
+			char[] np = node.prefix;
+			if (np.length > 0) {
 				int pm = 0;
-				for (; pm < prefix.length && pos < csl; pm++) {
-					if (prefix[pm] != cs.charAt(pos)) {
+				for (; pm < np.length && pos < csl; pm++) {
+					if (np[pm] != cs.charAt(pos)) {
 						return null;
 					}
 					pos++;
 				}
-				if (pm == prefix.length) {
-					if (pos == csl) {
-						return data;
-					} 
-				} else {
+				if (pm != np.length) {
 					return null;
-				}
+				} 
 			}
-			if(pos == csl) {
-				return data;
+			if (pos == csl) {
+				return node.data;
 			}
 			char first = cs.charAt(pos++);
 			if (first < 32 || first > 126) {
 				throw new IllegalArgumentException("Character out of range for CharArrayLookup " + first);
 			}
-			LookupNode<T> dest = children[first - ' '];
-			if(dest == null) {
-				return null;
-			}
-			return dest.get(cs, pos);
+			node = node.children[first - ' '];
 		}
-
-		public String toString() {
-			Map<String, LookupNode<T>> lettermappings = new HashMap<>();
-			for(int i=0; i< children.length;i++) {
-				LookupNode<T> ln = children[i];
-				if(ln != null) {
-					lettermappings.put(String.valueOf((char) (i+' ')), ln);
-				}
-			}
-			return "[ prefix: " + (prefix == null ? null : new String(prefix)) + ", data: " + data + ", children: "
-					+ lettermappings + " ]";
-		}
+		return null;
 	}
-	
+
 	public String toString() {
-		return lookup.toString();
+		Map<String, CharArrayLookup<T>> lettermappings = new HashMap<>();
+		for (int i = 0; i < children.length; i++) {
+			CharArrayLookup<T> ln = children[i];
+			if (ln != null) {
+				lettermappings.put(String.valueOf((char) (i + ' ')), ln);
+			}
+		}
+		return "[ prefix: " + (prefix == null ? null : new String(prefix)) + ", data: " + data + ", children: "
+				+ lettermappings + " ]";
 	}
 }
