@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * Copyright 2022 Alex Vigdor
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *******************************************************************************/
 package com.bigcloud.djomo.internal;
 
 import java.util.Arrays;
@@ -5,21 +20,17 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * A normal map lookup with a char sequence requires two traversals; one to
- * compute the hash code, and then a char-by-char confirmation during equals.
- * This lookup is intended for modest sets of reasonably different names as
- * found on typical objects; it uses binary search to find a match on the first
- * character, and then performs a single traversal of the char sequence combined
- * with binary search to locate the matching value if any.
- * 
- * Maybe we should try a collapsed Trie structure, where nodes are only broken
- * down as far as common suffix; so discrete names will be a flat list. We could
- * even consider using a bitmask to test whether a node contains a descendant of
- * the target length
+ * A normal map lookup with a char sequence requires two traversals of the
+ * characters; one to compute the hash code, and then a char-by-char
+ * confirmation during equals. This lookup is intended for modest sets of
+ * reasonably different names as found on typical objects; it uses a precomputed
+ * trie data structure to lookup a value with only a single traversal of the
+ * characters in the key. Only String keys with a subset of ASCII characters are
+ * supported (decimal 32-126 inclusive).
  * 
  * @author Alex Vigdor
  *
- * @param <T>
+ * @param <T> The type of value to be looked up with a simple ascii string
  */
 public class CharArrayLookup<T> {
 
@@ -97,32 +108,40 @@ public class CharArrayLookup<T> {
 	}
 
 	public T get(CharSequence cs) {
-		int pos = 0;
-		//System.out.println("Lookup.get("+cs+", "+pos+") from "+this);
 		int csl = cs.length();
+		if (csl == 0) {
+			if (prefix.length == 0) {
+				return data;
+			}
+			return null;
+		}
+		char c = cs.charAt(0);
+		int pos = 1;
 		CharArrayLookup<T> node = this;
 		while (node != null) {
 			char[] np = node.prefix;
 			if (np.length > 0) {
-				int pm = 0;
-				for (; pm < np.length && pos < csl; pm++) {
-					if (np[pm] != cs.charAt(pos)) {
+				for (int pm = 0; pm < np.length; pm++) {
+					if (np[pm] != c) {
 						return null;
 					}
-					pos++;
+					if (pos == csl) {
+						if (pm < np.length - 1) {
+							return null;
+						}
+						return node.data;
+					}
+					c = cs.charAt(pos++);
 				}
-				if (pm != np.length) {
-					return null;
-				} 
 			}
+			if (c < 32 || c > 126) {
+				throw new IllegalArgumentException("Character out of range for CharArrayLookup " + c);
+			}
+			node = node.children[c - ' '];
 			if (pos == csl) {
-				return node.data;
+				return node == null ? null : node.data;
 			}
-			char first = cs.charAt(pos++);
-			if (first < 32 || first > 126) {
-				throw new IllegalArgumentException("Character out of range for CharArrayLookup " + first);
-			}
-			node = node.children[first - ' '];
+			c = cs.charAt(pos++);
 		}
 		return null;
 	}
