@@ -63,11 +63,11 @@ public class UUIDModel extends BaseSimpleModel<UUID> {
 
 	@Override
 	public UUID parse(Buffer input, Buffer overflow) throws IOException {
-		int rp = input.readPosition;
+		int rp = input.readPosition + 1;
 		char[] rb = input.buffer;
 		int len = input.writePosition - rp;
-		if (len > 36) {
-			len = 36;
+		if (len > 37) {
+			len = 37;
 		}
 		long msb = 0;
 		long lsb = 0;
@@ -84,6 +84,11 @@ public class UUIDModel extends BaseSimpleModel<UUID> {
 				case 23:
 					if (ch != '-') {
 						throw new IllegalArgumentException("Illegal UUID format " + input.describe());
+					}
+					break;
+				case 36:
+					if (ch != '"') {
+						throw new IllegalArgumentException("Expected closing quote " + input.describe());
 					}
 					break;
 				default:
@@ -148,7 +153,7 @@ public class UUIDModel extends BaseSimpleModel<UUID> {
 				}
 			}
 			input.readPosition = rp + len;
-			if(upos == 36) {
+			if(upos == 37) {
 				break;
 			}
 			if (!input.refill()) {

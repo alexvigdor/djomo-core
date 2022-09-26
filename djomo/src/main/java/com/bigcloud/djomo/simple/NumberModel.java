@@ -47,7 +47,6 @@ public class NumberModel<N extends Number> extends BaseSimpleModel<N> {
 		char[] out = overflow.buffer;
 		int rp = input.readPosition;
 		int wp = input.writePosition;
-		int start = rp;
 		if (rp == wp) {
 			if (!input.refill()) {
 				throw new NumberFormatException(input.describe());
@@ -55,17 +54,37 @@ public class NumberModel<N extends Number> extends BaseSimpleModel<N> {
 			wp = input.writePosition;
 			rp = 0;
 		}
-		boolean negative = buffer[rp] == '-';
-		if (negative) {
-			rp++;
+		int start = rp;
+		char ch = buffer[rp++];
+		boolean quoted = ch == '"';
+		if(quoted) {
+			if (rp == wp) {
+				if (!input.refill()) {
+					throw new NumberFormatException(input.describe());
+				}
+				wp = input.writePosition;
+				rp = 0;
+			}
+			start = rp;
+			ch = buffer[rp++];
 		}
 		int op = 0;
+		boolean negative = ch == '-';
+		if (negative) {
+			if (rp == wp) {
+				if (!input.refill()) {
+					throw new NumberFormatException(input.describe());
+				}
+				wp = input.writePosition;
+				start = rp = 0;
+				out[op++] = '-';
+			}
+			ch = buffer[rp++];
+		}
 		long value = 0;
 		boolean integral = true;
 		PARSE_LOOP: while (true) {
-			int ch;
-			for (; rp < wp; rp++) {
-				ch = buffer[rp];
+			while(true) {
 				switch (ch) {
 					case '0': case '1': case '2': case '3': case '4':
 					case '5': case '6': case '7': case '8': case '9':
@@ -82,9 +101,19 @@ public class NumberModel<N extends Number> extends BaseSimpleModel<N> {
 					case 'n': case 'f': case 'i': case 't': case 'y':
 						integral = false;
 						break;
+					case '"':
+						if(!quoted) {
+							rp--;
+						}
+						break PARSE_LOOP;
 					default:
+						rp--;
 						break PARSE_LOOP;
 				}
+				if(rp == wp) {
+					break;
+				}
+				ch = buffer[rp++];
 			}
 			// if we get here, copy contents to overflow and refill buffer
 			int len = rp - start;
@@ -100,6 +129,7 @@ public class NumberModel<N extends Number> extends BaseSimpleModel<N> {
 			}
 			start = 0;
 			wp = input.writePosition;
+			ch = buffer[rp++];
 		}
 		input.readPosition = rp;
 		if(integral) {

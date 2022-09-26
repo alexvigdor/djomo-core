@@ -28,8 +28,8 @@ import com.bigcloud.djomo.io.Buffer;
  */
 public class CharSequenceParser {
 	public static CharSequence parse(Buffer readBuffer, Buffer writeBuffer) throws IOException {
-		// happy path
-		int rp = readBuffer.readPosition, start = rp;
+		// happy path; first character is already known to be a quote
+		int rp = readBuffer.readPosition+1, start = rp;
 		int wp = readBuffer.writePosition;
 		char[] rb = readBuffer.buffer;
 		char r = 0;

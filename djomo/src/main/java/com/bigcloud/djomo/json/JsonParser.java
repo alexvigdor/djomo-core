@@ -34,8 +34,6 @@ import com.bigcloud.djomo.error.UnexpectedPrimitiveException;
 import com.bigcloud.djomo.filter.FilterParser;
 import com.bigcloud.djomo.internal.CharSequenceParser;
 import com.bigcloud.djomo.io.Buffer;
-import com.bigcloud.djomo.simple.StringBasedModel;
-import com.bigcloud.djomo.simple.StringModel;
 
 public class JsonParser extends BaseParser implements Parser {
 	final Buffer input;
@@ -71,20 +69,8 @@ public class JsonParser extends BaseParser implements Parser {
 						input.readPosition = rp + 1;
 						return parseListModel(definition);
 					case '"':
-						input.readPosition = rp + 1;
-						T o = (T) parseStringModel(definition);
-						if (!(definition instanceof StringBasedModel) && !(definition instanceof StringModel)) {
-							rp = input.readPosition;
-							wp = input.writePosition;
-							if (rp == wp && input.refill()) {
-								rp = 0;
-								wp = input.writePosition;
-							}
-							if (rp < wp && buf[rp] == '"') {
-								input.readPosition = rp + 1;
-							}
-						}
-						return o;
+						input.readPosition = rp;
+						return (T) parseStringModel(definition);
 					case ' ':
 					case '\t':
 					case '\n':
@@ -131,7 +117,7 @@ public class JsonParser extends BaseParser implements Parser {
 				}
 				switch (buf[rp]) {
 					case '"':
-						input.readPosition = rp + 1;
+						input.readPosition = rp;
 						t.parseObjectField(model, CharSequenceParser.parse(input, o), consumer);
 						rp = input.readPosition;
 						wp = input.writePosition;

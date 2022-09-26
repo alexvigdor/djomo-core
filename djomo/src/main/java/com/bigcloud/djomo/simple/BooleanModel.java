@@ -25,7 +25,7 @@ import com.bigcloud.djomo.error.ModelException;
 import com.bigcloud.djomo.error.UnexpectedPrimitiveException;
 import com.bigcloud.djomo.io.Buffer;
 
-public class BooleanModel extends BaseSimpleModel<Boolean>{
+public class BooleanModel extends BaseSimpleModel<Boolean> {
 
 	public BooleanModel(Type type, ModelContext context) {
 		super(type, context);
@@ -33,20 +33,19 @@ public class BooleanModel extends BaseSimpleModel<Boolean>{
 
 	@Override
 	public void print(Boolean obj, Printer printer) {
-		if(obj.booleanValue()) {
+		if (obj.booleanValue()) {
 			printer.raw("true");
-		}
-		else {
+		} else {
 			printer.raw("false");
 		}
 	}
 
 	@Override
 	public Boolean convert(Object o) {
-		if(o==null) {
+		if (o == null) {
 			return Boolean.FALSE;
 		}
-		if(o instanceof Boolean) {
+		if (o instanceof Boolean) {
 			return (Boolean) o;
 		}
 		return Boolean.valueOf(getParseable(o));
@@ -57,23 +56,27 @@ public class BooleanModel extends BaseSimpleModel<Boolean>{
 		try {
 			var b = input;
 			var c = b.read();
-			if(c == 't') {
-					if((c = b.read()) == 'r' && (c = b.read()) == 'u' && (c = b.read()) == 'e'){
-						return Boolean.TRUE;
-					}
-					throw new UnexpectedPrimitiveException("Unexepected character in true "+(char)c);
+			boolean quoted = c == '"';
+			if (quoted) {
+				c = b.read();
 			}
-			else if(c == 'f') {
-				if((c = b.read()) == 'a' && (c = b.read()) == 'l' && (c = b.read()) == 's' && (c = b.read()) == 'e'){
+			if (c == 't') {
+				if ((c = b.read()) == 'r' && (c = b.read()) == 'u' && (c = b.read()) == 'e'
+						&& (!quoted || (c = b.read()) == '"')) {
+					return Boolean.TRUE;
+				}
+				throw new UnexpectedPrimitiveException("Unexepected character in true " + (char) c);
+			} else if (c == 'f') {
+				if ((c = b.read()) == 'a' && (c = b.read()) == 'l' && (c = b.read()) == 's' && (c = b.read()) == 'e'
+						&& (!quoted || (c = b.read()) == '"')) {
 					return Boolean.FALSE;
 				}
-				throw new UnexpectedPrimitiveException("Unexepected character in false "+(char)c);
+				throw new UnexpectedPrimitiveException("Unexepected character in false " + (char) c);
 			}
-			throw new UnexpectedPrimitiveException("Unexepected character in boolean "+(char)c);
-		}
-		catch(IOException e) {
+			throw new UnexpectedPrimitiveException("Unexepected character in boolean " + (char) c);
+		} catch (IOException e) {
 			throw new ModelException("Error parsing boolean", e);
 		}
 	}
-	
+
 }
