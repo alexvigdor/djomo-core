@@ -26,6 +26,7 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.temporal.TemporalAccessor;
 import java.time.temporal.TemporalAmount;
+import java.util.Date;
 import java.util.UUID;
 
 import com.bigcloud.djomo.api.Model;
@@ -127,6 +128,9 @@ public class SimpleModelFactory extends BaseModelFactory {
 		}
 		else if(UUID.class == rawType) {
 			return new UUIDModel(rawType, context);
+		}
+		else if(Date.class.isAssignableFrom(rawType)) {
+			return new DateModel(rawType, context);
 		}
 		else if(Throwable.class.isAssignableFrom(rawType)) {
 			return magicString(Throwable.class, context, null, String.class);

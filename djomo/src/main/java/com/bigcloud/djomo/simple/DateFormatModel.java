@@ -16,8 +16,12 @@
 package com.bigcloud.djomo.simple;
 
 import java.io.IOException;
-import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Type;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
 
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Printer;
@@ -26,51 +30,42 @@ import com.bigcloud.djomo.error.ModelException;
 import com.bigcloud.djomo.internal.CharSequenceParser;
 import com.bigcloud.djomo.io.Buffer;
 
-public class StringBasedModel<T> extends BaseSimpleModel<T> {
-	final MethodHandle constructor;
-	final MethodHandle toString;
+/**
+ * Used to provide string formatting for legacy Date objects
+ * 
+ * @author Alex Vigdor
+ *
+ */
+public class DateFormatModel extends BaseSimpleModel<Date> {
+	final DateTimeFormatter format;
 
-	public StringBasedModel(Type type, ModelContext context, MethodHandle constructor, MethodHandle toString) {
+	public DateFormatModel(Type type, ModelContext context, DateTimeFormatter format) {
 		super(type, context);
-		this.constructor = constructor;
-		this.toString = toString;
+		this.format = format;
 	}
 
 	@Override
-	public void print(T obj, Printer printer) {
-		try {
-			printer.quote((String)toString.invoke(obj));
-		}
-		catch(RuntimeException e) {
-			throw e;
-		}
-		catch (Throwable e) {
-			throw new RuntimeException(e);
-		}
+	public void print(Date obj, Printer printer) {
+		printer.quote(format.format(ZonedDateTime.ofInstant(obj.toInstant(), ZoneId.systemDefault())));
 	}
 
 	@Override
-	public T parse(Buffer input, Buffer overflow) throws IOException {
-		String s = CharSequenceParser.parse(input, overflow).toString();
-		try {
-			return (T) constructor.invoke(s);
-		} catch (Throwable e) {
-			throw new ModelException("Error constructing instance of "+type.getName()+" from string '"+s+"'", e);
-		}
+	public Date parse(Buffer input, Buffer overflow) throws IOException {
+		CharSequence cs = CharSequenceParser.parse(input, overflow);
+		return Date.from(format.parse(cs, Instant::from));
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
-	public T convert(Object o) {
+	public Date convert(Object o) {
+		if (o instanceof Date t) {
+			return t;
+		}
 		if (o == null) {
 			return null;
 		}
-		if (o.getClass() == type) {
-			return (T) o;
-		}
 		try {
 			String p = getParseable(o);
-			return (T) constructor.invoke(p);
+			return Date.from(format.parse(p, Instant::from));
 		} catch (Throwable e) {
 			throw new ModelException("Error converting " + o + " to " + type.getTypeName(), e);
 		}

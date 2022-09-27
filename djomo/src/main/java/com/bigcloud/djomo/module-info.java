@@ -31,6 +31,8 @@ module com.bigcloud.djomo {
 	exports com.bigcloud.djomo.json;
 	exports com.bigcloud.djomo.filter;
 	exports com.bigcloud.djomo.error;
+	exports com.bigcloud.djomo.poly;
+	exports com.bigcloud.djomo.object;
 	exports com.bigcloud.djomo.simple;
 	exports com.bigcloud.djomo.internal to com.bigcloud.djomo.test;
 
