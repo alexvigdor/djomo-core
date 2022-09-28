@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ServiceLoader;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
@@ -214,6 +215,7 @@ public class Models {
 			return Models.this;
 		}
 	}
+
 	/**
 	 * Builder to customize a Models with ModelFactories and Resolvers
 	 */
@@ -221,6 +223,11 @@ public class Models {
 		ArrayDeque<Resolver<?>> resolvers = new ArrayDeque<>();
 		ArrayDeque<ModelFactory> factories = new ArrayDeque<>();
 
+		/**
+		 * 
+		 * @param resolvers one or more resolvers to apply to the Models
+		 * @return this builder
+		 */
 		public Builder resolver(Resolver<?>... resolvers) {
 			for (Resolver<?> resolver : resolvers) {
 				this.resolvers.add(resolver);
@@ -228,6 +235,21 @@ public class Models {
 			return this;
 		}
 
+		/**
+		 * Use a java service loader to discover and load ModelFactory instances
+		 * 
+		 * @return this builder
+		 */
+		public Builder loadFactories() {
+			ServiceLoader.load(ModelFactory.class).forEach(factories::add);
+			return this;
+		}
+
+		/**
+		 * Pass in one or more ModelFactory instances to supply Models
+		 * 
+		 * @return this builder
+		 */
 		public Builder factory(ModelFactory... factories) {
 			for (ModelFactory factory : factories) {
 				this.factories.add(factory);
@@ -237,10 +259,9 @@ public class Models {
 
 		public Models build() {
 			ModelFactory[] useFactories;
-			if(resolvers.isEmpty()) {
+			if (resolvers.isEmpty()) {
 				useFactories = factories.toArray(new ModelFactory[factories.size()]);
-			}
-			else {
+			} else {
 				useFactories = factories.toArray(new ModelFactory[factories.size() + 1]);
 				useFactories[factories.size()] = new ResolverModelFactory(resolvers.toArray(new Resolver[0]));
 			}

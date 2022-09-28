@@ -58,6 +58,20 @@ public class DateTest {
 	}
 
 	@Test
+	public void testDateService() throws IOException {
+		Models models = Models.builder()
+				.loadFactories()
+				.build();
+		Json json = new Json(models);
+		ZonedDateTime zdt = ZonedDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+		Date date = Date.from(zdt.toInstant());
+		String str = json.toString(date);
+		Assert.assertEquals(str, "\"" + DateTimeFormatter.ISO_INSTANT.format(zdt) + "\"");
+		Date rt = json.fromString(str, Date.class);
+		Assert.assertEquals(rt, date);
+	}
+
+	@Test
 	public void testDateFormat() throws IOException {
 		Models models = Models.builder()
 				.factory(new DateFormatModelFactory(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL), Date.class))
