@@ -15,11 +15,12 @@
  *******************************************************************************/
 package com.bigcloud.djomo.test;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -30,7 +31,6 @@ import com.bigcloud.djomo.StaticType;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.io.Buffer;
 import com.bigcloud.djomo.json.JsonParser;
-import com.bigcloud.djomo.simple.DoubleModel;
 import com.bigcloud.djomo.simple.NumberModel;
 
 import lombok.Builder;
@@ -135,6 +135,21 @@ public class PrimitiveTest {
 	public void testNumberString() throws IOException {
 		Object val = ((NumberModel<Number>) new Models().numberModel).parse("1.234e-0");
 		Assert.assertEquals(val, 1.234);
+	}
+
+	@Test
+	public void testPrimitiveStreams() {
+		Models models = new Models();
+		Model<Stream> streamModel = models.get(Stream.class);
+		double[] ddata = { 1.0, 2.0, 3.0 };
+		double dsum = (double) streamModel.convert(ddata).collect(Collectors.summingDouble(d -> (double) d));
+		Assert.assertEquals(dsum, 6);
+		long[] ldata = { 4, 5, 6 };
+		long lsum = (long) streamModel.convert(ldata).collect(Collectors.summingLong(d -> (long) d));
+		Assert.assertEquals(lsum, 15);
+		int[] idata = { 7, 8, 9 };
+		int isum = (int) streamModel.convert(idata).collect(Collectors.summingInt(d -> (int) d));
+		Assert.assertEquals(isum, 24);
 	}
 
 	@Builder

@@ -15,16 +15,40 @@
  *******************************************************************************/
 package com.bigcloud.djomo.test;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import com.bigcloud.djomo.Json;
+import com.bigcloud.djomo.Models;
+import com.bigcloud.djomo.annotation.Parse;
+import com.bigcloud.djomo.annotation.Visit;
+import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.filter.CircularReferenceVisitor;
+import com.bigcloud.djomo.filter.ExcludeParser;
+import com.bigcloud.djomo.filter.ExcludeVisitor;
+import com.bigcloud.djomo.filter.FieldParser;
+import com.bigcloud.djomo.filter.FieldParserFunction;
+import com.bigcloud.djomo.filter.FieldVisitor;
+import com.bigcloud.djomo.filter.FieldVisitorFunction;
+import com.bigcloud.djomo.filter.FilterParser;
+import com.bigcloud.djomo.filter.FilterVisitor;
+import com.bigcloud.djomo.filter.IncludeParser;
+import com.bigcloud.djomo.filter.IncludeVisitor;
+import com.bigcloud.djomo.filter.MultiFilterParser;
+import com.bigcloud.djomo.filter.MultiFilterVisitor;
+import com.bigcloud.djomo.filter.OmitNullVisitor;
+import com.bigcloud.djomo.filter.RenameParser;
+import com.bigcloud.djomo.filter.RenameVisitor;
+import com.bigcloud.djomo.filter.TypeParser;
+import com.bigcloud.djomo.filter.TypeVisitor;
 
 public class FilterTest {
 	Json Json = new Json();
@@ -77,6 +101,125 @@ public class FilterTest {
 		Json.toString(regularList, new CircularReferenceVisitor());
 		Json.toString(circularList, new CircularReferenceVisitor());
 	}
-	
-	
+
+	public record Gadget(String name, Gear gear, Gauge gauge) {}
+
+	public record Gear(String name, Double value, Double radius) {}
+
+	public record Gauge(String name, Double value, Double max) {}
+
+	@Visit(value = IncludeVisitor.class, type = Gauge.class, arg = { "name", "value" })
+	@Visit(value = ExcludeVisitor.class, type = Gear.class, arg = "value")
+	@Visit(value = RenameVisitor.class, arg = { "name", "n" }, path = { "gauge.*", "gear.*" })
+	@Visit(OmitNullVisitor.class)
+	@Parse(value = RenameParser.class, arg = { "n", "name" }, path = { "gauge.*", "gear.*" })
+	@Parse(value = ExcludeParser.class, type = Gauge.class, arg = "value")
+	public class GadgetFilters {}
+
+	@Test
+	public void testAnnotations() throws IOException {
+		Json json = Json.builder().scan(GadgetFilters.class).build();
+		Gadget gadget = new Gadget("gizmo", new Gear("spur", 13.7, 8.0), new Gauge("pressure", 15.0, 20.0));
+		String str = json.toString(gadget);
+		Assert.assertEquals(str,
+				"{\"gauge\":{\"n\":\"pressure\",\"value\":15.0},\"gear\":{\"n\":\"spur\",\"radius\":8.0},\"name\":\"gizmo\"}");
+		Gadget roundTrip = json.fromString(str, Gadget.class);
+		Assert.assertEquals(json.toString(roundTrip),
+				"{\"gauge\":{\"n\":\"pressure\"},\"gear\":{\"n\":\"spur\",\"radius\":8.0},\"name\":\"gizmo\"}");
+	}
+	@Test
+	public void testConstructorMatching() {
+		Json json = new Json();
+		FilterParser[] filters = json.getAnnotationProcessor().parserFilters(CustomFilter.class);
+		Assert.assertEquals(filters.length, 1);
+		Assert.assertEquals(filters[0].getClass(), CustomFilter.class);
+		CustomFilter cf = (CustomFilter) filters[0];
+		Assert.assertEquals(cf.clazz, Date.class);
+		Assert.assertEquals(cf.models, json.models());
+		Assert.assertEquals(cf.method, "method");
+		Assert.assertEquals(cf.arg[0],  "arg1");
+	}
+
+	@Parse(value = CustomFilter.class, type = Date.class, arg = { "method", "arg1" })
+	public static class CustomFilter extends FilterParser {
+		Class clazz;
+		Models models;
+		String method;
+		String[] arg;
+
+		public CustomFilter(Model model, Class clazz) {
+			// bogus constructor to test matching
+			this.clazz = clazz;
+		}
+
+		public CustomFilter(Class clazz, Model model) {
+			// bogus constructor to test matching
+			this.clazz = clazz;
+		}
+
+		public CustomFilter(Class clazz, Models models, String method, String arg, String excess) {
+			// bogus constructor to test matching
+			this.clazz = clazz;
+		}
+		public CustomFilter(Class clazz, Models models, String method, String... arg) {
+			this.clazz = clazz;
+			this.models = models;
+			this.method = method;
+			this.arg = arg;
+		}
+	}
+
+	@Test
+	public void testMultiVisitor() {
+		Json json = Json.builder().scan(IncludeAndRenameVisitor.class).build();
+		Thing in = new Thing("foo", "bar");
+		String str = json.toString(in);
+		Assert.assertEquals(str, "{\"n\":\"OOF\"}");
+	}
+
+	@Visit(IncludeAndRenameVisitor.class)
+	public static class IncludeAndRenameVisitor extends MultiFilterVisitor {
+		public IncludeAndRenameVisitor(Models models) {
+			super(new IncludeVisitor<>(models.get(Thing.class), "name"),
+					new FieldVisitorFunction<>(Thing.class, String.class, "name", s -> new StringBuilder(s).reverse().toString()),
+					new FieldVisitor<>(Thing.class, "name", new FilterVisitor() {
+						public void visit(Object o) {
+							if (o instanceof String s) {
+								o = s.toUpperCase();
+							}
+							super.visit(o);
+						}
+					}),
+					new TypeVisitor<Thing>(new RenameVisitor("name", "n")) {});
+		}
+	}
+
+	@Test
+	public void testMultiParser() throws IOException {
+		Json json = Json.builder().scan(IncludeAndRenameParser.class).build();
+		String data = "{\"n\":\"OOF\",\"type\":\"bar\"}";
+		Thing parsed = json.fromString(data, Thing.class);
+		Assert.assertEquals(parsed, new Thing("foo", null));
+	}
+
+	@Parse(IncludeAndRenameParser.class)
+	public static class IncludeAndRenameParser extends MultiFilterParser {
+		public IncludeAndRenameParser(Models models) {
+			super(new TypeParser<Thing>(new RenameParser("n", "name")) {
+			},
+					new FieldParserFunction<>(Thing.class, String.class, String.class, "name", s -> new StringBuilder(s).reverse().toString()),
+					new FieldParser<>(Thing.class, "name", new FilterParser() {
+						public <T> T parse(Model<T> model) {
+							T t = super.parse(model);
+							if (model.getType() == String.class) {
+								t = (T) ((String) t).toLowerCase();
+							}
+							return t;
+						}
+					}),
+					new IncludeParser<>(models.get(Thing.class), "name"));
+		}
+	}
+
+	public static record Thing(String name, String type) {}
 }

@@ -58,24 +58,21 @@ public class ArrayModel<T, I> extends BaseComplexModel<T, ArrayMaker<T, I>> impl
 
 	@Override
 	public T convert(Object o) {
-		if(o==null) {
+		if (o == null) {
 			return null;
 		}
-		if(o.getClass() == getType()) {
+		if (o.getClass() == getType()) {
 			return (T) o;
 		}
 		Model<?> def = models.get(o.getClass());
-		if(def instanceof ListModel) {
-			ArrayMaker<T, I> maker = maker();
-			((ListModel)def).forEachItem(o, i->maker.item((I) i));
-			return maker.make();
+		ArrayMaker<T, I> maker = maker();
+		if (def instanceof ListModel) {
+			((ListModel) def).forEachItem(o, i -> maker.item(itemModel.convert(i)));
+		} 
+		else {
+			maker.item(itemModel.convert(o));
 		}
-		else if(def.getType() == componentType) {
-			ArrayMaker<T, I> maker = maker();
-			maker.item((I) o);
-			return maker.make();
-		}
-		throw new RuntimeException("Cannot convert object "+o+" of type "+o.getClass()+" to "+type.getTypeName());
+		return maker.make();
 	}
 
 	@Override

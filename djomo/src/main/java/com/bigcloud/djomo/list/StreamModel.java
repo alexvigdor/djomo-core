@@ -52,15 +52,11 @@ public class StreamModel<T extends Stream<I>, I> extends BaseComplexModel<T, Str
 		if (o == null) {
 			return null;
 		}
-		if (o.getClass() == getType()) {
-			return (T) o;
-		}
 		Model<?> def = models.get(o.getClass());
-		if(def instanceof ListModel) {
-			return (T) ((ListModel)def).stream(o);
+		if (def instanceof ListModel) {
+			return (T) ((ListModel) def).stream(o);
 		}
-		throw new RuntimeException(
-				"Cannot convert object " + o + " of type " + o.getClass() + " to " + type.getTypeName());
+		return (T) Stream.of(itemModel.convert(o));
 	}
 
 	@Override

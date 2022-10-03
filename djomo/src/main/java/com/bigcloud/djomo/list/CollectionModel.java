@@ -62,19 +62,14 @@ public class CollectionModel<T extends Collection<I>, I> extends BaseComplexMode
 			return (T) o;
 		}
 		Model def = models.get(o.getClass());
+		CollectionMaker<T, I> maker = maker();
 		if (def instanceof ListModel) {
-			CollectionMaker<T, I> maker = maker();
-			// TODO convert list item?
-			((ListModel) def).forEachItem(o, i ->{ 
-				if(itemModel!=null) {
-					i = itemModel.convert(i);
-				}
-				maker.item((I) i);
-			});
-			return maker.make();
+			((ListModel) def).forEachItem(o, i -> maker.item(itemModel.convert(i)));
 		}
-		throw new RuntimeException(
-				"Cannot convert object " + o + " of type " + o.getClass() + " to " + type.getTypeName());
+		else {
+			maker.item(itemModel.convert(o));
+		}
+		return maker.make();
 	}
 
 	@Override
