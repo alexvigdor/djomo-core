@@ -32,20 +32,23 @@ import java.util.Map;
  *
  * @param <T> The type of value to be looked up with a simple ascii string
  */
-public class CharArrayLookup<T> {
+public class CharSequenceLookup<T> {
 
-	private CharArrayLookup() {
+	private CharSequenceLookup() {
 
 	}
 
-	public CharArrayLookup(Map<CharSequence, T> data) {
+	public CharSequenceLookup(Map<CharSequence, T> data) {
 		data.forEach((k, t) -> set(k, 0, t));
+		if (prefix == null) {
+			prefix = new char[0];
+		}
 	}
 
 	private char[] prefix = null;
 	// todo would it be worth the add-time expense of copying array contents to make
 	// this field final?
-	private CharArrayLookup<T>[] children = new CharArrayLookup[95];
+	private CharSequenceLookup<T>[] children = new CharSequenceLookup[95];
 	private T data;
 
 	private void set(CharSequence cs, int pos, T data) {
@@ -57,7 +60,7 @@ public class CharArrayLookup<T> {
 			for (int i = pos; i < csl; i++) {
 				char c = cs.charAt(i);
 				if (c < 32 || c > 126) {
-					throw new IllegalArgumentException("Character out of range for CharArrayLookup " + c);
+					throw new IllegalArgumentException("Character out of range for CharSequenceLookup " + c);
 				}
 				prefix[i - pos] = c;
 			}
@@ -80,9 +83,9 @@ public class CharArrayLookup<T> {
 				}
 			} else {
 				// we need to split this prefix apart
-				CharArrayLookup<T> split = new CharArrayLookup<>();
+				CharSequenceLookup<T> split = new CharSequenceLookup<>();
 				split.children = this.children;
-				this.children = new CharArrayLookup[95];
+				this.children = new CharSequenceLookup[95];
 				split.prefix = Arrays.copyOfRange(prefix, pm + 1, prefix.length);
 				split.data = this.data;
 				this.children[prefix[pm] - ' '] = split;
@@ -97,11 +100,11 @@ public class CharArrayLookup<T> {
 		}
 		char first = cs.charAt(pos++);
 		if (first < 32 || first > 126) {
-			throw new IllegalArgumentException("Character out of range for CharArrayLookup " + first);
+			throw new IllegalArgumentException("Character out of range for CharSequenceLookup " + first);
 		}
-		CharArrayLookup<T> dest = children[first - ' '];
+		CharSequenceLookup<T> dest = children[first - ' '];
 		if (dest == null) {
-			dest = new CharArrayLookup<>();
+			dest = new CharSequenceLookup<>();
 			children[first - ' '] = dest;
 		}
 		dest.set(cs, pos, data);
@@ -117,7 +120,7 @@ public class CharArrayLookup<T> {
 		}
 		char c = cs.charAt(0);
 		int pos = 1;
-		CharArrayLookup<T> node = this;
+		CharSequenceLookup<T> node = this;
 		while (node != null) {
 			char[] np = node.prefix;
 			if (np.length > 0) {
@@ -135,7 +138,7 @@ public class CharArrayLookup<T> {
 				}
 			}
 			if (c < 32 || c > 126) {
-				throw new IllegalArgumentException("Character out of range for CharArrayLookup " + c);
+				throw new IllegalArgumentException("Character out of range for CharSequenceLookup " + c);
 			}
 			node = node.children[c - ' '];
 			if (pos == csl) {
@@ -147,9 +150,9 @@ public class CharArrayLookup<T> {
 	}
 
 	public String toString() {
-		Map<String, CharArrayLookup<T>> lettermappings = new HashMap<>();
+		Map<String, CharSequenceLookup<T>> lettermappings = new HashMap<>();
 		for (int i = 0; i < children.length; i++) {
-			CharArrayLookup<T> ln = children[i];
+			CharSequenceLookup<T> ln = children[i];
 			if (ln != null) {
 				lettermappings.put(String.valueOf((char) (i + ' ')), ln);
 			}

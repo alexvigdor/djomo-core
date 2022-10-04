@@ -35,7 +35,7 @@ import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.ObjectMaker;
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.Visitor;
-import com.bigcloud.djomo.internal.CharArrayLookup;
+import com.bigcloud.djomo.internal.CharSequenceLookup;
 import com.bigcloud.djomo.object.BeanField;
 /**
  * Common baseline behavior for Object Models with a predefined set of fields
@@ -49,7 +49,7 @@ import com.bigcloud.djomo.object.BeanField;
  * @param <V>
  */
 public abstract class BaseObjectModel<T, M extends ObjectMaker<T, F, V>, F extends Field<T, K, V>, K, V> extends BaseComplexModel<T, M> implements ObjectModel<T, M, F, K, V> {
-	protected final CharArrayLookup<F> fields;
+	protected final CharSequenceLookup<F> fields;
 	protected final F[] sortedFields;
 	protected final Models models;
 	protected final List<F> fieldList;
@@ -58,7 +58,7 @@ public abstract class BaseObjectModel<T, M extends ObjectMaker<T, F, V>, F exten
 		super(type, context);
 		this.models = context.models();
 		var fieldMap = initFields(context);
-		this.fields = new CharArrayLookup<>(fieldMap);
+		this.fields = new CharSequenceLookup<>(fieldMap);
 		@SuppressWarnings("unchecked")
 		F[] sortedFields = fieldMap.values().toArray((F[]) new Field[0]);
 		Order order = this.type.getAnnotation(Order.class);

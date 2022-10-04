@@ -23,14 +23,14 @@ import java.util.stream.Collectors;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import com.bigcloud.djomo.internal.CharArrayLookup;
+import com.bigcloud.djomo.internal.CharSequenceLookup;
 import com.bigcloud.djomo.internal.CharArraySequence;
 
-public class CharArrayLookupTest {
+public class CharSequenceLookupTest {
 	@Test
-	public void testCharArrayLookup() {
+	public void testCharSequenceLookup() {
 		List<String> testWords = List.of("id", "title", "type", "tide", "titleLang", "potato", "potash", "pota");
-		CharArrayLookup<String> lookup = new CharArrayLookup<String>(
+		CharSequenceLookup<String> lookup = new CharSequenceLookup<String>(
 				testWords.stream().collect(Collectors.toMap(Function.identity(), Function.identity())));
 		lookup.toString();
 		testWords.forEach(word -> {
@@ -43,13 +43,19 @@ public class CharArrayLookupTest {
 		Assert.assertEquals(lookup.get("titla"), null);
 	}
 
+	@Test
+	public void testEmptyLookup() {
+		CharSequenceLookup<String> lookup = new CharSequenceLookup<String>(Map.of());
+		Assert.assertEquals(lookup.get("missing"), null);
+	}
+
 	@Test(expectedExceptions = IllegalArgumentException.class)
 	public void testBadLookupSet() {
-		new CharArrayLookup<String>(Map.of("\nbad", "test"));
+		new CharSequenceLookup<String>(Map.of("\nbad", "test"));
 	}
 
 	@Test(expectedExceptions = IllegalArgumentException.class)
 	public void testBadLookupGet() {
-		new CharArrayLookup<String>(Map.of("bad", "test", "test", "bad")).get("\nbad");
+		new CharSequenceLookup<String>(Map.of("bad", "test", "test", "bad")).get("\nbad");
 	}
 }
