@@ -1,4 +1,4 @@
-# Djomo :: Data Models for Java Objects
+# djomo :: dynamic json I/O models for Java and JAX-RS
 
 a small, fast and extensible java library for reading and writing JSON and performing data transformations
 
@@ -16,14 +16,14 @@ A model is a logical structure composed of *objects with fields* and *lists with
 * Numbers
 * Booleans
 
-Djomo represents these and related concepts with a set of interfaces and concrete implementations. The class `Models` is used as a runtime lookup/cache/context for model implementations; it makes use of ModelFactory implementations to lazy-load models on demand, and offers a `Resolver` extension interface for plugging in logic to decide on a concrete type to use when parsing to an abstract model or interface.
+djomo represents these and related concepts with a set of interfaces and concrete implementations. The class `Models` is used as a runtime lookup/cache/context for model implementations; it makes use of ModelFactory implementations to lazy-load models on demand, and offers a `Resolver` extension interface for plugging in logic to decide on a concrete type to use when parsing to an abstract model or interface.
 
 The two primary interfaces available for working with data are `Visitor`, for walking an existing object structure in order to analyze or serialize it, and `Parser`, for materializing an object structure from some other representation.  A high-level `Json` utility class has convenient methods for parsing or serializing data using string form, using readers and writers or streams of binary UTF-8 encoded text.  
 
 The behavior of parse and visit operations can be completely customized by extending the `FilterVisitor` and `FilterParser` base classes, which allow you to intercept the recursive calls through a Visitor or Parser.   Common use cases for filtering might be limiting the set of fields serialized for an object, renaming object fields, injecting computed field values, excluding null values, checking for circular references, limiting collection sizes, transforming one data type to another, dereferencing data pointers or applying path-based filters to specific locations in a model.  The Model API comes with a number of base classes to support filtering, as shown in the examples below.  This programming approach means that transformations can be made in a feed-forward and just-in-time fashion, avoiding extra data copies, mutations or the overhead of processing and holding a complete transformed data model in memory.  Built-in models are also provided to support Streams and Futures, for compatibility with arbitrary streaming and asynchronous data sources.
 
 
-### Djomo basics
+### djomo basics
 
 The two core classes you will use to start with are `com.bigcloud.djomo.Models` and `com.bigcloud.djomo.Json`.  Each are concrete types; Models is a heavyweight and preferably long-lived object that acts as a pull-through cache for Model implementations.  Json is a lighter class that provides convenient methods for parsing and serializing, but it must construct a Models instance internally if you don't pass one in.
 
@@ -493,9 +493,9 @@ System.out.println(str);
 
 ```
 
-### Djomo JAX-RS Provider
+### djomo JAX-RS Provider
 
-This tiny module allows you to plug in Djomo as a provider of JSON reading and writing for JAX-RS applications.  It supports customization of Json and Model objects using a custom JAX-RS ContextResolver, and supports the use of @Visit and @Parse annotations from Djomo on any JSON producing endpoint or entity.  It also includes an @Indent annotation to allow for pretty-printing responses.
+This tiny module allows you to plug in djomo as a provider of JSON reading and writing for JAX-RS applications.  It supports customization of Json and Model objects using a custom JAX-RS ContextResolver, and supports the use of @Visit and @Parse annotations from djomo on any JSON producing endpoint or entity.  It also includes an @Indent annotation to allow for pretty-printing responses.
 
 To use the the providers, you should register these two classes with your JAX-RS application
 

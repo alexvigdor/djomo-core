@@ -43,7 +43,7 @@ import com.bigcloud.djomo.json.JsonWriter;
 import com.bigcloud.djomo.json.MergeJsonParser;
 /**
  * <p>
- * Primary high-level utility class for Djomo, used to read JSON data from byte arrays, input streams, readers or strings into java object models, 
+ * Primary high-level utility class for djomo, used to read JSON data from byte arrays, input streams, readers or strings into java object models, 
  * and to write java object models out to JSON via binary streams, character streams or as strings.
  * </p><p>
  * The core Json implementation offers basic, efficient default handling for many data types. Read and write operations can be customized by applying
@@ -57,7 +57,7 @@ import com.bigcloud.djomo.json.MergeJsonParser;
  * before filters that were attached to Json via a builder.
  * </p><p>
  * Json is a lightweight object that relies on an underlying {@link Models} object; you can share the same Models object across multiple Json
- * instances that have been configured with different filters. To add support for data types that don't work with Djomo out of the box,
+ * instances that have been configured with different filters. To add support for data types that don't work with djomo out of the box,
  * you can add a custom {@link ModelFactory} to the {@link Models} passed into the Json, or you can use {@link TypeVisitorFunction} and {@link TypeParserFunction}
  * to apply custom type mapping functions to this Json.
  * </p>

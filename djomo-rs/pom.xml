@@ -19,14 +19,19 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
+
 	<parent>
 		<groupId>com.bigcloud.djomo</groupId>
 		<artifactId>djomo-core</artifactId>
 		<version>0.9.0-SNAPSHOT</version>
 	</parent>
+
 	<artifactId>djomo-rs</artifactId>
 	<packaging>jar</packaging>
-	<name>Djomo Entity Provider for Java Restful Services</name>
+
+	<name>djomo-rs :: dynamic json I/O models for JAX-RS</name>
+	<description>JAX-RS EntityProviders for producing and consuming json using djomo</description>
+
 	<dependencies>
 		<dependency>
 			<groupId>com.bigcloud.djomo</groupId>

@@ -14,7 +14,7 @@
  * limitations under the License.
  *******************************************************************************/
 /**
- * JAX-RS entity providers for producing and consuming JSON using Djomo.
+ * JAX-RS entity providers for producing and consuming JSON using djomo.
  * 
  * @author Alex Vigdor
  *

@@ -26,7 +26,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.ext.ContextResolver;
 import jakarta.ws.rs.ext.Providers;
 /**
- * Base class for Djomo entity providers, supports lookup and caching of Json objects by type from a user-provided ContextResolver&lt;Json&gt;.
+ * Base class for djomo entity providers, supports lookup and caching of Json objects by type from a user-provided ContextResolver&lt;Json&gt;.
  * 
  * @author Alex Vigdoor
  *

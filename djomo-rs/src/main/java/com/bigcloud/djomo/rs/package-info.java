@@ -14,6 +14,6 @@
  * limitations under the License.
  *******************************************************************************/
 /**
- * Djomo Json entity providers for JAX-RS; the Json in use can be customized by implementing a JAX-RS ContextResolver&lt;Json&gt;.
+ * djomo entity providers for JAX-RS; the Json in use can be customized by implementing a JAX-RS ContextResolver&lt;Json&gt;.
  */
 package com.bigcloud.djomo.rs;
