@@ -45,7 +45,7 @@
 
 	<scm>
 		<connection>scm:git:git://github.com/alexvigdor/djomo-core.git</connection>
-		<developerConnection>scm:git:ssh://github.com/alexvigdor/djomo-core.git</developerConnection>
+		<developerConnection>scm:git:ssh://git@github.com/alexvigdor/djomo-core.git</developerConnection>
 		<url>https://github.com/alexvigdor/djomo-core</url>
 	</scm>
 
