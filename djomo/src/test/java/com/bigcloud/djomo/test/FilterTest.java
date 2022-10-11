@@ -21,6 +21,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
@@ -28,6 +30,7 @@ import org.testng.annotations.Test;
 
 import com.bigcloud.djomo.Json;
 import com.bigcloud.djomo.Models;
+import com.bigcloud.djomo.StaticType;
 import com.bigcloud.djomo.annotation.Parse;
 import com.bigcloud.djomo.annotation.Visit;
 import com.bigcloud.djomo.api.Model;
@@ -49,6 +52,7 @@ import com.bigcloud.djomo.filter.RenameParser;
 import com.bigcloud.djomo.filter.RenameVisitor;
 import com.bigcloud.djomo.filter.TypeParser;
 import com.bigcloud.djomo.filter.TypeVisitor;
+import com.bigcloud.djomo.filter.TypeVisitorTransform;
 
 public class FilterTest {
 	Json Json = new Json();
@@ -222,4 +226,49 @@ public class FilterTest {
 	}
 
 	public static record Thing(String name, String type) {}
+
+	@Test
+	public void testInjection() throws IOException {
+		Dao<Thing> dao = new Dao<Thing>();
+		List<UUID> ids = new ArrayList<>();
+		List<Thing> things = new ArrayList<>();
+		for (int i = 0; i < 5; i++) {
+			UUID id = UUID.randomUUID();
+			Thing thing = new Thing("Thing " + i, "thing");
+			dao.put(id, thing);
+			ids.add(id);
+			things.add(thing);
+		}
+		Json json = Json.builder().inject(dao).scan(DaoLoader.class).build();
+		String str = json.toString(ids);
+		List<Thing> rt = json.fromString(str, new StaticType<List<Thing>>() {});
+		Assert.assertEquals(rt, things);
+	}
+
+	@Visit(DaoLoader.class)
+	public static class DaoLoader extends TypeVisitorTransform<UUID> {
+		final Dao dao;
+
+		public DaoLoader(Dao dao) {
+			this.dao = dao;
+		}
+
+		@Override
+		public Object transform(UUID in) {
+			return dao.get(in);
+		}
+
+	}
+
+	public static class Dao<T> {
+		private ConcurrentHashMap<UUID, T> data = new ConcurrentHashMap<>();
+
+		public T get(UUID id) {
+			return data.get(id);
+		}
+
+		public void put(UUID id, T obj) {
+			data.put(id, obj);
+		}
+	}
 }

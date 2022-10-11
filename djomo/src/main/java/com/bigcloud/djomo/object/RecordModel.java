@@ -17,6 +17,8 @@ package com.bigcloud.djomo.object;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodHandles.Lookup;
+import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.AbstractMap;
 import java.util.Arrays;
@@ -27,10 +29,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.base.BaseObjectModel;
+import com.bigcloud.djomo.object.BeanField.Builder;
 
 public class RecordModel<T>
-		extends BaseObjectModel<T, RecordMaker<T>, BeanField<T, Object>, String, Object> {
+		extends ObjectMethodsModel<T, RecordMaker<T>> {
 	final MethodHandle constructor;
 	final Object[] args;
 
@@ -55,16 +57,18 @@ public class RecordModel<T>
 		try {
 			return (T) constructor.invokeWithArguments(args);
 		} catch (Throwable e) {
-			throw new RuntimeException("Unable to create instance of "+getType().getName()+" with "+Arrays.toString(args), e);
+			throw new RuntimeException(
+					"Unable to create instance of " + getType().getName() + " with " + Arrays.toString(args), e);
 		}
 	}
 
 	@Override
 	protected Map<CharSequence, BeanField<T, Object>> initFields(ModelContext context) throws IllegalAccessException {
-		MethodHandles.Lookup lookup = MethodHandles.lookup();
-		var fields = new ConcurrentHashMap<String, BeanField.Builder<?,?>>();
-		Function<String, BeanField.Builder<?,?>> fieldLookup = (name) -> fields.computeIfAbsent(name,
-				n -> BeanField.builder().name(n));
+		Lookup lookup = MethodHandles.lookup();
+		var fields = new ConcurrentHashMap<String, BeanField.Builder<T,Object>>();
+		Function<String, BeanField.Builder<T,Object>> fieldLookup = (name) -> fields.computeIfAbsent(name,
+				n -> BeanField.<T, Object>builder().name(n));
+		processMethods(lookup, context, fieldLookup);
 		var rcs = type.getRecordComponents();
 		for(int i=0; i<rcs.length;i++) {
 			var rc = rcs[i];
@@ -79,6 +83,12 @@ public class RecordModel<T>
 		return fields.entrySet().stream()
 				.map(e -> new AbstractMap.SimpleEntry<String, BeanField>(e.getKey(), e.getValue().build()))
 				.collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+	}
+
+	@Override
+	protected void processMethod(Method method, Lookup lookup, ModelContext context,
+			Function<String, Builder<T, Object>> fieldLookup) throws IllegalAccessException {
+		// no further processing needed, parent class will handle basic accessors
 	}
 
 }

@@ -50,9 +50,11 @@ public class AnnotationProcessor {
 	private final ConcurrentHashMap<Visit, FilterVisitor> visitors = new ConcurrentHashMap<>();
 	private final ConcurrentHashMap<Parse, FilterParser> parsers = new ConcurrentHashMap<>();
 	private final Models models;
+	private final Object[] dependencies;
 	
-	public AnnotationProcessor(Models models) {
+	public AnnotationProcessor(Models models, Object... dependencies) {
 		this.models = models;
+		this.dependencies = dependencies.clone();
 	}
 
 	public FilterVisitor[] visitorFilters(Class<?> type) {
@@ -146,6 +148,7 @@ public class AnnotationProcessor {
 			boolean foundType = false;
 			Object[] values = new Object[parms.length];
 			int argPointer = 0;
+			PARM_LOOP:
 			for(int i=0; i<parms.length; i++) {
 				Parameter parm = parms[i];
 				Class parmType = parm.getType();
@@ -184,6 +187,12 @@ public class AnnotationProcessor {
 					argPointer = args.length;
 				}
 				else {
+					for(Object d: dependencies) {
+						if(parmType.isInstance(d)) {
+							values[i] = d;
+							continue PARM_LOOP;
+						}
+					}
 					continue CONSTRUCTOR_SEARCH;
 				}
 			}

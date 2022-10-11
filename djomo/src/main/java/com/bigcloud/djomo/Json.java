@@ -305,29 +305,41 @@ public class Json {
 	 */
 	public static class JsonBuilder {
 		Models models;
-		AnnotationProcessor processor;
-		ArrayDeque<FilterVisitor> visitorFilters = new ArrayDeque<>();
-		ArrayDeque<FilterParser> parserFilters = new ArrayDeque<>();
+		ArrayDeque<Object> stages = new ArrayDeque<>();
+		ArrayDeque<Object> dependencies = new ArrayDeque<>();
 
 		public JsonBuilder models(Models models) {
 			this.models = models;
-			this.processor = new AnnotationProcessor(models);
 			return this;
 		}
 
 		public JsonBuilder visit(FilterVisitor... filters) {
 			for (FilterVisitor v : filters) {
-				visitorFilters.add(v);
+				stages.add(v);
 			}
 			return this;
 		}
 
 		public JsonBuilder parse(FilterParser... filters) {
 			for (FilterParser p : filters) {
-				parserFilters.add(p);
+				stages.add(p);
 			}
 			return this;
 		}
+
+		/**
+		 * Provide user-defined objects to be made available for injection by type in filter constructors
+		 * 
+		 * @param dependencies one or more user-defined objects
+		 * @return this builder
+		 */
+		public JsonBuilder inject(Object... dependencies) {
+			for(Object o: dependencies) {
+				this.dependencies.add(o);
+			}
+			return this;
+		}
+
 		/**
 		 * Scan java classes for {@link com.bigcloud.djomo.annotation.Visit} and {@link com.bigcloud.djomo.annotation.Parse} annotations, load and attach declared filters to the built Json instance
 		 * 
@@ -335,24 +347,34 @@ public class Json {
 		 * @return this builder
 		 */
 		public JsonBuilder scan(Class<?>... classes) {
-			if(processor == null) {
-				models(new Models());
-			}
 			for (Class c : classes) {
-				for (FilterVisitor v : processor.visitorFilters(c)) {
-					visitorFilters.add(v);
-				}
-				for (FilterParser f : processor.parserFilters(c)) {
-					parserFilters.add(f);
-				}
+				stages.add(c);
 			}
 			return this;
 		}
 
 		public Json build() {
 			Models m = models == null ? new Models() : models;
-			AnnotationProcessor p = processor == null ? new AnnotationProcessor(m) : processor;
-			return new Json(m, p, visitorFilters.toArray(new FilterVisitor[0]),
+			AnnotationProcessor processor = new AnnotationProcessor(m, dependencies.toArray());
+			ArrayDeque<FilterVisitor> visitorFilters = new ArrayDeque<>();
+			ArrayDeque<FilterParser> parserFilters = new ArrayDeque<>();
+			for(Object stage: stages) {
+				if(stage instanceof FilterVisitor f) {
+					visitorFilters.add(f);
+				}
+				else if(stage instanceof FilterParser f) {
+					parserFilters.add(f);
+				}
+				else if(stage instanceof Class c) {
+					for (FilterVisitor v : processor.visitorFilters(c)) {
+						visitorFilters.add(v);
+					}
+					for (FilterParser f : processor.parserFilters(c)) {
+						parserFilters.add(f);
+					}
+				}
+			}
+			return new Json(m, processor, visitorFilters.toArray(new FilterVisitor[0]),
 					parserFilters.toArray(new FilterParser[0]));
 		}
 	}
