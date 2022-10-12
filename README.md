@@ -27,10 +27,31 @@ The behavior of parse and visit operations can be completely customized by exten
 
 The two core classes you will use to start with are `com.bigcloud.djomo.Models` and `com.bigcloud.djomo.Json`.  Each are concrete types; Models is a heavyweight and preferably long-lived object that acts as a pull-through cache for Model implementations.  Json is a lighter class that provides convenient methods for parsing and serializing, but it must construct a Models instance internally if you don't pass one in.
 
-First let's serialize and parse regular collections; while in this example `Map.of(...)` does not produce an ordered map, `Json.fromString(...)` does by default return a LinkedHashMap that maintains the field order of the source json.
+Here's a quick look at basic parsing and serializing using the read, write, fromString and toString methods of Json.  Read and write are overloaded to accept either binary streams or character readers/writers.
 
 ```
 import com.bigcloud.djomo.Json;
+
+Json json = new Json();
+List<Integer> data = List.of(1, 2, 3);
+ByteArrayOutputStream binOut = new ByteArrayOutputStream();
+json.write(data, binOut);
+Object roundTrip = json.read(binOut.toByteArray());
+assertEquals(roundTrip, data);
+roundTrip = json.read(new ByteArrayInputStream(binOut.toByteArray()));
+assertEquals(roundTrip, data);
+
+CharArrayWriter charOut = new CharArrayWriter();
+json.write(data, charOut);
+roundTrip = json.read(new StringReader(charOut.toString()));
+assertEquals(roundTrip, data);
+roundTrip = json.fromString(charOut.toString());
+assertEquals(json.toString(data), charOut.toString());
+```
+
+Now let's serialize and parse regular collections; while in this example `Map.of(...)` does not produce an ordered map, `Json.fromString(...)` does by default return a LinkedHashMap that maintains the field order of the source json.
+
+```
 Json json = new Json();
 Map data = Map.of("name", "John Doe", "age", 42, "aliases", List.of("Johnny", "Jawn"));
 String str = json.toString(data);
@@ -364,7 +385,9 @@ class Dao {
 	}
 }
 
-public static class ExpandFilter extends TypeVisitorTransform<Long> {
+import com.bigcloud.djomo.filter.TypeVisitorTransform;
+
+class ExpandFilter extends TypeVisitorTransform<Long> {
 	Dao dao;
 
 	public ExpandFilter(Dao dao) {
@@ -379,22 +402,20 @@ public static class ExpandFilter extends TypeVisitorTransform<Long> {
 }
 
 @Visit(ExpandFilter.class)
-public static record Doc(String title, long[] refs) {}
+record Doc(String title, long[] refs) {}
 
-public static void injection() {
-	Dao dao = new Dao();
-	dao.setData(1, "Hello");
-	dao.setData(2, "World");
-	Doc doc = new Doc("Greeting", new long[] { 1, 2 });
-	Json json = new Json();
-	String str = json.toString(doc);
-	System.out.println(str);
-		// {"refs":[1,2],"title":"Greeting"}
-	json = json.builder().scan(Doc.class).inject(dao).build();
-	str = json.toString(doc);
-	System.out.println(str);
-		// {"refs":["Hello","World"],"title":"Greeting"}
-}
+Dao dao = new Dao();
+dao.setData(1, "Hello");
+dao.setData(2, "World");
+Doc doc = new Doc("Greeting", new long[] { 1, 2 });
+Json json = new Json();
+String str = json.toString(doc);
+System.out.println(str);
+	// {"refs":[1,2],"title":"Greeting"}
+json = json.builder().scan(Doc.class).inject(dao).build();
+str = json.toString(doc);
+System.out.println(str);
+	// {"refs":["Hello","World"],"title":"Greeting"}
 
 ```
 
