@@ -34,6 +34,7 @@ import com.bigcloud.djomo.StaticType;
 import com.bigcloud.djomo.annotation.Parse;
 import com.bigcloud.djomo.annotation.Visit;
 import com.bigcloud.djomo.api.Model;
+import com.bigcloud.djomo.error.AnnotationException;
 import com.bigcloud.djomo.filter.CircularReferenceVisitor;
 import com.bigcloud.djomo.filter.ExcludeParser;
 import com.bigcloud.djomo.filter.ExcludeVisitor;
@@ -245,6 +246,11 @@ public class FilterTest {
 		Assert.assertEquals(rt, things);
 	}
 
+	@Test(expectedExceptions = AnnotationException.class)
+	public void testMissingVisitorInjection() throws IOException {
+		Json.builder().scan(DaoLoader.class).build();
+	}
+
 	@Visit(DaoLoader.class)
 	public static class DaoLoader extends TypeVisitorTransform<UUID> {
 		final Dao dao;
@@ -269,6 +275,22 @@ public class FilterTest {
 
 		public void put(UUID id, T obj) {
 			data.put(id, obj);
+		}
+	}
+
+	@Test(expectedExceptions = AnnotationException.class)
+	public void testMissingParserInjection() throws IOException {
+		Json.builder().scan(TroubleMaker.class).build();
+	}
+
+	@Parse(TroubleMaker.class)
+	public static class TroubleMaker extends FilterParser {
+		public TroubleMaker(String name) {
+
+		}
+
+		public TroubleMaker(Dao dao, String name) {
+
 		}
 	}
 }
