@@ -1,4 +1,4 @@
-# djomo :: dynamic json I/O models for Java and JAX-RS
+# djomo :: dynamic json models for Java and JAX-RS
 
 a small, fast and extensible java library for reading and writing JSON and performing data transformations
 
@@ -306,6 +306,9 @@ System.out.println(str);
 	// {"a":"b","d":[1,2]}
 ```
 
+
+##### Declarative Filters using annotations
+
 The examples so far show how to pass a concrete filter into a parse or visit operation; the Model API also comes with a set of annotations that can be used to define filters, and you can use the annotation processor to read and apply those filters.  A variation on the prior example, we use the class MyFilter to organize one or more visitors that we have defined with the @Visit or @Parse annotation:
 
 ```
@@ -337,6 +340,66 @@ str = json.toString(data);
 System.out.println(str);
 	// {"a":"b","d":[1,2]}
 ```
+
+The AnnotationProcessor supports a simple form of dependency injection for filters, so that configuration options and application components can when necessary be passed down into filters that are managed by the djomo runtime.
+
+Out of the box, filter constructor injection is supported for 
+
+- a single Model or Class, whose value will come from the "type" attribute of the annotation
+- Models, so that the filter can load arbitrary models for processing
+- Strings and/or a String[] whose values will come from the "arg" attribute of the annotation
+
+In addition, you can inject custom objects into the Json builder that will then be available for filter constructor injection, based on simple type matching.  For example, imagine a filter that expands data references by loading objects from an application DAO.
+
+```
+class Dao {
+	Map<Long, String> items = new ConcurrentHashMap<>();
+
+	public String getData(long id) {
+		return items.get(id);
+	}
+
+	public void setData(long id, String data) {
+		items.put(id, data);
+	}
+}
+
+public static class ExpandFilter extends TypeVisitorTransform<Long> {
+	Dao dao;
+
+	public ExpandFilter(Dao dao) {
+		this.dao = dao;
+	}
+
+	@Override
+	public String transform(Long in) {
+		return dao.getData(in);
+	}
+
+}
+
+@Visit(ExpandFilter.class)
+public static record Doc(String title, long[] refs) {}
+
+public static void injection() {
+	Dao dao = new Dao();
+	dao.setData(1, "Hello");
+	dao.setData(2, "World");
+	Doc doc = new Doc("Greeting", new long[] { 1, 2 });
+	Json json = new Json();
+	String str = json.toString(doc);
+	System.out.println(str);
+		// {"refs":[1,2],"title":"Greeting"}
+	json = json.builder().scan(Doc.class).inject(dao).build();
+	str = json.toString(doc);
+	System.out.println(str);
+		// {"refs":["Hello","World"],"title":"Greeting"}
+}
+
+```
+
+
+##### Field filters
 
 A trio of common filters support common operations on fields during either visit or parse; field renaming, field including and field excluding.  These can be combined with a `type` to narrow the effect to specific classes.
 
@@ -396,6 +459,8 @@ System.out.println(json.toString(roundTrip));
 	// {"ids":["1","2","3"],"name":"Hello World"}
 ```
 
+##### Transforming data with filters
+
 You can also use filters to perform structural modifications to a data type, e.g. to serialize a java object with fields down to a plain string and back.  Supporting a full round trip of structural transformations requires symmetric parser and visitor filters; in this example we create those symmetric filters as classes, and attach them using annotations to a single interface to group them together.
 
 ```
@@ -451,6 +516,8 @@ roundTrip = json.fromString(str, Contact.class);
 assertEquals(roundTrip, contact);
 
 ```
+
+##### Limiting filter scope by type and path
 
 In the basic form, the annotations take as a value the class of the VisitorFilter or ParserFilter to be invoked.  You can also provide `type` and `path` elements to the annotations which will automatically combine the specified filter with a Type or Path filter to limit the scope in which the filter is applied.  In this example, we set up filters to exclude a field by name from a java class, only when it is found under a given path.  We also inject the simple class name as a field for some types.
 
