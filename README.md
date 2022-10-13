@@ -2,32 +2,27 @@
 
 a small, fast and extensible java library for reading and writing JSON and performing data transformations
 
-## What is a Model?
+## What is djomo?
 
-A model is a logical structure composed of *objects with fields* and *lists with items*, with the terminal elements in the structure composed of primitives like strings, numbers and booleans.  The concept of a model maps directly onto the structure of a JSON document when serialized.  In java, a model might be represented using
+djomo is an experimental (but refined) JSON library for Java designed according to the Open/Closed principle, to allow the composition of arbitrary parser and serializer features on top of a fast, lean core. 
 
-* Java collections (lists and maps)
-* Java Beans (field getters and setters)
-* Builder & Immutable objects (builder pattern e.g. Lombok @Value @Builder)
-* Java records (jdk 16+ immutable object)
-* Java temporal objects (java.time)
-* Java enums
-* Strings
-* Numbers
-* Booleans
+A pair of interfaces (`Parser`, `Visitor`) and base classes (`FilterParser`, `FilterVisitor`) allow users to implement complex filters that intercept each step of parsing or serializing.  A matching pair of annotations (`@Parse`, `@Visit`) allow declarative use of any filter with dependency injection and filter scoping based on path and type.
 
-djomo represents these and related concepts with a set of interfaces and concrete implementations. The class `Models` is used as a runtime lookup/cache/context for model implementations; it makes use of ModelFactory implementations to lazy-load models on demand, and offers a `Resolver` extension interface for plugging in logic to decide on a concrete type to use when parsing to an abstract model or interface.
+Another set of interfaces represent data Models (which might be `ListModel`, `ObjectModel` or `SimpleModel`), and users can apply custom Models for unique data types by developing a `ModelFactory` plugin, or by writing a filter that injects a custom Model into the Parser or Visitor.
 
-The two primary interfaces available for working with data are `Visitor`, for walking an existing object structure in order to analyze or serialize it, and `Parser`, for materializing an object structure from some other representation.  A high-level `Json` utility class has convenient methods for parsing or serializing data using string form, using readers and writers or streams of binary UTF-8 encoded text.  
+Provided filter implementations include limiting the set of fields visited for an object, renaming object fields, excluding null values, checking for circular references, limiting collection sizes, reducing objects to lists of field values, and applying path-based filters to specific locations in a model.  Additional base classes make it simple to write filters to transform one data type to another, to inject computed field values, or to transform a specific field of an object. Filters are applied in a feed-forward and just-in-time fashion, avoiding extra data copies, mutations or the overhead of processing and holding a complete transformed data model in memory.
 
-The behavior of parse and visit operations can be completely customized by extending the `FilterVisitor` and `FilterParser` base classes, which allow you to intercept the recursive calls through a Visitor or Parser.   Common use cases for filtering might be limiting the set of fields serialized for an object, renaming object fields, injecting computed field values, excluding null values, checking for circular references, limiting collection sizes, transforming one data type to another, dereferencing data pointers or applying path-based filters to specific locations in a model.  The Model API comes with a number of base classes to support filtering, as shown in the examples below.  This programming approach means that transformations can be made in a feed-forward and just-in-time fashion, avoiding extra data copies, mutations or the overhead of processing and holding a complete transformed data model in memory.  Built-in models are also provided to support Streams and Futures, for compatibility with arbitrary streaming and asynchronous data sources.
+Out of the box, djomo provides Models for many common Java types, including Strings and primitives, arrays, collections (lists and maps), beans, records, builders, java.time objects, Enums and EnumMaps, UUIDs, URIs and URLs, along with more complex types such as java.util.concurrent.atomic.*, Future, Stream, Supplier, and Optional. 
 
+### djomo starter
 
-### djomo basics
+The two core classes you will use are `com.bigcloud.djomo.Models` and `com.bigcloud.djomo.Json`. 
 
-The two core classes you will use to start with are `com.bigcloud.djomo.Models` and `com.bigcloud.djomo.Json`.  Each are concrete types; Models is a heavyweight and preferably long-lived object that acts as a pull-through cache for Model implementations.  Json is a lighter class that provides convenient methods for parsing and serializing, but it must construct a Models instance internally if you don't pass one in.
+`Models` is a heavyweight and preferably long-lived object that acts as a pull-through cache for Model implementations. `Models` can be built with custom `ModelFactory` implementations that lazy-load models on demand, and `Resolver` implementations to pick a concrete type when parsing to an abstract model or interface. 
 
-Here's a quick look at basic parsing and serializing using the read, write, fromString and toString methods of Json.  Read and write are overloaded to accept either binary streams or character readers/writers.
+`Json` is a lighter class that provides convenient methods for parsing and serializing, but it must construct a Models instance internally if you don't pass one in.  
+
+Here's a quick look at basic parsing and serializing using the `read`, `write`, `fromString` and `toString` methods of Json.  Read and write are overloaded to accept either binary streams of UTF-8 encoded text or character readers/writers.  All these methods also accept filters as varargs at the end of the method call, that will be invoked during that operation; filters are covered in more depth below.
 
 ```
 import com.bigcloud.djomo.Json;
@@ -327,10 +322,18 @@ System.out.println(str);
 	// {"a":"b","d":[1,2]}
 ```
 
+it is also possible to install filters at the time the Json is being built, so that all calls through that Json object will invoke those filters.  We could repeat the previous example with a permanently attached filter:
+
+```
+json = Json.builder().visit(new OmitNullVisitor()).build();
+str = json.toString(data);
+System.out.println(str);
+	// {"a":"b","d":[1,2]}
+```
 
 ##### Declarative Filters using annotations
 
-The examples so far show how to pass a concrete filter into a parse or visit operation; the Model API also comes with a set of annotations that can be used to define filters, and you can use the annotation processor to read and apply those filters.  A variation on the prior example, we use the class MyFilter to organize one or more visitors that we have defined with the @Visit or @Parse annotation:
+The examples so far show how to pass a concrete filter into a parse or visit operation; the Model API also comes with a set of annotations that can be used to configure filters, and you can use the annotation processor to read and apply those filters.  A variation on the prior example, we use the class MyFilter to organize one or more visitors that we have defined with the @Visit or @Parse annotation:
 
 ```
 import com.bigcloud.djomo.annotation.Visit;
@@ -339,16 +342,6 @@ import com.bigcloud.djomo.annotation.Visit;
 public class MyFilter{}
 
 String str = json.toString(data, json.getAnnotationProcessor().visitorFilters(MyFilter.class));
-System.out.println(str);
-	// {"a":"b","d":[1,2]}
-```
-
-
-it is also possible to install filters at the time the Json is being built, so that all calls through that Json object will invoke those filters.  We could repeat the previous example with a permanently attached filter:
-
-```
-json = Json.builder().visit(new OmitNullVisitor()).build();
-str = json.toString(data);
 System.out.println(str);
 	// {"a":"b","d":[1,2]}
 ```
