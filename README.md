@@ -1,36 +1,52 @@
-# djomo :: dynamic json I/O models for Java and JAX-RS
+# djomo :: dynamic json models for Java and JAX-RS
 
 a small, fast and extensible java library for reading and writing JSON and performing data transformations
 
-## What is a Model?
+## What is djomo?
 
-A model is a logical structure composed of *objects with fields* and *lists with items*, with the terminal elements in the structure composed of primitives like strings, numbers and booleans.  The concept of a model maps directly onto the structure of a JSON document when serialized.  In java, a model might be represented using
+djomo is an experimental (but refined) JSON library for Java designed according to the Open/Closed principle, to allow the composition of arbitrary parser and serializer features on top of a fast, lean core. 
 
-* Java collections (lists and maps)
-* Java Beans (field getters and setters)
-* Builder & Immutable objects (builder pattern e.g. Lombok @Value @Builder)
-* Java records (jdk 16+ immutable object)
-* Java temporal objects (java.time)
-* Java enums
-* Strings
-* Numbers
-* Booleans
+A pair of interfaces (`Parser`, `Visitor`) and base classes (`FilterParser`, `FilterVisitor`) allow users to implement complex filters that intercept each step of parsing or serializing.  A matching pair of annotations (`@Parse`, `@Visit`) allow declarative use of any filter with dependency injection and filter scoping based on path and type.
 
-djomo represents these and related concepts with a set of interfaces and concrete implementations. The class `Models` is used as a runtime lookup/cache/context for model implementations; it makes use of ModelFactory implementations to lazy-load models on demand, and offers a `Resolver` extension interface for plugging in logic to decide on a concrete type to use when parsing to an abstract model or interface.
+Another set of interfaces represent data Models (which might be `ListModel`, `ObjectModel` or `SimpleModel`), and users can apply custom Models for unique data types by developing a `ModelFactory` plugin, or by writing a filter that injects a custom Model into the Parser or Visitor.
 
-The two primary interfaces available for working with data are `Visitor`, for walking an existing object structure in order to analyze or serialize it, and `Parser`, for materializing an object structure from some other representation.  A high-level `Json` utility class has convenient methods for parsing or serializing data using string form, using readers and writers or streams of binary UTF-8 encoded text.  
+Provided filter implementations include limiting the set of fields visited for an object, renaming object fields, excluding null values, checking for circular references, limiting collection sizes, reducing objects to lists of field values, and applying path-based filters to specific locations in a model.  Additional base classes make it simple to write filters to transform one data type to another, to inject computed field values, or to transform a specific field of an object. Filters are applied in a feed-forward and just-in-time fashion, avoiding extra data copies, mutations or the overhead of processing and holding a complete transformed data model in memory.
 
-The behavior of parse and visit operations can be completely customized by extending the `FilterVisitor` and `FilterParser` base classes, which allow you to intercept the recursive calls through a Visitor or Parser.   Common use cases for filtering might be limiting the set of fields serialized for an object, renaming object fields, injecting computed field values, excluding null values, checking for circular references, limiting collection sizes, transforming one data type to another, dereferencing data pointers or applying path-based filters to specific locations in a model.  The Model API comes with a number of base classes to support filtering, as shown in the examples below.  This programming approach means that transformations can be made in a feed-forward and just-in-time fashion, avoiding extra data copies, mutations or the overhead of processing and holding a complete transformed data model in memory.  Built-in models are also provided to support Streams and Futures, for compatibility with arbitrary streaming and asynchronous data sources.
+Out of the box, djomo provides Models for many common Java types, including Strings and primitives, arrays, collections (lists and maps), beans, records, builders, java.time objects, Enums and EnumMaps, UUIDs, URIs and URLs, along with more complex types such as java.util.concurrent.atomic.*, Future, Stream, Supplier, and Optional. 
 
+### djomo starter
 
-### djomo basics
+The two core classes you will use are `com.bigcloud.djomo.Models` and `com.bigcloud.djomo.Json`. 
 
-The two core classes you will use to start with are `com.bigcloud.djomo.Models` and `com.bigcloud.djomo.Json`.  Each are concrete types; Models is a heavyweight and preferably long-lived object that acts as a pull-through cache for Model implementations.  Json is a lighter class that provides convenient methods for parsing and serializing, but it must construct a Models instance internally if you don't pass one in.
+`Models` is a heavyweight and preferably long-lived object that acts as a pull-through cache for Model implementations. `Models` can be built with custom `ModelFactory` implementations that lazy-load models on demand, and `Resolver` implementations to pick a concrete type when parsing to an abstract model or interface. 
 
-First let's serialize and parse regular collections; while in this example `Map.of(...)` does not produce an ordered map, `Json.fromString(...)` does by default return a LinkedHashMap that maintains the field order of the source json.
+`Json` is a lighter class that provides convenient methods for parsing and serializing, but it must construct a Models instance internally if you don't pass one in.  
+
+Here's a quick look at basic parsing and serializing using the `read`, `write`, `fromString` and `toString` methods of Json.  Read and write are overloaded to accept either binary streams of UTF-8 encoded text or character readers/writers.  All these methods also accept filters as varargs at the end of the method call, that will be invoked during that operation; filters are covered in more depth below.
 
 ```
 import com.bigcloud.djomo.Json;
+
+Json json = new Json();
+List<Integer> data = List.of(1, 2, 3);
+ByteArrayOutputStream binOut = new ByteArrayOutputStream();
+json.write(data, binOut);
+Object roundTrip = json.read(binOut.toByteArray());
+assertEquals(roundTrip, data);
+roundTrip = json.read(new ByteArrayInputStream(binOut.toByteArray()));
+assertEquals(roundTrip, data);
+
+CharArrayWriter charOut = new CharArrayWriter();
+json.write(data, charOut);
+roundTrip = json.read(new StringReader(charOut.toString()));
+assertEquals(roundTrip, data);
+roundTrip = json.fromString(charOut.toString());
+assertEquals(json.toString(data), charOut.toString());
+```
+
+Now let's serialize and parse regular collections; while in this example `Map.of(...)` does not produce an ordered map, `Json.fromString(...)` does by default return a LinkedHashMap that maintains the field order of the source json.
+
+```
 Json json = new Json();
 Map data = Map.of("name", "John Doe", "age", 42, "aliases", List.of("Johnny", "Jawn"));
 String str = json.toString(data);
@@ -306,7 +322,18 @@ System.out.println(str);
 	// {"a":"b","d":[1,2]}
 ```
 
-The examples so far show how to pass a concrete filter into a parse or visit operation; the Model API also comes with a set of annotations that can be used to define filters, and you can use the annotation processor to read and apply those filters.  A variation on the prior example, we use the class MyFilter to organize one or more visitors that we have defined with the @Visit or @Parse annotation:
+it is also possible to install filters at the time the Json is being built, so that all calls through that Json object will invoke those filters.  We could repeat the previous example with a permanently attached filter:
+
+```
+json = Json.builder().visit(new OmitNullVisitor()).build();
+str = json.toString(data);
+System.out.println(str);
+	// {"a":"b","d":[1,2]}
+```
+
+##### Declarative Filters using annotations
+
+The examples so far show how to pass a concrete filter into a parse or visit operation; the Model API also comes with a set of annotations that can be used to configure filters, and you can use the annotation processor to read and apply those filters.  A variation on the prior example, we use the class MyFilter to organize one or more visitors that we have defined with the @Visit or @Parse annotation:
 
 ```
 import com.bigcloud.djomo.annotation.Visit;
@@ -319,16 +346,6 @@ System.out.println(str);
 	// {"a":"b","d":[1,2]}
 ```
 
-
-it is also possible to install filters at the time the Json is being built, so that all calls through that Json object will invoke those filters.  We could repeat the previous example with a permanently attached filter:
-
-```
-json = Json.builder().visit(new OmitNullVisitor()).build();
-str = json.toString(data);
-System.out.println(str);
-	// {"a":"b","d":[1,2]}
-```
-
 Or we can use the scan function of the json builder to pick up @Visit or @Parse annotations
 
 ```
@@ -337,6 +354,66 @@ str = json.toString(data);
 System.out.println(str);
 	// {"a":"b","d":[1,2]}
 ```
+
+The AnnotationProcessor supports a simple form of dependency injection for filters, so that configuration options and application components can when necessary be passed down into filters that are managed by the djomo runtime.
+
+Out of the box, filter constructor injection is supported for 
+
+- a single Model or Class, whose value will come from the "type" attribute of the annotation
+- Models, so that the filter can load arbitrary models for processing
+- Strings and/or a String[] whose values will come from the "arg" attribute of the annotation
+
+In addition, you can inject custom objects into the Json builder that will then be available for filter constructor injection, based on simple type matching.  For example, imagine a filter that expands data references by loading objects from an application DAO.
+
+```
+class Dao {
+	Map<Long, String> items = new ConcurrentHashMap<>();
+
+	public String getData(long id) {
+		return items.get(id);
+	}
+
+	public void setData(long id, String data) {
+		items.put(id, data);
+	}
+}
+
+import com.bigcloud.djomo.filter.TypeVisitorTransform;
+
+class ExpandFilter extends TypeVisitorTransform<Long> {
+	Dao dao;
+
+	public ExpandFilter(Dao dao) {
+		this.dao = dao;
+	}
+
+	@Override
+	public String transform(Long in) {
+		return dao.getData(in);
+	}
+
+}
+
+@Visit(ExpandFilter.class)
+record Doc(String title, long[] refs) {}
+
+Dao dao = new Dao();
+dao.setData(1, "Hello");
+dao.setData(2, "World");
+Doc doc = new Doc("Greeting", new long[] { 1, 2 });
+Json json = new Json();
+String str = json.toString(doc);
+System.out.println(str);
+	// {"refs":[1,2],"title":"Greeting"}
+json = json.builder().scan(Doc.class).inject(dao).build();
+str = json.toString(doc);
+System.out.println(str);
+	// {"refs":["Hello","World"],"title":"Greeting"}
+
+```
+
+
+##### Field filters
 
 A trio of common filters support common operations on fields during either visit or parse; field renaming, field including and field excluding.  These can be combined with a `type` to narrow the effect to specific classes.
 
@@ -396,6 +473,8 @@ System.out.println(json.toString(roundTrip));
 	// {"ids":["1","2","3"],"name":"Hello World"}
 ```
 
+##### Transforming data with filters
+
 You can also use filters to perform structural modifications to a data type, e.g. to serialize a java object with fields down to a plain string and back.  Supporting a full round trip of structural transformations requires symmetric parser and visitor filters; in this example we create those symmetric filters as classes, and attach them using annotations to a single interface to group them together.
 
 ```
@@ -451,6 +530,8 @@ roundTrip = json.fromString(str, Contact.class);
 assertEquals(roundTrip, contact);
 
 ```
+
+##### Limiting filter scope by type and path
 
 In the basic form, the annotations take as a value the class of the VisitorFilter or ParserFilter to be invoked.  You can also provide `type` and `path` elements to the annotations which will automatically combine the specified filter with a Type or Path filter to limit the scope in which the filter is applied.  In this example, we set up filters to exclude a field by name from a java class, only when it is found under a given path.  We also inject the simple class name as a field for some types.
 

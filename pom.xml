@@ -23,7 +23,7 @@
 	<packaging>pom</packaging>
 	<version>0.9.1-SNAPSHOT</version>
 
-	<name>djomo-core :: dynamic json I/O models for Java and JAX-RS</name>
+	<name>djomo-core :: dynamic json models for Java and JAX-RS</name>
 	<description>Parent project for djomo and djomo-rs libraries</description>
 	<url>https://github.com/alexvigdor/djomo-core</url>
 

@@ -27,7 +27,7 @@
 	<artifactId>djomo-rs</artifactId>
 	<packaging>jar</packaging>
 
-	<name>djomo-rs :: dynamic json I/O models for JAX-RS</name>
+	<name>djomo-rs :: dynamic json models for JAX-RS</name>
 	<description>JAX-RS EntityProviders for producing and consuming json using djomo</description>
 
 	<dependencies>

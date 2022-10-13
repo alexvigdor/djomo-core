@@ -27,7 +27,7 @@
 	<artifactId>djomo</artifactId>
 	<packaging>jar</packaging>
 
-	<name>djomo :: dynamic json I/O models for Java</name>
+	<name>djomo :: dynamic json models for Java</name>
 	<description>a small, fast and extensible java library for reading and writing JSON and performing data transformations</description>
 
 	<properties>

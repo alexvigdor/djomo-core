@@ -47,7 +47,7 @@ public class BeanModel<T> extends ObjectMethodsModel<T, BeanMaker<T>> {
 		try {
 			return (T) constructor.invoke();
 		} catch (Throwable e) {
-			throw new RuntimeException("Unable to create instance of "+type.getName(), e);
+			throw new RuntimeException("Unable to create instance of " + type.getName(), e);
 		}
 	}
 
