@@ -33,9 +33,13 @@ import jakarta.ws.rs.ext.Providers;
  */
 public class JsonContext {
 	private static final AtomicReference<Json> defaultJson = new AtomicReference<>();
-	@Context
 	protected Providers providers;
 	private final Map<Class<?>, Json> jsons = new ConcurrentHashMap<>();
+
+	@Context
+	public void setProviders(Providers providers) {
+		this.providers = providers;
+	}
 
 	public Json getJson(Class<?> type) {
 		Json json = jsons.get(type);
