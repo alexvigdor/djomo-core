@@ -15,13 +15,14 @@
  *******************************************************************************/
 package com.bigcloud.djomo.rs.test;
 
-import com.bigcloud.djomo.filter.TypeParserTransform;
+import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.parsers.StringParser;
 
-public class ProduceUpper extends TypeParserTransform<String, Object> {
-
+public class ProduceUpper implements StringParser {
+	
 	@Override
-	public Object transform(String in) {
-		return in.toUpperCase();
+	public CharSequence parseString(Parser parser) {
+		return parser.parseString().toString().toUpperCase();
 	}
 
 }

@@ -15,14 +15,14 @@
  *******************************************************************************/
 package com.bigcloud.djomo.simple;
 
-import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.Date;
 
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.api.Printer;
-import com.bigcloud.djomo.base.BaseSimpleModel;
-import com.bigcloud.djomo.io.Buffer;
+import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.base.BaseModel;
 
 /**
  * This is simple default behavior for legacy java Date objects, treating them
@@ -32,22 +32,12 @@ import com.bigcloud.djomo.io.Buffer;
  * @author Alex Vigdor
  *
  */
-public class DateModel extends BaseSimpleModel<Date> {
+public class DateModel extends BaseModel<Date> {
 	NumberModel<Long> longModel;
 
 	public DateModel(Type type, ModelContext context) {
 		super(type, context);
 		longModel = (NumberModel) context.get(Long.class);
-	}
-
-	@Override
-	public void print(Date obj, Printer printer) {
-		longModel.print(obj.getTime(), printer);
-	}
-
-	@Override
-	public Date parse(Buffer input, Buffer overflow) throws IOException {
-		return new Date(longModel.parse(input, overflow));
 	}
 
 	@Override
@@ -64,4 +54,17 @@ public class DateModel extends BaseSimpleModel<Date> {
 		return new Date(longModel.parse(getParseable(o)));
 	}
 
+	@Override
+	public Date parse(Parser parser) {
+		return new Date(parser.parseLong());
+	}
+
+	@Override
+	public void visit(Date obj, Visitor visitor) {
+		visitor.visitLong(obj.getTime());
+	}
+	@Override
+	public Format getFormat() {
+		return Format.NUMBER;
+	}
 }

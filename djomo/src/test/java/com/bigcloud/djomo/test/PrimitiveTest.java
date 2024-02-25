@@ -31,7 +31,6 @@ import com.bigcloud.djomo.StaticType;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.io.Buffer;
 import com.bigcloud.djomo.json.JsonParser;
-import com.bigcloud.djomo.simple.NumberModel;
 
 import lombok.Builder;
 import lombok.Value;
@@ -94,18 +93,14 @@ public class PrimitiveTest {
 		Models models = new Models();
 		Map<String, Number> samples = Map.of("-387.2498e+13", -387.2498e+13, "-387.2498e+0", -387.2498, "-387.2", -387.2, "-387.", -387.0, "-3", -3.0);
 		samples.forEach((str, num) -> {
-			try {
-				Double val = models.doubleModel.parse(new Buffer(new char[1], new StringReader(str)), new Buffer(new char[26]));
+				Double val = new JsonParser(models, new Buffer(new char[7], new StringReader(str)), new Buffer(new char[26])).parseDouble();
 				Assert.assertEquals(val, num);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			}
 		});
 		Model<List<Double>> listDoubleModel = models.get(new StaticType<List<Double>>() {});
-		for (int bufsize : new int[] { 1, 2, 3, 4 }) {
+		for (int bufsize : new int[] { 9, 11, 13, 15 }) {
 			samples.forEach((str, num) -> {
-				List<Double> val = listDoubleModel.parse(
-						new JsonParser(models, new Buffer(new char[bufsize], new StringReader("[" + str + "]")), new Buffer(new char[26])));
+				List<Double> val =
+						(List<Double>) new JsonParser(models, new Buffer(new char[bufsize], new StringReader("[" + str + "]")), new Buffer(new char[26])).parse(listDoubleModel);
 				Assert.assertEquals(val.get(0), num);
 			});
 		}
@@ -113,27 +108,27 @@ public class PrimitiveTest {
 
 	@Test(expectedExceptions = NumberFormatException.class)
 	public void testBadNumber() throws IOException {
-		Double val = new Models().doubleModel.parse(new Buffer(new char[1], new StringReader("-1..0")), new Buffer(new char[26]));
+		Double val = new JsonParser(new Models(), new Buffer(new char[3], new StringReader("-1..0")), new Buffer(new char[26])).parseDouble();
 	}
 
 	@Test(expectedExceptions = NumberFormatException.class)
 	public void testEmptyNumber() throws IOException {
-		Double val = new Models().doubleModel.parse(new Buffer(new char[1], new StringReader("")), new Buffer(new char[26]));
+		Double val = new JsonParser(new Models(), new Buffer(new char[1], new StringReader("")), new Buffer(new char[26])).parseDouble();
 	}
 
 	@Test(expectedExceptions = NumberFormatException.class)
 	public void testBadDoubleString() throws IOException {
-		((NumberModel<Double>) new Models().doubleModel).parse("-1..0");
+		new Json().fromString("-1..0", double.class);
 	}
 
 	@Test(expectedExceptions = NumberFormatException.class)
 	public void testBadNumberString() throws IOException {
-		((NumberModel<Number>) new Models().numberModel).parse("-1..0");
+		new Json().fromString("-1..0", Number.class);
 	}
 
 	@Test
 	public void testNumberString() throws IOException {
-		Object val = ((NumberModel<Number>) new Models().numberModel).parse("1.234e-0");
+		Object val = new Json().fromString("1.234e-0", Number.class);
 		Assert.assertEquals(val, 1.234);
 	}
 

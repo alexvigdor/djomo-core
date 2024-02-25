@@ -23,9 +23,8 @@ import org.testng.annotations.Test;
 import com.bigcloud.djomo.Json;
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.annotation.Order;
-import com.bigcloud.djomo.api.Field;
-import com.bigcloud.djomo.api.ObjectMaker;
 import com.bigcloud.djomo.api.ObjectModel;
+import com.bigcloud.djomo.base.InstanceParser;
 
 public class RecordTest {
 	Models models = new Models();
@@ -44,19 +43,20 @@ public class RecordTest {
 	}
 
 	@Test
-	public <F extends Field<Envelope, ?, Object>> void testMaker() {
+	public void testMaker() {
 		Envelope envelope = new Envelope(13, "you", new Message("Testing", "Are you there?"));
-		var em = ((ObjectModel<Envelope, ObjectMaker<Envelope, F, Object>, F, ?, Object>) models.get(Envelope.class));
+		ObjectModel<Envelope> em = ((ObjectModel<Envelope>) models.get(Envelope.class));
 		var maker = em.maker(envelope);
-		maker.field(em.getField("id"), 99);
-		envelope = maker.make();
+		em.getField("id").parse(maker, new InstanceParser(models, 99));
+		envelope = em.make(maker);
 		Assert.assertEquals(envelope.id(), 99);
 		Assert.assertEquals(envelope.to(), "you");
 	}
 
 	@Test(expectedExceptions = RuntimeException.class)
 	public void testBadRecord() throws IOException {
-		((ObjectModel) models.get(Envelope.class)).maker().make();
+		ObjectModel model =(ObjectModel) models.get(Envelope.class); 
+		model.make(model.maker());
 	}
 
 	@Order({ "id", "to" })

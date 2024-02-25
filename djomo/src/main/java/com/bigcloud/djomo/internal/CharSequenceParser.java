@@ -43,7 +43,10 @@ public class CharSequenceParser {
 			// System.out.println("FOUND HAPPY QUOTED STRING "+readBuffer.toString(start,
 			// rp-start));
 			readBuffer.readPosition = rp + 1;
-			return new CharArraySequence(rb, start, rp - start);
+			var seq = readBuffer.charArraySequence;
+			seq.start = start;
+			seq.len = rp -start;
+			return seq;
 		}
 		writeBuffer.writePosition = 0;
 		OUTER: while (true) {
@@ -61,7 +64,10 @@ public class CharSequenceParser {
 				readBuffer.readPosition = rp;
 				// System.out.println("FOUND SAD QUOTED STRING "+writeBuffer.toString(0,
 				// writeBuffer.writePosition));
-				return new CharArraySequence(writeBuffer.buffer, 0, writeBuffer.writePosition);
+				var seq = writeBuffer.charArraySequence;
+				seq.start = 0;
+				seq.len = writeBuffer.writePosition;
+				return seq;
 			}
 			if (r == '\\') {
 				writeBuffer.write(rb, start, rp - 1 - start);

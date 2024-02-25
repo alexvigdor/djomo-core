@@ -28,9 +28,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.bigcloud.djomo.annotation.Ignore;
+import com.bigcloud.djomo.api.Field;
 import com.bigcloud.djomo.api.ModelContext;
 
-public class BeanModel<T> extends ObjectMethodsModel<T, BeanMaker<T>> {
+public class BeanModel<T> extends ObjectMethodsModel<T> {
 	private final MethodHandle constructor;
 	
 	public BeanModel(Type type, ModelContext context, MethodHandle constructor) throws IllegalAccessException {
@@ -39,8 +40,8 @@ public class BeanModel<T> extends ObjectMethodsModel<T, BeanMaker<T>> {
 	}
 
 	@Override
-	public BeanMaker<T> maker() {
-		return new BeanMaker<>(this);
+	public Object maker() {
+		return newInstance();
 	}
 
 	public T newInstance() {
@@ -52,11 +53,11 @@ public class BeanModel<T> extends ObjectMethodsModel<T, BeanMaker<T>> {
 	}
 
 	@Override
-	protected Map<CharSequence, BeanField<T, Object>> initFields(ModelContext context) throws IllegalAccessException {
+	protected Map<CharSequence, Field> initFields(ModelContext context) throws IllegalAccessException {
 		MethodHandles.Lookup lookup = MethodHandles.lookup();
-		var fields = new ConcurrentHashMap<String, BeanField.Builder<T,Object>>();
-		Function<String, BeanField.Builder<T, Object>> fieldLookup = (name) -> fields.computeIfAbsent(name,
-				n -> BeanField.<T,Object>builder().name(n));
+		var fields = new ConcurrentHashMap<String, BeanField.Builder>();
+		Function<String, BeanField.Builder> fieldLookup = (name) -> fields.computeIfAbsent(name,
+				n -> BeanField.builder().name(n));
 		// start with direct field access; method access will override
 		for (var field : type.getFields()) {
 			if (!Modifier.isStatic(field.getModifiers()) && field.getAnnotation(Ignore.class) == null && field.trySetAccessible() ) {
@@ -65,18 +66,23 @@ public class BeanModel<T> extends ObjectMethodsModel<T, BeanMaker<T>> {
 		}
 		processMethods(lookup, context, fieldLookup);
 		return fields.entrySet().stream()
-				.map(e -> new AbstractMap.SimpleEntry<String, BeanField<T,Object>>(e.getKey(), e.getValue().build()))
+				.map(e -> new AbstractMap.SimpleEntry<String, BeanField>(e.getKey(), e.getValue().build()))
 				.collect(Collectors.toMap(Entry::getKey, Entry::getValue));
 	}
 
 	@Override
 	protected void processMethod(Method method, MethodHandles.Lookup lookup, ModelContext context,
-			Function<String, BeanField.Builder<T, Object>> fieldLookup) throws IllegalAccessException {
+			Function<String, BeanField.Builder> fieldLookup) throws IllegalAccessException {
 		String name = method.getName();
 		if (!Modifier.isStatic(method.getModifiers()) && name.startsWith("set") && name.length() > 3
 				&& method.getParameterCount() == 1 && method.trySetAccessible()) {
 			name = name.substring(3, 4).toLowerCase().concat(name.substring(4));
 			mutator(lookup, context, fieldLookup.apply(name), method, typeArgs);
 		}
+	}
+
+	@Override
+	public T make(Object maker) {
+		return (T) maker;
 	}
 }

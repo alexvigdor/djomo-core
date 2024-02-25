@@ -15,9 +15,6 @@
  *******************************************************************************/
 package com.bigcloud.djomo.api;
 
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-
 import com.bigcloud.djomo.Models;
 /**
  * Interface for object parsers; the interface is source agnostic, it could be parsing from a binary or character stream, or from an already existing object model.
@@ -26,12 +23,17 @@ import com.bigcloud.djomo.Models;
  *
  */
 public interface Parser {
-	<T> T parse(Model<T> model);
-	<O, M extends ObjectMaker<O, F, V>, F extends Field<O,?,V>, V> M parseObject(ObjectModel<O, M, F, ?, V> model);
-	<O, M extends ObjectMaker<O, F, V>, F extends Field<O,?,V>, V> void parseObjectField(ObjectModel<O, M, F, ?, V> model, CharSequence field, BiConsumer<F, V> consumer);
-	<L, M extends ListMaker<L, I>, I> M parseList(ListModel<L, M, I> model);
-	<T> void parseListItem(Model<T> model, Consumer<T> consumer);
-	<T> T parseSimple(SimpleModel<T> model);
+	Object parse(Model model);
+	Object parseObject(ObjectModel model);
+	Field parseObjectField(ObjectModel model, CharSequence field);
+	Object parseList(ListModel model);
+	void parseListItem();
+	int parseInt();
+	long parseLong();
+	float parseFloat();
+	double parseDouble();
+	boolean parseBoolean();
+	CharSequence parseString();
 	Object parseNull();
 	Models models();
 }

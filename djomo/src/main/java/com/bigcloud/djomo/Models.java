@@ -21,7 +21,6 @@ import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -36,9 +35,8 @@ import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.ModelFactory;
 import com.bigcloud.djomo.api.ObjectModel;
-import com.bigcloud.djomo.api.SimpleModel;
-import com.bigcloud.djomo.filter.FilterParser;
-import com.bigcloud.djomo.filter.FilterVisitor;
+import com.bigcloud.djomo.api.ParserFilter;
+import com.bigcloud.djomo.api.VisitorFilter;
 import com.bigcloud.djomo.list.ListModelFactory;
 import com.bigcloud.djomo.object.ObjectModelFactory;
 import com.bigcloud.djomo.poly.AnyModel;
@@ -54,7 +52,7 @@ import com.bigcloud.djomo.simple.SimpleModelFactory;
  * Models provide the core data-mapping logic used by {@link Json} for parsing and serializing.  Default factories support standard java primitives, 
  * collections, java time classes, as well as any classes following standard java beans or builder conventions.
  * </p><p>
- * While {@link FilterParser} and {@link FilterVisitor} can be used to customize the high-level operation of a parser or serializer, there may be cases where
+ * While {@link ParserFilter} and {@link VisitorFilter} can be used to customize the high-level operation of a parser or serializer, there may be cases where
  * you want to provide a custom model implementation or define custom logic for how to create a concrete instance of an interface or abstract type.
  * To do so use a {@link Models.Builder}, to which you can pass both custom {@link ModelFactory} and {@link Resolver} implementations.
  * </p>
@@ -65,17 +63,10 @@ import com.bigcloud.djomo.simple.SimpleModelFactory;
 public class Models {
 	private final ConcurrentHashMap<Type, Model<?>> models = new ConcurrentHashMap<>();
 	private final ModelFactory[] modelFactories;
-	public final SimpleModel<String> stringModel;
-	public final SimpleModel<Long> longModel;
-	public final SimpleModel<Integer> intModel;
-	public final SimpleModel<Float> floatModel;
-	public final SimpleModel<Double> doubleModel;
-	public final SimpleModel<Boolean> booleanModel;
-	public final SimpleModel<Number> numberModel;
 	public final AnyModel anyModel;
-	public final ObjectModel<Map, ?, ?, ?, ?> mapModel;
-	public final ListModel<List, ?, ?> listModel;
-	public final ListModel<Stream, ?, ?> streamModel;
+	public final ObjectModel<Map> mapModel;
+	public final ListModel<List> listModel;
+	public final ListModel<Stream> streamModel;
 
 	public Models(ModelFactory... factories) {
 		if(factories == null || factories.length == 0) {
@@ -90,21 +81,14 @@ public class Models {
 		modelFactories[modelFactories.length-3] = new ListModelFactory();
 		modelFactories[modelFactories.length-2] = new PolyModelFactory();
 		modelFactories[modelFactories.length-1] = new ObjectModelFactory();
-		stringModel = get(String.class);
-		longModel = get(Long.class);
-		intModel = get(Integer.class);
-		floatModel = get(Float.class);
-		doubleModel = get(Double.class);
-		booleanModel = get(Boolean.class);
-		numberModel = get(Number.class);
 		anyModel = get(Object.class);
 		streamModel = get(Stream.class);
 		Model tm = get(Map.class);
-		ObjectModel<Map, ?, ?, ?, ?> mapModel = null;
+		ObjectModel<Map> mapModel = null;
 		if(tm instanceof ResolverModel) {
 			Resolver r = ((ResolverModel)tm).getResolver();
 			if(r instanceof Substitute) {
-				mapModel = (ObjectModel<Map, ?, ?, ?, ?>) ((Substitute) r).getSubstitute();
+				mapModel = (ObjectModel<Map>) ((Substitute) r).getSubstitute();
 			}
 		}
 		if(mapModel == null) {
@@ -112,15 +96,15 @@ public class Models {
 		}
 		this.mapModel = mapModel;
 		Model tl = get(List.class);
-		ListModel<List, ?, ?> listModel = null;
+		ListModel<List> listModel = null;
 		if(tl instanceof ResolverModel) {
 			Resolver r = ((ResolverModel)tl).getResolver();
 			if(r instanceof Substitute) {
-				listModel = (ListModel<List, ?, ?>) ((Substitute) r).getSubstitute();
+				listModel = (ListModel<List>) ((Substitute) r).getSubstitute();
 			}
 		}
-		if(listModel == null) {
-			listModel =  (ListModel) get(ArrayList.class);
+		else if(tl instanceof ListModel){
+			listModel = (ListModel) tl;
 		}
 		this.listModel = listModel;
 	}

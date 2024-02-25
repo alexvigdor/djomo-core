@@ -19,41 +19,44 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import com.bigcloud.djomo.Models;
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ListModel;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
+import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.base.BaseComplexModel;
 
-public class ArrayModel<T, I> extends BaseComplexModel<T, ArrayMaker<T, I>> implements ListModel<T, ArrayMaker<T, I>, I>{
+public class ArrayModel<T> extends BaseComplexModel<T> implements ListModel<T>{
 	final Class<?> componentType;
 	final Models models;
-	final Model<I> itemModel;
+	final Model itemModel;
 
 	public ArrayModel(Type type, ModelContext context) {
 		super(type, context);
 		this.componentType = getType().getComponentType();
 		this.models = context.models();
-		this.itemModel = (Model<I>) context.get(componentType);
+		this.itemModel = context.get(componentType);
 	}
 
 	@Override
-	public ArrayMaker<T, I> maker(T obj) {
-		ArrayList<I> start = new ArrayList<I>();
+	public Object maker(T obj) {
+		ArrayList start = new ArrayList();
 		int len = Array.getLength(obj);
 		for(int i=0; i<len;i++) {
-			start.add((I)Array.get(obj,  i));
+			start.add(Array.get(obj,  i));
 		}
-		return new ArrayMaker<T, I>(this, start);
+		return start;
 	}
 
 	@Override
-	public ArrayMaker<T, I> maker() {
-		return new ArrayMaker<>(this, new ArrayList<>());
+	public Object maker() {
+		return new ArrayList();
 	}
 
 	@Override
@@ -65,40 +68,40 @@ public class ArrayModel<T, I> extends BaseComplexModel<T, ArrayMaker<T, I>> impl
 			return (T) o;
 		}
 		Model<?> def = models.get(o.getClass());
-		ArrayMaker<T, I> maker = maker();
+		List maker = (List) maker();
 		if (def instanceof ListModel) {
-			((ListModel) def).forEachItem(o, i -> maker.item(itemModel.convert(i)));
+			((ListModel) def).forEachItem(o, i -> maker.add(itemModel.convert(i)));
 		} 
 		else {
-			maker.item(itemModel.convert(o));
+			maker.add(itemModel.convert(o));
 		}
-		return maker.make();
+		return make(maker);
 	}
 
 	@Override
-	public void forEachItem(T t, Consumer<I> consumer) {
+	public void forEachItem(T t, Consumer consumer) {
 		int len = Array.getLength(t);
 		for (int i = 0; i < len; i++) {
-			consumer.accept((I) Array.get(t, i));
+			consumer.accept( Array.get(t, i));
 		}
 	}
 
 	@Override
-	public Stream<I> stream(T t) {
+	public Stream stream(T t) {
 		if(type == double[].class) {
-			return (Stream<I>) Arrays.stream((double[]) t).boxed();
+			return Arrays.stream((double[]) t).boxed();
 		}
 		if(type == long[].class) {
-			return (Stream<I>) Arrays.stream((long[]) t).boxed();
+			return Arrays.stream((long[]) t).boxed();
 		}
 		if(type == int[].class) {
-			return (Stream<I>) Arrays.stream((int[]) t).boxed();
+			return Arrays.stream((int[]) t).boxed();
 		}
-		return (Stream<I>) Arrays.stream((Object[])t);
+		return Arrays.stream((Object[])t);
 	}
 
 	@Override
-	public Model<I> itemModel() {
+	public Model itemModel() {
 		return itemModel;
 	}
 
@@ -107,4 +110,47 @@ public class ArrayModel<T, I> extends BaseComplexModel<T, ArrayMaker<T, I>> impl
 		visitor.visitList(obj, this);
 	}
 
+	@Override
+	public T parse(Parser parser) {
+		return (T) parser.parseList(this);
+	}
+	
+	@Override
+	public Format getFormat() {
+		return Format.LIST;
+	}
+
+	@Override
+	public void visitItems(T t, Visitor visitor) {
+		var m = itemModel;
+		int len = Array.getLength(t);
+		for (int i = 0; i < len; i++) {
+			visitor.visitListItem();
+			var o = Array.get(t, i);
+			if(o == null) {
+				visitor.visitNull();
+			}
+			else {
+				m.visit(o, visitor);
+			}
+		}
+	}
+
+	@Override
+	public void parseItem(Object listMaker, Parser parser) {
+		// TODO Auto-generated method stub
+		parser.parseListItem();
+		((List)listMaker).add(parser.parse(itemModel));
+	}
+
+	@Override
+	public T make(Object maker) {
+		List list = (List) maker;
+		int len = list.size();
+		Object array = Array.newInstance(componentType, len);
+		for (int i = 0; i < len; i++) {
+			Array.set(array, i, list.get(i));
+		}
+		return (T) array;
+	}
 }

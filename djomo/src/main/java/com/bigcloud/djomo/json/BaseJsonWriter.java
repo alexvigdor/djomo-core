@@ -18,13 +18,13 @@ package com.bigcloud.djomo.json;
 import java.util.Arrays;
 
 import com.bigcloud.djomo.Models;
-import com.bigcloud.djomo.api.Printer;
-import com.bigcloud.djomo.api.SimpleModel;
+import com.bigcloud.djomo.api.VisitorFilterFactory;
 import com.bigcloud.djomo.base.BaseVisitor;
-import com.bigcloud.djomo.filter.FilterVisitor;
+import com.bigcloud.djomo.internal.DoublePrinter;
+import com.bigcloud.djomo.internal.FloatPrinter;
 import com.bigcloud.djomo.io.CharSink;
 
-public class BaseJsonWriter extends BaseVisitor implements Printer, AutoCloseable{
+public class BaseJsonWriter extends BaseVisitor implements AutoCloseable {
 	private static final char[] NULL = { 'n', 'u', 'l', 'l' };
 	protected static final int BUF_LEN = 4096;
 	private static final ThreadLocal<char[]> localBuffer = new ThreadLocal<>() {
@@ -37,7 +37,8 @@ public class BaseJsonWriter extends BaseVisitor implements Printer, AutoCloseabl
 			return new char[BUF_LEN];
 		}
 	};
-	private static final char[] hexchars = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+	private static final char[] hexchars = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E',
+			'F' };
 	private static final boolean[] special = new boolean[65536];
 	static {
 		Arrays.fill(special, 0, 32, true);
@@ -52,7 +53,7 @@ public class BaseJsonWriter extends BaseVisitor implements Printer, AutoCloseabl
 	int pos = 0;
 	boolean first;
 
-	public BaseJsonWriter(Models context, CharSink sink, FilterVisitor... filters) {
+	public BaseJsonWriter(Models context, CharSink sink, VisitorFilterFactory... filters) {
 		super(context, filters);
 		this.sink = sink;
 		sink.buffer(buffer);
@@ -64,19 +65,14 @@ public class BaseJsonWriter extends BaseVisitor implements Printer, AutoCloseabl
 			pos = 0;
 		}
 	}
-	
+
 	@Override
 	public void visitNull() {
 		raw(NULL, 0, 4);
 	}
-	
-	@Override
-	public <T> void visitSimple(T model, SimpleModel<T> definition) {
-		definition.print(model, this);
-	}
 
 	@Override
-	public void quote(String str) {
+	public void visitString(CharSequence str) {
 		var sbuf = strBuffer;
 		var buf = buffer;
 		var spec = special;
@@ -94,7 +90,13 @@ public class BaseJsonWriter extends BaseVisitor implements Printer, AutoCloseabl
 		}
 		int c = 0, p, l, i;
 		while (true) {
-			str.getChars(start, start + room, buf, lpos);
+			if (str instanceof String s) {
+				s.getChars(start, start + room, buf, lpos);
+			} else {
+				for (int x = 0; x < room; x++) {
+					buf[lpos + x] = str.charAt(x + start);
+				}
+			}
 			for (i = 0; i < room; i++) {
 				c = buf[lpos];
 				if (spec[c]) {
@@ -191,7 +193,6 @@ public class BaseJsonWriter extends BaseVisitor implements Printer, AutoCloseabl
 		pos = lpos + 1;
 	}
 
-	@Override
 	public void raw(char[] chars, int offset, int len) {
 		var p = pos;
 		int room = BUF_LEN - p;
@@ -208,25 +209,121 @@ public class BaseJsonWriter extends BaseVisitor implements Printer, AutoCloseabl
 	}
 
 	@Override
-	public void raw(String str) {
-		int len = str.length();
-		var p = pos;
-		int room = BUF_LEN - p;
-		int offset = 0;
-		while (room < len) {
-			str.getChars(offset, offset + room, buffer, p);
-			sink.next(BUF_LEN);
-			offset += room;
-			p = 0;
-			len -= room;
-			room = BUF_LEN;
-		}
-		str.getChars(offset, offset + len, buffer, p);
-		pos = p + len;
-	}
-
-	@Override
 	public void close() {
 		sink.last(pos);
 	}
+
+	@Override
+	public void visitInt(int value) {
+		var p = pos;
+		int room = BUF_LEN - p;
+		if (room < 11) {
+			sink.next(p);
+			p = 0;
+		}
+		char[] buf = buffer;
+		switch (value) {
+		case 0:
+		case 1:
+		case 2:
+		case 3:
+		case 4:
+		case 5:
+		case 6:
+		case 7:
+		case 8:
+		case 9:
+			buf[p] = (char) ('0' + value);
+			pos = p + 1;
+			break;
+		case Integer.MIN_VALUE:
+			String.valueOf(Integer.MIN_VALUE).getChars(0, 11, buf, p);
+			pos = p + 11;
+			break;
+		default:
+			boolean negative = false;
+			int normal = value;
+			if (value < 0) {
+				negative = true;
+				normal = -normal;
+			}
+			int stringLen = normal < 100000
+					? normal < 100 ? normal < 10 ? 1 : 2 : normal < 1000 ? 3 : normal < 10000 ? 4 : 5
+					: normal < 10000000 ? normal < 1000000 ? 6 : 7
+							: normal < 100000000 ? 8 : normal < 1000000000 ? 9 : 10;
+
+			if (negative) {
+				buf[p] = '-';
+				++stringLen;
+			}
+			pos = p += stringLen;
+			do {
+				buf[--p] = (char) (48 + ((normal % 10)));
+				normal /= 10;
+			} while (normal != 0);
+		}
+
+	}
+
+	@Override
+	public void visitLong(long value) {
+		int mult = value < 0 ? -1 : 1;
+		char[] buf = new char[20];
+		int pos = 20;
+		do {
+			buf[--pos] = (char) (48 + ((value % 10) * mult));
+			value /= 10;
+		} while (value != 0);
+		if (mult == -1) {
+			buf[--pos] = '-';
+		}
+		raw(buf, pos, 20 - pos);
+	}
+
+	@Override
+	public void visitFloat(float value) {
+		var p = pos;
+		int room = BUF_LEN - p;
+		if (room < 15) {
+			sink.next(p);
+			p = 0;
+		}
+		pos = FloatPrinter.printFloat(value, buffer, p);
+	}
+
+	@Override
+	public void visitDouble(double value) {
+		var p = pos;
+		int room = BUF_LEN - p;
+		if (room < 24) {
+			sink.next(p);
+			p = 0;
+		}
+		pos = DoublePrinter.printDouble(value, buffer, p);
+	}
+
+	@Override
+	public void visitBoolean(boolean value) {
+		var p = pos;
+		int room = BUF_LEN - p;
+		if (room < 5) {
+			sink.next(p);
+			p = 0;
+		}
+		char[] buf = buffer;
+		if (value) {
+			buf[p++] = 't';
+			buf[p++] = 'r';
+			buf[p++] = 'u';
+			buf[p++] = 'e';
+		} else {
+			buf[p++] = 'f';
+			buf[p++] = 'a';
+			buf[p++] = 'l';
+			buf[p++] = 's';
+			buf[p++] = 'e';
+		}
+		pos = p;
+	}
+
 }

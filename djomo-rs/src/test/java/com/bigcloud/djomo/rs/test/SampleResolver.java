@@ -15,9 +15,9 @@
  *******************************************************************************/
 package com.bigcloud.djomo.rs.test;
 
-import com.bigcloud.djomo.filter.InjectVisitor;
 import com.bigcloud.djomo.Json;
 import com.bigcloud.djomo.Models;
+import com.bigcloud.djomo.filter.visitors.InjectVisitor;
 
 import jakarta.ws.rs.ext.ContextResolver;
 import jakarta.ws.rs.ext.Provider;

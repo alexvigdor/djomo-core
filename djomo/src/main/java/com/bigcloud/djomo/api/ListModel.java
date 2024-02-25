@@ -23,11 +23,14 @@ import java.util.stream.Stream;
  * @author Alex Vigdor
  *
  * @param <T> Class of object this model describes
- * @param <M> ListMaker used to create an instance of this model
- * @param <I> Item class used by this model (use Object if mixed types are used)
  */
-public interface ListModel<T, M extends ListMaker<T, I>, I> extends ComplexModel<T, M> {
-	void forEachItem(T t, Consumer<I> consumer);
-	Stream<I> stream(T t);
-	Model<I> itemModel();
+public interface ListModel<T> extends Model<T> {
+	void forEachItem(T t, Consumer consumer);
+	void visitItems(T t, Visitor visitor);
+	void parseItem(Object listMaker, Parser parser);
+	Stream stream(T t);
+	Model itemModel();
+	Object maker(T obj);
+	Object maker();
+	T make(Object maker);
 }

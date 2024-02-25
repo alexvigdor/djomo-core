@@ -14,6 +14,9 @@
  * limitations under the License.
  *******************************************************************************/
 package com.bigcloud.djomo.api;
+
+import com.bigcloud.djomo.Models;
+
 /**
  * A Model allows parsing, visiting and converting to a specific java type.
  * 
@@ -31,13 +34,18 @@ public interface Model<T> {
 	 */
 	Class<T> getType();
 	/**
+	 * 
+	 * @return the format this model parses from / visits to
+	 */
+	Format getFormat();
+	/**
 	 * Attempt to convert another object into an instance of the type represented by this Model
 	 * @param o another object, such as a raw parsed string, list or map, to convert to this type
 	 * @return an instance of this type based on the object passed in
 	 */
 	T convert(Object o);
 	/**
-	 * The canonical implementation merely returns parser.parse(this); may be used to implement wrapped or structurally modified types
+	 * Materialize an instance of this type by pulling from the parser; should invoke parseList, parseObject or a primitive parse method
 	 * @param parser The parser to used to pull an instance of this model, or of an other underlying Model this one relies upon
 	 * @return an instance of this type based on date pulled from the parser
 	 */
@@ -49,4 +57,9 @@ public interface Model<T> {
 	 * @param visitor
 	 */
 	void visit(T obj, Visitor visitor);
+	/**
+	 * Retrieve the owning Models instance
+	 * @return
+	 */
+	Models models();
 }

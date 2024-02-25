@@ -15,18 +15,17 @@
  *******************************************************************************/
 package com.bigcloud.djomo.simple;
 
-import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Type;
 
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.api.Printer;
-import com.bigcloud.djomo.base.BaseSimpleModel;
+import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.base.BaseModel;
 import com.bigcloud.djomo.error.ModelException;
-import com.bigcloud.djomo.internal.CharSequenceParser;
-import com.bigcloud.djomo.io.Buffer;
 
-public class StringBasedModel<T> extends BaseSimpleModel<T> {
+public class StringBasedModel<T> extends BaseModel<T> {
 	final MethodHandle constructor;
 	final MethodHandle toString;
 
@@ -37,25 +36,24 @@ public class StringBasedModel<T> extends BaseSimpleModel<T> {
 	}
 
 	@Override
-	public void print(T obj, Printer printer) {
+	public void visit(T obj, Visitor visitor) {
 		try {
-			printer.quote((String)toString.invoke(obj));
-		}
-		catch(RuntimeException e) {
+			visitor.visitString((CharSequence) toString.invoke(obj));
+		} catch (RuntimeException e) {
 			throw e;
-		}
-		catch (Throwable e) {
+		} catch (Throwable e) {
 			throw new RuntimeException(e);
 		}
 	}
 
 	@Override
-	public T parse(Buffer input, Buffer overflow) throws IOException {
-		String s = CharSequenceParser.parse(input, overflow).toString();
+	public T parse(Parser parser) {
 		try {
-			return (T) constructor.invoke(s);
+			return (T) constructor.invoke(parser.parseString().toString());
+		} catch (RuntimeException e) {
+			throw e;
 		} catch (Throwable e) {
-			throw new ModelException("Error constructing instance of "+type.getName()+" from string '"+s+"'", e);
+			throw new RuntimeException(e);
 		}
 	}
 
@@ -75,5 +73,9 @@ public class StringBasedModel<T> extends BaseSimpleModel<T> {
 			throw new ModelException("Error converting " + o + " to " + type.getTypeName(), e);
 		}
 	}
-
+	
+	@Override
+	public Format getFormat() {
+		return Format.STRING;
+	}
 }

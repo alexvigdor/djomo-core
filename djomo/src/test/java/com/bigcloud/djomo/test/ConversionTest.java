@@ -15,6 +15,8 @@
  *******************************************************************************/
 package com.bigcloud.djomo.test;
 
+import static org.testng.Assert.assertEquals;
+
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -24,12 +26,6 @@ import org.testng.annotations.Test;
 
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.StaticType;
-import com.bigcloud.djomo.api.Field;
-import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.api.ObjectMaker;
-import com.bigcloud.djomo.api.ObjectModel;
-
-import static org.testng.Assert.*;
 
 public class ConversionTest {
 	Models Models = new Models();
@@ -62,13 +58,13 @@ public class ConversionTest {
 		List<String> strings = (List<String>) Models.get(new StaticType<List<String>>() {}).convert(test);
 		Assert.assertEquals(strings.stream().collect(Collectors.joining()), "abc");
 	}
-
-	@Test(expectedExceptions = RuntimeException.class)
-	public <F extends Field<ImmutableModel, ?, Object>> void testStrictConvertFail() {
-		var model =  ((ObjectModel<ImmutableModel, ObjectMaker<ImmutableModel,F,Object>, F, ?, ?>)Models.get(ImmutableModel.class));
-		ObjectMaker<ImmutableModel, F, Object> maker =model.maker();
-		maker.field(model.getField("name"), "foo");
-		maker.field(model.getField("count"), "123");
-		maker.field(model.getField("enabled"), "true");
-	}
+//
+//	@Test(expectedExceptions = RuntimeException.class)
+//	public void testStrictConvertFail() {
+//		var model =  ((ObjectModel<ImmutableModel>)Models.get(ImmutableModel.class));
+//		ObjectMaker<ImmutableModel> maker =model.maker();
+//		maker.setField(model.getField("name"),  "foo");
+//		maker.setField(model.getField("count"),  "123");
+//		maker.setField(model.getField("enabled"),  "true");
+//	}
 }

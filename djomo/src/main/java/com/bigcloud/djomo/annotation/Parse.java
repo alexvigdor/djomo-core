@@ -22,7 +22,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import com.bigcloud.djomo.filter.FilterParser;
+import com.bigcloud.djomo.api.ParserFilterFactory;
 /**
  * Define and configure a parser filter; can be loaded in a Json.Builder using the scan method, or
  * used on a jax-rs body parameter to control parsing.  For lower-level use, the AnnotationProcessor 
@@ -36,7 +36,7 @@ import com.bigcloud.djomo.filter.FilterParser;
 @Repeatable(Parses.class)
 @Target({ElementType.PARAMETER, ElementType.TYPE})
 public @interface Parse {
-	Class<? extends FilterParser> value();
+	Class<? extends ParserFilterFactory> value();
 	String[] path() default {};
 	String[] arg() default {};
 	Class<? extends Object> type() default Object.class;

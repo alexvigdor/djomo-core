@@ -15,41 +15,44 @@
  *******************************************************************************/
 package com.bigcloud.djomo.simple;
 
-import java.io.IOException;
 import java.lang.reflect.Type;
 
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.api.Printer;
-import com.bigcloud.djomo.base.BaseSimpleModel;
-import com.bigcloud.djomo.internal.CharSequenceParser;
-import com.bigcloud.djomo.io.Buffer;
+import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.base.BaseModel;
 
-public class EnumModel<T extends Enum<T>> extends BaseSimpleModel<T> {
+public class EnumModel<T extends Enum<T>> extends BaseModel<T> {
 
 	public EnumModel(Type type, ModelContext context) {
 		super(type, context);
 	}
 
-	@Override
-	public void print(T obj, Printer printer) {
-		printer.quote(obj.name());
-	}
-
-	@Override
-	public T parse(Buffer input, Buffer overflow) throws IOException {
-		return (T) Enum.valueOf(getType(), CharSequenceParser.parse(input, overflow).toString());
-	}
-
 	@SuppressWarnings("unchecked")
 	@Override
 	public T convert(Object o) {
-		if(o==null) {
+		if (o == null) {
 			return null;
 		}
-		if(getType().isAssignableFrom(o.getClass())) {
+		if (getType().isAssignableFrom(o.getClass())) {
 			return (T) o;
 		}
 		return (T) Enum.valueOf(getType(), o.toString());
 	}
 
+	@Override
+	public void visit(T obj, Visitor visitor) {
+		visitor.visitString(obj.name());
+	}
+
+	@Override
+	public T parse(Parser parser) {
+		return (T) Enum.valueOf(getType(), parser.parseString().toString());
+	}
+
+	@Override
+	public Format getFormat() {
+		return Format.STRING;
+	}
 }

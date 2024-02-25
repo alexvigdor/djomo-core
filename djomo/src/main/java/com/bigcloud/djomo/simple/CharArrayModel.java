@@ -15,34 +15,18 @@
  *******************************************************************************/
 package com.bigcloud.djomo.simple;
 
-import java.io.IOException;
+import java.nio.CharBuffer;
 
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.api.Printer;
-import com.bigcloud.djomo.base.BaseSimpleModel;
-import com.bigcloud.djomo.internal.CharSequenceParser;
-import com.bigcloud.djomo.io.Buffer;
+import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.base.BaseModel;
 
-public class CharArrayModel extends BaseSimpleModel<char[]> {
+public class CharArrayModel extends BaseModel<char[]> {
 
 	public CharArrayModel(ModelContext context) {
 		super(char[].class, context);
-	}
-
-	@Override
-	public void print(char[] obj, Printer printer) {
-		printer.quote(new String(obj));
-	}
-
-	@Override
-	public char[] parse(Buffer input, Buffer overflow) throws IOException {
-		CharSequence cs = CharSequenceParser.parse(input, overflow);
-		int len = cs.length();
-		char[] rval = new char[len];
-		for(int i=0; i< len; i++) {
-			rval[i] = cs.charAt(i);
-		}
-		return rval;
 	}
 
 	@Override
@@ -54,6 +38,27 @@ public class CharArrayModel extends BaseSimpleModel<char[]> {
 			return (char[]) o;
 		}
 		return o.toString().toCharArray();
+	}
+
+	@Override
+	public char[] parse(Parser parser) {
+		CharSequence cs = parser.parseString();
+		int len = cs.length();
+		char[] rval = new char[len];
+		for(int i=0; i< len; i++) {
+			rval[i] = cs.charAt(i);
+		}
+		return rval;
+	}
+
+	@Override
+	public void visit(char[] obj, Visitor visitor) {
+		visitor.visitString(CharBuffer.wrap(obj));
+	}
+
+	@Override
+	public Format getFormat() {
+		return Format.STRING;
 	}
 
 }

@@ -15,6 +15,7 @@
  *******************************************************************************/
 package com.bigcloud.djomo.list;
 
+import java.util.List;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Type;
@@ -35,6 +36,9 @@ public class ListModelFactory extends BaseModelFactory {
 		Class<?> rawType = getRawType(type);
 		Type valueType = getTypeParameter(type, 0);
 		Constructor<?> constructor = getConstructor(rawType);
+		if(rawType.isInterface() && (rawType==List.class || rawType==Collection.class || rawType == Iterable.class)){
+			return new ImmutableListModel(type, context, valueType);
+		}
 		if (Collection.class.isAssignableFrom(rawType)) {
 			try {
 				return new CollectionModel<>(type, context, constructor == null ? null : lookup.unreflectConstructor(constructor), valueType);

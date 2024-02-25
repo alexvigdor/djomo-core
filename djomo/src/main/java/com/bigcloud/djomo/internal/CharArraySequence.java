@@ -14,6 +14,9 @@
  * limitations under the License.
  *******************************************************************************/
 package com.bigcloud.djomo.internal;
+
+import com.bigcloud.djomo.io.Buffer;
+
 /**
  * A simple CharSequence used when parsing to avoid creating extra strings for field lookups
  * 
@@ -21,14 +24,12 @@ package com.bigcloud.djomo.internal;
  *
  */
 public class CharArraySequence implements CharSequence {
-	private final char[] buffer;
-	private final int start;
-	private final int len;
+	protected final Buffer buffer;
+	public int start;
+	public int len;
 
-	public CharArraySequence(char[] buffer, int start, int len) {
+	public CharArraySequence(Buffer buffer) {
 		this.buffer = buffer;
-		this.start = start;
-		this.len = len;
 	}
 
 	@Override
@@ -38,16 +39,19 @@ public class CharArraySequence implements CharSequence {
 
 	@Override
 	public char charAt(int index) {
-		return buffer[start + index];
+		return buffer.buffer[start + index];
 	}
 
 	@Override
 	public CharSequence subSequence(int start, int end) {
-		return new CharArraySequence(buffer, this.start + start, end - start);
+		var sub = new CharArraySequence(buffer);
+		sub.start = this.start + start;
+		sub.len = end-start;
+		return sub;
 	}
 
 	public int hashCode() {
-		char[] b = buffer;
+		char[] b = buffer.buffer;
 		int h = 0;
 		int i = start, end = i+len;
 		for (; i < end; i++) {
@@ -58,7 +62,7 @@ public class CharArraySequence implements CharSequence {
 
 	public boolean equals(Object o) {
 		if (o instanceof CharSequence cs) {
-			char[] b = buffer;
+			char[] b = buffer.buffer;
 			int len = this.len;
 			int start = this.start;
 			if (cs.length() == len) {
@@ -74,6 +78,6 @@ public class CharArraySequence implements CharSequence {
 	}
 
 	public String toString() {
-		return new String(buffer, start, len);
+		return new String(buffer.buffer, start, len);
 	}
 }

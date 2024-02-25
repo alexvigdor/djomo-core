@@ -18,49 +18,67 @@ package com.bigcloud.djomo.filter;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import com.bigcloud.djomo.api.ListMaker;
 import com.bigcloud.djomo.api.ListModel;
 import com.bigcloud.djomo.api.Model;
+import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.Visitor;
 /**
  * Base ListModel for filtering other list models.
  * 
  * @author Alex Vigdor
  *
  * @param <T> The list or array type to filter
- * @param <M> The type of ListMaker used
- * @param <I> The item model for this list model
  */
-public class FilterListModel<T, M extends ListMaker<T, I>, I> extends FilterModel<T> implements ListModel<T, M, I> {
-	final ListModel<T, M, I> listModel;
+public class FilterListModel<T> extends FilterModel<T> implements ListModel<T> {
+	protected final ListModel<T> listModel;
 
-	public FilterListModel(ListModel<T, M, I> delegate) {
+	public FilterListModel(ListModel<T> delegate) {
 		super(delegate);
 		this.listModel = delegate;
 	}
 
 	@Override
-	public M maker(T obj) {
+	public Object maker(T obj) {
 		return listModel.maker(obj);
 	}
 
 	@Override
-	public M maker() {
+	public Object maker() {
 		return listModel.maker();
 	}
 
 	@Override
-	public void forEachItem(T t, Consumer<I> consumer) {
+	public void forEachItem(T t, Consumer consumer) {
 		listModel.forEachItem(t, consumer);
 	}
 
 	@Override
-	public Stream<I> stream(T t) {
+	public Stream stream(T t) {
 		return listModel.stream(t);
 	}
 
 	@Override
-	public Model<I> itemModel() {
+	public Model itemModel() {
 		return listModel.itemModel();
+	}
+
+	@Override
+	public void visitItems(T t, Visitor visitor) {
+		listModel.visitItems(t, visitor);
+	}
+
+	@Override
+	public void parseItem(Object listMaker, Parser parser) {
+		listModel.parseItem(listMaker, parser);
+	}
+
+	@Override
+	public T make(Object maker) {
+		return listModel.make(maker);
+	}
+	@Override
+	public T parse(Parser parser) {
+		return (T) parser.parseList(this);
 	}
 
 }

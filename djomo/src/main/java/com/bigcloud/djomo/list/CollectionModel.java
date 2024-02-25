@@ -22,35 +22,37 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import com.bigcloud.djomo.Models;
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ListModel;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
+import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.base.BaseComplexModel;
 
-public class CollectionModel<T extends Collection<I>, I> extends BaseComplexModel<T, CollectionMaker<T, I>>
-		implements ListModel<T, CollectionMaker<T, I>, I> {
+public class CollectionModel<T extends Collection> extends BaseComplexModel<T>
+		implements ListModel<T> {
 	final MethodHandle constructor;
 	final Models models;
-	final Model<I> itemModel;
+	final Model itemModel;
 
 	public CollectionModel(Type type, ModelContext context, MethodHandle constructor, Type valueType) {
 		super(type, context);
 		this.constructor = constructor;
 		this.models = context.models();
-		this.itemModel = (Model<I>) context.get(valueType != null ? valueType : Object.class);
+		this.itemModel = context.get(valueType != null ? valueType : Object.class);
 	}
 
 	@Override
-	public CollectionMaker<T, I> maker(T obj) {
-		var maker = maker();
-		obj.forEach(maker::item);
+	public Object maker(T obj) {
+		Collection maker = (Collection) maker();
+		obj.forEach(maker::add);
 		return maker;
 	}
 
 	@Override
-	public CollectionMaker<T, I> maker() {
-		return new CollectionMaker<>(this);
+	public Object maker() {
+		return newInstance();
 	}
 
 	@Override
@@ -62,28 +64,28 @@ public class CollectionModel<T extends Collection<I>, I> extends BaseComplexMode
 			return (T) o;
 		}
 		Model def = models.get(o.getClass());
-		CollectionMaker<T, I> maker = maker();
+		T maker = (T) maker();
 		if (def instanceof ListModel) {
-			((ListModel) def).forEachItem(o, i -> maker.item(itemModel.convert(i)));
+			((ListModel) def).forEachItem(o, i -> maker.add(itemModel.convert(i)));
 		}
 		else {
-			maker.item(itemModel.convert(o));
+			maker.add(itemModel.convert(o));
 		}
-		return maker.make();
+		return maker;
 	}
 
 	@Override
-	public void forEachItem(T t, Consumer<I> consumer) {
+	public void forEachItem(T t, Consumer consumer) {
 		t.forEach(consumer);
 	}
 
 	@Override
-	public Stream<I> stream(T t) {
+	public Stream stream(T t) {
 		return t.stream();
 	}
 
 	@Override
-	public Model<I> itemModel() {
+	public Model itemModel() {
 		return itemModel;
 	}
 
@@ -101,5 +103,38 @@ public class CollectionModel<T extends Collection<I>, I> extends BaseComplexMode
 	@Override
 	public void visit(T obj, Visitor visitor) {
 		visitor.visitList(obj, this);
+	}
+	@Override
+	public T parse(Parser parser) {
+		return (T) parser.parseList(this);
+	}
+	@Override
+	public Format getFormat() {
+		return Format.LIST;
+	}
+
+	@Override
+	public void visitItems(T t, Visitor visitor) {
+		var m = itemModel;
+		t.forEach(i -> {
+			visitor.visitListItem();
+			if(i == null) {
+				visitor.visitNull();
+			}
+			else {
+				m.visit(i, visitor);
+			}
+		});
+	}
+	
+	@Override
+	public void parseItem(Object listMaker, Parser parser) {
+		parser.parseListItem();
+		((Collection)listMaker).add(parser.parse(itemModel));
+	}
+
+	@Override
+	public T make(Object maker) {
+		return (T) maker;
 	}
 }

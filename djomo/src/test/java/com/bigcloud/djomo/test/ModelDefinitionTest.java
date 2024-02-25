@@ -26,7 +26,7 @@ import com.bigcloud.djomo.api.ObjectModel;
 public class ModelDefinitionTest {
 	@Test
 	public void testModelDefinition() {
-		ObjectModel<ImmutableModel, ?, ?, ?, ?> md = (ObjectModel<ImmutableModel, ?, ?, ?, ?>) new Models().get(ImmutableModel.class);
+		ObjectModel<ImmutableModel> md = (ObjectModel<ImmutableModel>) new Models().get(ImmutableModel.class);
 		assertNotNull(md);
 		ImmutableModel sm = ImmutableModel.builder().name("foo").count(5).enabled(true).build();
 		assertEquals(md.getField("name").get(sm), "foo");

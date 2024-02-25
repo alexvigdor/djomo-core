@@ -28,11 +28,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.bigcloud.djomo.api.Field;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.object.BeanField.Builder;
 
 public class RecordModel<T>
-		extends ObjectMethodsModel<T, RecordMaker<T>> {
+		extends ObjectMethodsModel<T> {
 	final MethodHandle constructor;
 	final Object[] args;
 
@@ -44,8 +45,8 @@ public class RecordModel<T>
 	}
 
 	@Override
-	public RecordMaker<T> maker() {
-		return new RecordMaker<>(this);
+	public Object maker() {
+		return newArgs();
 	}
 
 	public Object[] newArgs() {
@@ -63,11 +64,11 @@ public class RecordModel<T>
 	}
 
 	@Override
-	protected Map<CharSequence, BeanField<T, Object>> initFields(ModelContext context) throws IllegalAccessException {
+	protected Map<CharSequence, Field> initFields(ModelContext context) throws IllegalAccessException {
 		Lookup lookup = MethodHandles.lookup();
-		var fields = new ConcurrentHashMap<String, BeanField.Builder<T,Object>>();
-		Function<String, BeanField.Builder<T,Object>> fieldLookup = (name) -> fields.computeIfAbsent(name,
-				n -> BeanField.<T, Object>builder().name(n));
+		var fields = new ConcurrentHashMap<String, BeanField.Builder>();
+		Function<String, BeanField.Builder> fieldLookup = (name) -> fields.computeIfAbsent(name,
+				n -> BeanField.builder().name(n));
 		processMethods(lookup, context, fieldLookup);
 		var rcs = type.getRecordComponents();
 		for(int i=0; i<rcs.length;i++) {
@@ -87,8 +88,14 @@ public class RecordModel<T>
 
 	@Override
 	protected void processMethod(Method method, Lookup lookup, ModelContext context,
-			Function<String, Builder<T, Object>> fieldLookup) throws IllegalAccessException {
+			Function<String, Builder> fieldLookup) throws IllegalAccessException {
 		// no further processing needed, parent class will handle basic accessors
+	}
+
+	@Override
+	public T make(Object maker) {
+		// TODO Auto-generated method stub
+		return create((Object[])maker);
 	}
 
 }

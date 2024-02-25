@@ -16,8 +16,10 @@
 package com.bigcloud.djomo.api;
 
 import com.bigcloud.djomo.Models;
+
 /**
- * Interface for object visitors, such as serializers; customizing serialization is typically done by extending the FilterVisitor base class.
+ * Interface for object visitors, such as serializers; customizing serialization
+ * is typically done by extending the FilterVisitor base class.
  * 
  * @author Alex Vigdor
  *
@@ -25,17 +27,28 @@ import com.bigcloud.djomo.Models;
 public interface Visitor {
 	void visitNull();
 
-	<T> void visitSimple(T value, SimpleModel<T> model);
+	<T> void visitList(T list, ListModel<T> model);
 
-	<T> void visitList(T list, ListModel<T, ?, ?> model);
+	void visitListItem();
 
-	void visitListItem(Object obj);
+	<T> void visitObject(T object, ObjectModel<T> model);
 
-	<T> void visitObject(T object, ObjectModel<T, ?, ?, ?, ?> model);
-
-	void visitObjectField(Object name, Object value);
+	void visitObjectField(Object name);
 
 	void visit(Object obj);
 
+	void visitInt(int value);
+
+	void visitLong(long value);
+
+	void visitFloat(float value);
+
+	void visitDouble(double value);
+
+	void visitBoolean(boolean value);
+
+	void visitString(CharSequence value);
+
 	Models models();
+
 }

@@ -24,7 +24,7 @@ import java.lang.reflect.Type;
 import java.nio.channels.Channel;
 
 import com.bigcloud.djomo.Json;
-import com.bigcloud.djomo.filter.FilterVisitor;
+import com.bigcloud.djomo.api.VisitorFilterFactory;
 
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.WebApplicationException;
@@ -73,7 +73,7 @@ public class JsonBodyWriter<T> extends JsonContext implements MessageBodyWriter<
 		}
 		// System.out.println("Writing "+type.getName()+" with "+filters);
 		Json json = getJson(type);
-		FilterVisitor[] filters = json.getAnnotationProcessor().visitorFilters(annotations);
+		VisitorFilterFactory[] filters = json.getAnnotationProcessor().visitorFilters(annotations);
 		if (filters.length == 0) {
 			if (indent == null) {
 				json.write(t, entityStream);

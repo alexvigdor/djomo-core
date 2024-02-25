@@ -21,20 +21,27 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.annotation.Parse;
 import com.bigcloud.djomo.annotation.Visit;
-import com.bigcloud.djomo.filter.ExcludeVisitor;
-import com.bigcloud.djomo.filter.FieldVisitorFunction;
-import com.bigcloud.djomo.filter.FilterVisitor;
-import com.bigcloud.djomo.filter.IncludeVisitor;
-import com.bigcloud.djomo.filter.LimitVisitor;
-import com.bigcloud.djomo.filter.MultiFilterVisitor;
-import com.bigcloud.djomo.filter.OmitNullVisitor;
-import com.bigcloud.djomo.filter.TypeParserTransform;
-import com.bigcloud.djomo.filter.TypeVisitor;
-import com.bigcloud.djomo.filter.TypeVisitorTransform;
+import com.bigcloud.djomo.api.Field;
+import com.bigcloud.djomo.api.Filters;
+import com.bigcloud.djomo.api.Model;
+import com.bigcloud.djomo.api.ObjectModel;
+import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.api.parsers.ModelParser;
+import com.bigcloud.djomo.api.visitors.ObjectVisitor;
+import com.bigcloud.djomo.base.BaseVisitorFilter;
+import com.bigcloud.djomo.filter.FilterFieldObjectModel;
+import com.bigcloud.djomo.filter.visitors.BlackHoleVisitor;
+import com.bigcloud.djomo.filter.visitors.ExcludeVisitor;
+import com.bigcloud.djomo.filter.visitors.FieldVisitor;
+import com.bigcloud.djomo.filter.visitors.IncludeVisitor;
+import com.bigcloud.djomo.filter.visitors.LimitVisitor;
+import com.bigcloud.djomo.filter.visitors.MultiFilterVisitor;
+import com.bigcloud.djomo.filter.visitors.OmitNullItemVisitor;
 import com.bigcloud.djomo.rs.Indent;
-import com.bigcloud.djomo.Models;
 
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
@@ -78,7 +85,7 @@ public class SampleApp {
 	@Consumes("application/json")
 	@Produces("application/json")
 	@Visit(ThingFlattener.class)
-	@Visit(OmitNullVisitor.class)
+	@Visit(OmitNullItemVisitor.class)
 	public Response flatten(@Parse(ThingUnflattener.class) Thing body, @QueryParam("pretty") boolean pretty) {
 		var response = Response.ok();
 		if (pretty) {
@@ -94,7 +101,7 @@ public class SampleApp {
 	@Consumes("application/json")
 	@Produces("application/json")
 	@Visit(value=LimitVisitor.class, arg="5")
-	public Thing limit(@Parse(ThingUnflattener.class) Thing body) {
+	public Thing limit(Thing body) {
 		return body;
 	}
 
@@ -102,7 +109,7 @@ public class SampleApp {
 	@Path("foobar")
 	@Consumes("application/json")
 	@Produces("application/json")
-	@Visit(value=ExcludeVisitor.class, path="**.foo.bar")
+	@Visit(value=BlackHoleVisitor.class, path="**.foo.bar")
 	public Map foobar(Map body) {
 		return body;
 	}
@@ -118,7 +125,7 @@ public class SampleApp {
 	@GET
 	@Path("canupper")
 	@Produces("application/json")
-	@Visit(OmitNullVisitor.class)
+	@Visit(OmitNullItemVisitor.class)
 	public Response canUpper(@QueryParam("toUpper") boolean toUpper) {
 		try {
 			var entity = new Thing<Object>("thing2", Arrays.asList("a", null, "b", "c"));
@@ -137,7 +144,7 @@ public class SampleApp {
 	@GET
 	@Path("partial")
 	@Produces("application/json")
-	@Visit(DynamicExcludeFilter.class)
+	@Visit(value = DynamicExcludeFilter.class, type=Doc.class)
 	public Doc partial(@QueryParam("exclude") List<String> excludes) {
 		dynamicExcludes.set(excludes);
 		return new Doc("Title", "Author", "Body");
@@ -156,8 +163,7 @@ public class SampleApp {
 	@Path("label")
 	@Consumes("application/json")
 	@Produces("application/json")
-	@Visit(value=Labeller.class,path="elements[*]",type=String.class)
-	@Visit(value=Labeller.class,path="elements[*]",type=Double.class)
+	@Visit(value=Labeller.class,path="elements[*]")
 	public Thing label(Thing body) {
 		return body;
 	}
@@ -185,40 +191,52 @@ public class SampleApp {
 	private class UpperTransform {
 	}
 
-	public static class DynamicExcludeFilter extends ExcludeVisitor{
+	public static class DynamicExcludeFilter implements ObjectVisitor{
 
 		@Override
-		public boolean exclude(String fieldName) {
-			return dynamicExcludes.get().contains(fieldName);
+		public void visitObject(Object obj, ObjectModel model, Visitor visitor) {
+			List<Field> fields = model.fields();
+			visitor.visitObject(obj, new FilterFieldObjectModel(model, fields.stream()
+					.filter(f -> !dynamicExcludes.get().contains(f.key().toString()))
+					.toArray(Field[]::new)));
 		}
 		
 	}
 
-	public static class Labeller extends TypeVisitorTransform<Object>{
+	public static class Labeller extends BaseVisitorFilter{
 
 		@Override
-		public Object transform(Object obj) {
-			return "("+obj.getClass().getSimpleName()+") "+obj;
+		public void visitString(CharSequence s) {
+			visitor.visitString("("+s.getClass().getSimpleName()+") "+s);
+		}
+		
+		@Override
+		public void visitDouble(double d) {
+			visitor.visitString("(Double) "+d);
 		}
 
 	}
 	
-	public static class ParseLabeller extends TypeParserTransform<Object, Object> {
+	public static class ParseLabeller implements ModelParser{
 
 		@Override
-		public Object transform(Object obj) {
-			return "("+obj.getClass().getSimpleName()+") "+obj;
+		public Object parse(Model model, Parser parser) {
+			var obj = parser.parse(model);
+			if(obj != null) {
+				return "("+obj.getClass().getSimpleName()+") "+obj;
+			}
+			return null;
 		}
 		
 	}
 
+
 	public static class ThingNameExploder extends MultiFilterVisitor {
 
 		public ThingNameExploder(Models models) {
-			super(new IncludeVisitor<>(models.get(Thing.class), "name"),
-					new FieldVisitorFunction<Thing, String>("name", (String n) -> {
-						return n.chars().boxed().map(Character::toString).collect(Collectors.toList());
-					}) {});
+			super(new IncludeVisitor<>(Thing.class, "name"),
+					new FieldVisitor<Thing>("name", Filters.visitString((s, visitor) -> 
+						visitor.visit(s.chars().boxed().map(Character::toString).collect(Collectors.toList())))) {});
 		}
 	}
 }

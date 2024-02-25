@@ -15,7 +15,6 @@
  *******************************************************************************/
 package com.bigcloud.djomo.simple;
 
-import java.io.IOException;
 import java.lang.reflect.Type;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -23,12 +22,12 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.api.Printer;
-import com.bigcloud.djomo.base.BaseSimpleModel;
+import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.base.BaseModel;
 import com.bigcloud.djomo.error.ModelException;
-import com.bigcloud.djomo.internal.CharSequenceParser;
-import com.bigcloud.djomo.io.Buffer;
 
 /**
  * Used to provide string formatting for legacy Date objects
@@ -36,23 +35,12 @@ import com.bigcloud.djomo.io.Buffer;
  * @author Alex Vigdor
  *
  */
-public class DateFormatModel extends BaseSimpleModel<Date> {
+public class DateFormatModel extends BaseModel<Date> {
 	final DateTimeFormatter format;
 
 	public DateFormatModel(Type type, ModelContext context, DateTimeFormatter format) {
 		super(type, context);
 		this.format = format;
-	}
-
-	@Override
-	public void print(Date obj, Printer printer) {
-		printer.quote(format.format(ZonedDateTime.ofInstant(obj.toInstant(), ZoneId.systemDefault())));
-	}
-
-	@Override
-	public Date parse(Buffer input, Buffer overflow) throws IOException {
-		CharSequence cs = CharSequenceParser.parse(input, overflow);
-		return Date.from(format.parse(cs, Instant::from));
 	}
 
 	@Override
@@ -71,4 +59,17 @@ public class DateFormatModel extends BaseSimpleModel<Date> {
 		}
 	}
 
+	@Override
+	public Date parse(Parser parser) {
+		return Date.from(format.parse(parser.parseString(), Instant::from));
+	}
+
+	@Override
+	public void visit(Date obj, Visitor visitor) {
+		visitor.visitString(format.format(ZonedDateTime.ofInstant(obj.toInstant(), ZoneId.systemDefault())));
+	}
+	@Override
+	public Format getFormat() {
+		return Format.STRING;
+	}
 }

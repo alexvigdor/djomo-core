@@ -16,52 +16,71 @@
 package com.bigcloud.djomo.json;
 
 import com.bigcloud.djomo.Models;
-import com.bigcloud.djomo.api.ComplexModel;
 import com.bigcloud.djomo.api.Field;
-import com.bigcloud.djomo.api.ListMaker;
 import com.bigcloud.djomo.api.ListModel;
-import com.bigcloud.djomo.api.Maker;
-import com.bigcloud.djomo.filter.FilterParser;
+import com.bigcloud.djomo.api.ObjectModel;
+import com.bigcloud.djomo.api.ParserFilterFactory;
 import com.bigcloud.djomo.io.Buffer;
 
 public class MergeJsonParser extends JsonParser {
-	public MergeJsonParser(Models context, Buffer input, Buffer overflow, Object destination, FilterParser... filters) {
+	public MergeJsonParser(Models context, Buffer input, Buffer overflow, Object destination,
+			ParserFilterFactory... filters) {
 		super(context, input, overflow, filters);
 		this.source = destination;
 	}
 
+	protected Object object;
 	protected Object source;
 	protected Object list;
+
 	@Override
-	protected <O, M extends Maker<O>> M maker(ComplexModel<O, M> definition){
-		if (source != null) {
-			return definition.maker((O) source);
+	protected Object objectMaker(ObjectModel definition) {
+		if (object != null) {
+			return definition.maker(object);
 		}
+		return definition.maker();
+	}
+
+	@Override
+	protected Object listMaker(ListModel definition) {
 		if (list != null) {
-			var maker = definition.maker((O) list);
+			var maker = definition.maker(list);
 			list = null;
 			return maker;
 		}
 		return definition.maker();
 	}
+
 	@Override
-	protected Object parseFieldValue(Field field) {
-		Object o = source;
-		if (o != null) {
-			source = field.get(o);
+	public Field parseObjectField(ObjectModel model, CharSequence field) {
+		Field f = super.parseObjectField(model, field);
+		Object o = object;
+		if (f == null || o == null) {
+			source = null;
+		} else {
+			source = f.get(o);
 		}
-		try {
-			return super.parseFieldValue(field);
-		} finally {
-			source = o;
-		}
+		return f;
 	}
 
 	@Override
-	public <L, M extends ListMaker<L, I>, I> M parseList(ListModel<L, M, I> definition) {
+	public Object parseList(ListModel definition) {
+		var ls = list;
 		list = source;
 		source = null;
-		return super.parseList(definition);
+		var pl = super.parseList(definition);
+		list = ls;
+		return pl;
+	}
+
+	@Override
+	public Object parseObject(ObjectModel definition) {
+		var ro = object;
+		object = source;
+		source = null;
+		var po = super.parseObject(definition);
+		object = ro;
+		return po;
 	}
 
 	@Override

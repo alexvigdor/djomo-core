@@ -15,7 +15,6 @@
  *******************************************************************************/
 package com.bigcloud.djomo.simple;
 
-import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
@@ -23,12 +22,12 @@ import java.lang.reflect.Type;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.api.Printer;
-import com.bigcloud.djomo.base.BaseSimpleModel;
+import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.base.BaseModel;
 import com.bigcloud.djomo.error.ModelException;
-import com.bigcloud.djomo.internal.CharSequenceParser;
-import com.bigcloud.djomo.io.Buffer;
 
 /**
  * Used to provide customized string formatting for java.time objects
@@ -36,7 +35,7 @@ import com.bigcloud.djomo.io.Buffer;
  * @author Alex Vigdor
  *
  */
-public class DateTimeFormatterModel extends BaseSimpleModel<TemporalAccessor> {
+public class DateTimeFormatterModel extends BaseModel<TemporalAccessor> {
 	final DateTimeFormatter format;
 	final MethodHandle fromHandle;
 
@@ -49,17 +48,6 @@ public class DateTimeFormatterModel extends BaseSimpleModel<TemporalAccessor> {
 		} catch (NoSuchMethodException | SecurityException | IllegalAccessException e) {
 			throw new ModelException("Unable to create formatter model for type " + type.getTypeName(), e);
 		}
-	}
-
-	@Override
-	public void print(TemporalAccessor obj, Printer printer) {
-		printer.quote(format.format(obj));
-	}
-
-	@Override
-	public TemporalAccessor parse(Buffer input, Buffer overflow) throws IOException {
-		CharSequence cs = CharSequenceParser.parse(input, overflow);
-		return format.parse(cs, this::convert);
 	}
 
 	@Override
@@ -81,5 +69,20 @@ public class DateTimeFormatterModel extends BaseSimpleModel<TemporalAccessor> {
 		} catch (Throwable e) {
 			throw new ModelException("Error converting " + o + " to " + type.getTypeName(), e);
 		}
+	}
+
+	@Override
+	public TemporalAccessor parse(Parser parser) {
+		return format.parse(parser.parseString(), this::convert);
+	}
+
+	@Override
+	public void visit(TemporalAccessor obj, Visitor visitor) {
+		visitor.visitString(format.format(obj));
+	}
+	
+	@Override
+	public Format getFormat() {
+		return Format.STRING;
 	}
 }

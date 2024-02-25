@@ -25,94 +25,99 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import com.bigcloud.djomo.ModelType;
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.annotation.Order;
 import com.bigcloud.djomo.api.Field;
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.api.ObjectMaker;
 import com.bigcloud.djomo.api.ObjectModel;
+import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.internal.CharSequenceLookup;
 import com.bigcloud.djomo.object.BeanField;
+
 /**
  * Common baseline behavior for Object Models with a predefined set of fields
  * 
  * @author Alex Vigdor
  *
  * @param <T>
- * @param <M>
- * @param <F>
- * @param <K>
- * @param <V>
  */
-public abstract class BaseObjectModel<T, M extends ObjectMaker<T, F, V>, F extends Field<T, K, V>, K, V> extends BaseComplexModel<T, M> implements ObjectModel<T, M, F, K, V> {
-	protected final CharSequenceLookup<F> fields;
-	protected final F[] sortedFields;
-	protected final Models models;
-	protected final List<F> fieldList;
+public abstract class BaseObjectModel<T> extends BaseComplexModel<T> implements ObjectModel<T> {
+	protected final CharSequenceLookup<Field> fields;
+	protected final Field[] sortedFields;
+	protected final List<Field> fieldList;
 
 	public BaseObjectModel(Type type, ModelContext context) throws IllegalAccessException {
 		super(type, context);
-		this.models = context.models();
 		var fieldMap = initFields(context);
 		this.fields = new CharSequenceLookup<>(fieldMap);
 		@SuppressWarnings("unchecked")
-		F[] sortedFields = fieldMap.values().toArray((F[]) new Field[0]);
+		Field[] sortedFields = fieldMap.values().toArray((Field[]) new Field[0]);
 		Order order = this.type.getAnnotation(Order.class);
-		if(order!=null && order.value()!=null && order.value().length>0) {
+		if (order != null && order.value() != null && order.value().length > 0) {
 			final String[] declared = order.value();
 			final int dl = declared.length;
-			Arrays.sort(sortedFields, (a, b)->{
+			Arrays.sort(sortedFields, (a, b) -> {
 				int p1 = dl;
 				int p2 = dl;
-				for(int i=0;i<dl;i++) {
+				for (int i = 0; i < dl; i++) {
 					String d = declared[i];
-					if(a.key().toString().equals(d)) {
+					if (a.key().toString().equals(d)) {
 						p1 = i;
 					}
-					if(b.key().toString().equals(d)) {
+					if (b.key().toString().equals(d)) {
 						p2 = i;
 					}
-					if(p1<dl && p2<dl) {
+					if (p1 < dl && p2 < dl) {
 						break;
 					}
 				}
-				if(p1==p2) {
+				if (p1 == p2) {
 					return a.key().toString().compareTo(b.key().toString());
 				}
-				return p1-p2;
-			} );
+				return p1 - p2;
+			});
+		} else {
+			Arrays.sort(sortedFields, (a, b) -> a.key().toString().compareTo(b.key().toString()));
 		}
-		else {
-			Arrays.sort(sortedFields, (a,b)->a.key().toString().compareTo(b.key().toString()));
-		}
-		this.sortedFields=sortedFields;
+		this.sortedFields = sortedFields;
 		this.fieldList = List.of(sortedFields);
 	}
-	
-	protected abstract Map<CharSequence, F> initFields(ModelContext context) throws IllegalAccessException;
+
+	protected BaseObjectModel(Models models, Type type, Field... fields) {
+		super(type, models);
+		this.sortedFields = fields;
+		this.fieldList = List.of(sortedFields);
+		this.fields = new CharSequenceLookup<Field>(
+				fieldList.stream().collect(Collectors.toMap(f -> f.key().toString(), Function.identity())));
+	}
+
+	protected abstract Map<CharSequence, Field> initFields(ModelContext context) throws IllegalAccessException;
 
 	@Override
-	public M maker(T obj) {
+	public Object maker(T obj) {
 		var m = maker();
-		for(F f: sortedFields) {
-			m.field(f, f.get(obj));
+		for (Field f : sortedFields) {
+			f.set(m, f.get(obj));
 		}
 		return m;
 	}
 
 	@Override
 	public T convert(Object o) {
-		if(o==null) {
+		if (o == null) {
 			return null;
 		}
-		if(o.getClass() == getType()) {
+		if (o.getClass() == getType()) {
 			return (T) o;
 		}
-		ModelParser mp = new ModelParser(models, o);
+		InstanceParser mp = new InstanceParser(models, o);
 		return mp.filter(this);
 	}
 
@@ -120,48 +125,64 @@ public abstract class BaseObjectModel<T, M extends ObjectMaker<T, F, V>, F exten
 	public void visit(T obj, Visitor visitor) {
 		visitor.visitObject(obj, this);
 	}
+
 	@Override
-	public void forEachField(T t, BiConsumer<K, V> consumer) {
-		for(F f: sortedFields) {
+	public T parse(Parser parser) {
+		return (T) parser.parseObject(this);
+	}
+
+	@Override
+	public void forEachField(T t, BiConsumer consumer) {
+		for (Field f : sortedFields) {
 			consumer.accept(f.key(), f.get(t));
 		}
 	}
+
 	@Override
-	public F getField(CharSequence name) {
+	public void visitFields(T t, Visitor visitor) {
+		for (Field f : sortedFields) {
+			f.visit(t, visitor);
+		}
+	}
+
+	@Override
+	public Field getField(CharSequence name) {
 		return fields.get(name);
 	}
+
 	@Override
-	public List<F> fields() {
+	public List<Field> fields() {
 		return fieldList;
 	}
 
-	protected <CLASS_TYPE> void accessor(MethodHandles.Lookup lookup, ModelContext context, BeanField.Builder<CLASS_TYPE, ?> fieldDef,
+	protected <CLASS_TYPE> void accessor(MethodHandles.Lookup lookup, ModelContext context, BeanField.Builder fieldDef,
 			Method method, Map<String, Type> typeArgs) throws IllegalAccessException {
 		Type ft = fixGenericType(method.getGenericReturnType(), typeArgs);
 		fieldDef.accessor(lookup.unreflect(method));
-		fieldDef.model((Model)context.get(ft));
+		fieldDef.model((Model) context.get(ft));
 	}
-	
-	protected <CLASS_TYPE> void publicField(MethodHandles.Lookup lookup, ModelContext context, BeanField.Builder<CLASS_TYPE, ?> fieldDef,
-			java.lang.reflect.Field field, Map<String, Type> typeArgs) throws IllegalAccessException {
+
+	protected <CLASS_TYPE> void publicField(MethodHandles.Lookup lookup, ModelContext context,
+			BeanField.Builder fieldDef, java.lang.reflect.Field field, Map<String, Type> typeArgs)
+			throws IllegalAccessException {
 		Type ft = fixGenericType(field.getGenericType(), typeArgs);
 		fieldDef.accessor(lookup.unreflectGetter(field));
 		fieldDef.mutator(lookup.unreflectSetter(field));
-		fieldDef.model((Model)context.get(ft));
+		fieldDef.model((Model) context.get(ft));
 	}
 
-	protected <CLASS_TYPE> void mutator(MethodHandles.Lookup lookup, ModelContext context, BeanField.Builder<CLASS_TYPE, ?> fieldDef,
+	protected <CLASS_TYPE> void mutator(MethodHandles.Lookup lookup, ModelContext context, BeanField.Builder fieldDef,
 			Method method, Map<String, Type> typeArgs) throws IllegalAccessException {
 		Type ft = fixGenericType(method.getGenericParameterTypes()[0], typeArgs);
 		fieldDef.mutator(lookup.unreflect(method));
-		fieldDef.model((Model)context.get(ft));
+		fieldDef.model((Model) context.get(ft));
 	}
 
-	protected <CLASS_TYPE> void mutator(MethodHandles.Lookup lookup, ModelContext context, BeanField.Builder<CLASS_TYPE, ?> fieldDef,
+	protected <CLASS_TYPE> void mutator(MethodHandles.Lookup lookup, ModelContext context, BeanField.Builder fieldDef,
 			MethodHandle method, Type fieldType, Map<String, Type> typeArgs) throws IllegalAccessException {
 		fieldType = fixGenericType(fieldType, typeArgs);
 		fieldDef.mutator(method);
-		fieldDef.model((Model)context.get(fieldType));
+		fieldDef.model((Model) context.get(fieldType));
 	}
 
 	private Type fixGenericType(Type declared, Map<String, Type> args) {
@@ -186,4 +207,8 @@ public abstract class BaseObjectModel<T, M extends ObjectMaker<T, F, V>, F exten
 		return ft;
 	}
 
+	@Override
+	public Format getFormat() {
+		return Format.OBJECT;
+	}
 }

@@ -27,8 +27,8 @@ import org.testng.annotations.Test;
 
 import com.bigcloud.djomo.Json;
 import com.bigcloud.djomo.StaticType;
-import com.bigcloud.djomo.filter.ExcludeParser;
-import com.bigcloud.djomo.filter.OmitNullParser;
+import com.bigcloud.djomo.filter.parsers.ExcludeParser;
+import com.bigcloud.djomo.filter.parsers.OmitNullItemParser;
 import com.bigcloud.djomo.test.ComplexModel.Direction;
 
 public class MergeTest {
@@ -48,7 +48,7 @@ public class MergeTest {
 				.models(Arrays.asList(
 						null,
 						ImmutableModel.builder().name("update").build()))
-				.history(new EnumMap(Map.of(ComplexModel.Direction.SOUTH, List.of(-1,-2,-3), ComplexModel.Direction.EAST,  List.of(-4,-5))))
+				.history(new EnumMap(Map.of(ComplexModel.Direction.SOUTH, List.of(-1l,-2l,-3l), ComplexModel.Direction.EAST,  List.of(-4l,-5l))))
 				.build();
 		
 		String mj = Json.toString(mb);
@@ -70,11 +70,11 @@ public class MergeTest {
 				.models(Arrays.asList(
 						null,
 						ImmutableModel.builder().name("update").build()))
-				.history(new EnumMap(Map.of(ComplexModel.Direction.SOUTH, List.of(-1,-2,-3), ComplexModel.Direction.EAST,  List.of(-4,-5))))
+				.history(new EnumMap(Map.of(ComplexModel.Direction.SOUTH, List.of(-1l,-2l,-3l), ComplexModel.Direction.EAST,  List.of(-4l,-5l))))
 				.build();
 		
 		String mj = Json.toString(mb);
-		ComplexModel merged = Json.fromString(mj, ma, new OmitNullParser(), new ExcludeParser("history"));
+		ComplexModel merged = Json.fromString(mj, ma, new OmitNullItemParser(), new ExcludeParser(ComplexModel.class, "history"));
 		Assert.assertEquals(Json.toString(merged), "{\"children\":null,\"direction\":\"WEST\",\"history\":{\"NORTH\":[1,2,3],\"EAST\":[4,5,6]},\"models\":[{\"count\":0,\"enabled\":true,\"name\":\"foo\"},{\"count\":4,\"enabled\":false,\"name\":\"bar\"},{\"count\":0,\"enabled\":false,\"name\":\"update\"}]}");
 	}
 }

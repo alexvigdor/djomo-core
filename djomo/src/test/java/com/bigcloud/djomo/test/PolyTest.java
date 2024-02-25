@@ -30,13 +30,11 @@ import org.testng.annotations.Test;
 
 import com.bigcloud.djomo.Json;
 import com.bigcloud.djomo.Models;
-import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.filter.FilterVisitor;
-import com.bigcloud.djomo.filter.InjectVisitor;
-import com.bigcloud.djomo.filter.PathParser;
-import com.bigcloud.djomo.filter.PathVisitor;
-import com.bigcloud.djomo.filter.TypeParserFunction;
-import com.bigcloud.djomo.filter.TypeVisitorFunction;
+import com.bigcloud.djomo.api.Filters;
+import com.bigcloud.djomo.base.BaseVisitorFilter;
+import com.bigcloud.djomo.filter.parsers.PathParser;
+import com.bigcloud.djomo.filter.visitors.InjectVisitor;
+import com.bigcloud.djomo.filter.visitors.PathVisitor;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -89,19 +87,23 @@ public class PolyTest {
 	
 	@Test
 	public void testArbitraryTypes() throws IOException, URISyntaxException {
-		FilterVisitor serialTransform = InjectVisitor.inject(Object.class, "@type", o -> o.getClass().getName());
-		var deserialTransform = new TypeParserFunction<>(Map.class, Object.class, m->  {
-			Object type = m.get("@type");
-			if(type==null) {
-				return m;
+		BaseVisitorFilter serialTransform = InjectVisitor.inject(Object.class, "@type", o -> o.getClass().getName());
+		var deserialTransform = Filters.parseModel( (model, parser) -> {
+			var o = parser.parse(model);
+			if(o instanceof Map m) {
+				Object type = m.get("@type");
+				if(type==null) {
+					return m;
+				}
+				Class c;
+				try {
+					c = Class.forName(type.toString());
+				} catch (ClassNotFoundException e) {
+					throw new RuntimeException(e);
+				}
+				return Models.get(c).convert(m);
 			}
-			Class c;
-			try {
-				c = Class.forName(type.toString());
-			} catch (ClassNotFoundException e) {
-				throw new RuntimeException(e);
-			}
-			return Models.get(c).convert(m);
+			return o;
 		});
 		List data = List.of(
 				new Coordinates(123, 456),
@@ -116,17 +118,25 @@ public class PolyTest {
 	@Test
 	public void testStructuralChange() throws IOException {
 		Poly poly =poly();
-		PathVisitor serialTransform = PathVisitor.builder().filter("**.namedChildren", new TypeVisitorFunction<Map<?,?>>(data ->
-			data.entrySet().stream().map(e->{
+		PathVisitor serialTransform = PathVisitor.builder().filter("**.namedChildren", Filters.visitObject(Map.class, (object, model, visitor) -> 
+			visitor.visit(
+			((Map<?,?>)object).entrySet().stream().map(e->{
 				Map kids = (Map) Models.get(Map.class).convert(e.getValue());
 				kids.put("key", e.getKey());
 				return kids;
-			}).collect(Collectors.toList())
-		){}).build();
+			}).collect(Collectors.toList()))
+		)).build();
 		String json = Json.toString(poly,"  ", serialTransform);
-		PathParser deserialTransform = PathParser.builder().filter("**.namedChildren", new TypeParserFunction<List, Object>(l ->
-			l.stream().collect(Collectors.toMap(m->((Map)m).get("key"), m->m))
-		) {}).build();
+		PathParser deserialTransform = PathParser.builder().filter("**.namedChildren", 
+				Filters.parseModel((model, parser) -> {
+					var list = ((List)parser.parse(Models.listModel));
+					if(list == null) {
+						return null;
+					}
+					return list.stream().collect(Collectors.toMap(m->((Map)m).get("key"), m->m));
+				})
+		
+				).build();
 		Poly round = Json.read(new StringReader(json), Poly.class, deserialTransform);
 		assertEquals(round, poly);
 	}

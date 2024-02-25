@@ -16,12 +16,9 @@
 package com.bigcloud.djomo.poly;
 
 import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
@@ -46,8 +43,6 @@ public class DefaultResolverModelFactory extends ResolverModelFactory {
 				new Resolver.Substitute<>(SortedSet.class, TreeSet.class),
 				new Resolver.Substitute<>(Set.class, LinkedHashSet.class),
 				new Resolver.Substitute<>(Queue.class, ArrayDeque.class),
-				new Resolver.Substitute<>(Deque.class, ArrayDeque.class),
-				new Resolver.Substitute<>(List.class, ArrayList.class),
-				new Resolver.Substitute<>(Collection.class, ArrayList.class));
+				new Resolver.Substitute<>(Deque.class, ArrayDeque.class));
 	}
 }

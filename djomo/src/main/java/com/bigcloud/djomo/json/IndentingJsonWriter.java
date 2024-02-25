@@ -18,14 +18,14 @@ package com.bigcloud.djomo.json;
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.api.ListModel;
 import com.bigcloud.djomo.api.ObjectModel;
-import com.bigcloud.djomo.filter.FilterVisitor;
+import com.bigcloud.djomo.api.VisitorFilterFactory;
 import com.bigcloud.djomo.io.CharSink;
 
 public class IndentingJsonWriter extends BaseJsonWriter {
 	private final char[] indent;
 	private int depth = 0;
 
-	public IndentingJsonWriter(Models context, CharSink sink, String indent, FilterVisitor... filters) {
+	public IndentingJsonWriter(Models context, CharSink sink, String indent, VisitorFilterFactory... filters) {
 		super(context, sink, filters);
 		this.indent = indent.toCharArray();
 	}
@@ -36,7 +36,7 @@ public class IndentingJsonWriter extends BaseJsonWriter {
 		}
 	}
 
-	public <T> void visitObject(T model, ObjectModel<T, ?, ?, ?, ?> definition) {
+	public <T> void visitObject(T model, ObjectModel<T> definition) {
 		char[] buf = buffer;
 		if(pos==BUF_LEN) {
 			sink.next(BUF_LEN);
@@ -62,7 +62,7 @@ public class IndentingJsonWriter extends BaseJsonWriter {
 		buf[pos++] = '}';
 	}
 
-	public <T> void visitList(T model, ListModel<T, ?, ?> definition) {
+	public <T> void visitList(T model, ListModel<T> definition) {
 		char[] buf = buffer;
 		if(pos==BUF_LEN) {
 			sink.next(BUF_LEN);
@@ -88,7 +88,7 @@ public class IndentingJsonWriter extends BaseJsonWriter {
 		buf[pos++] = ']';
 	}
 
-	public void visitObjectField(Object name, Object value) {
+	public void visitObjectField(Object name) {
 		char[] buf = buffer;
 		if (!first) {
 			reserve(2+(depth*indent.length));
@@ -100,15 +100,14 @@ public class IndentingJsonWriter extends BaseJsonWriter {
 		}
 		buf[pos++] = '\n';
 		indent();
-		quote(name.toString());
+		visitString(name.toString());
 		reserve(3);
 		buf[pos++] = ' ';
 		buf[pos++] = ':';
 		buf[pos++] = ' ';
-		super.visitObjectField(name, value);
 	}
 
-	public void visitListItem(Object value) {
+	public void visitListItem() {
 		char[] buf = buffer;
 		if (!first) {
 			reserve(2+(depth*indent.length));
@@ -120,6 +119,5 @@ public class IndentingJsonWriter extends BaseJsonWriter {
 		}
 		buf[pos++] = '\n';
 		indent();
-		super.visitListItem(value);
 	}
 }

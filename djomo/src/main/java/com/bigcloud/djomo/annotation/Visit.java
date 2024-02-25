@@ -22,7 +22,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import com.bigcloud.djomo.filter.FilterVisitor;
+import com.bigcloud.djomo.api.VisitorFilterFactory;
 /**
  * Define and configure a visitor filter; can be loaded in a Json.Builder using the scan method, or
  * used on a jax-rs endpoint to control serialization.  For lower-level use, the AnnotationProcessor 
@@ -36,7 +36,7 @@ import com.bigcloud.djomo.filter.FilterVisitor;
 @Repeatable(Visits.class)
 @Target({ElementType.METHOD, ElementType.TYPE})
 public @interface Visit {
-	Class<? extends FilterVisitor> value();
+	Class<? extends VisitorFilterFactory> value();
 	String[] path() default {};
 	String[] arg() default {};
 	Class<? extends Object> type() default Object.class;

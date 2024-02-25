@@ -24,17 +24,17 @@ import java.util.function.BiConsumer;
  * @author Alex Vigdor
  *
  * @param <T> Class of object this model describes
- * @param <M> ObjectMaker used to create an instance of this model
- * @param <F> Field used by this model
- * @param <K> Key class used by this model (use String for normal java beans)
- * @param <V> Value class used by this model (use Object if Fields have different types)
  */
-public interface ObjectModel<T, M extends ObjectMaker<T, F, V>, F extends Field<T, K, V>, K, V> extends ComplexModel<T, M> {
-	void forEachField(T t, BiConsumer<K, V> consumer);
-	F getField(CharSequence name);
+public interface ObjectModel<T> extends Model<T> {
+	void forEachField(T t, BiConsumer consumer);
+	void visitFields(T t, Visitor visitor);
+	Field getField(CharSequence name);
 	/**
 	 * return iterable if set of fields is fixed and known; otherwise return null to indicate dynamic field model
 	 * @return
 	 */
-	List<F> fields();
+	List<Field> fields();
+	Object maker(T obj);
+	Object maker();
+	T make(Object maker);
 }

@@ -18,7 +18,8 @@ package com.bigcloud.djomo.simple;
 import java.lang.reflect.Type;
 
 import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.api.Printer;
+import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.Visitor;
 
 public class ShortModel extends NumberModel<Short> {
 
@@ -52,21 +53,12 @@ public class ShortModel extends NumberModel<Short> {
 	}
 
 	@Override
-	public void print(Short obj, Printer out) {
-		int l = obj.shortValue();
-		boolean negative = l < 0;
-		if (negative) {
-			l = 0 - l;
-		}
-		char[] buf = new char[6];
-		int pos = 6;
-		do {
-			buf[--pos] = (char) (48 + (l % 10));
-			l /= 10;
-		} while (l > 0);
-		if (negative) {
-			buf[--pos] = '-';
-		}
-		out.raw(buf, pos, 6 - pos);
+	public void visit(Short obj, Visitor visitor) {
+		visitor.visitInt(obj.intValue());
+	}
+
+	@Override
+	public Short parse(Parser parser) {
+		return (short) parser.parseInt();
 	}
 }

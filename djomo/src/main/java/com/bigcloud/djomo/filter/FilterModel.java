@@ -15,6 +15,8 @@
  *******************************************************************************/
 package com.bigcloud.djomo.filter;
 
+import com.bigcloud.djomo.Models;
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
@@ -50,6 +52,16 @@ public class FilterModel<T> implements Model<T> {
 	@Override
 	public void visit(T obj, Visitor visitor) {
 		delegate.visit(obj, visitor);
+	}
+
+	@Override
+	public Format getFormat() {
+		return delegate.getFormat();
+	}
+
+	@Override
+	public Models models() {
+		return delegate.models();
 	}
 
 }

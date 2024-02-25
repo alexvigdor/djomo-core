@@ -111,40 +111,76 @@ public class CharSequenceLookup<T> {
 	}
 
 	public T get(CharSequence cs) {
-		int csl = cs.length();
+		final int csl = cs.length();
 		if (csl == 0) {
 			if (prefix.length == 0) {
 				return data;
 			}
 			return null;
 		}
-		char c = cs.charAt(0);
-		int pos = 1;
-		CharSequenceLookup<T> node = this;
-		while (node != null) {
-			char[] np = node.prefix;
-			if (np.length > 0) {
-				for (int pm = 0; pm < np.length; pm++) {
-					if (np[pm] != c) {
-						return null;
-					}
-					if (pos == csl) {
-						if (pm < np.length - 1) {
+		if(cs instanceof CharArraySequence cas) {
+			var buf = cas.buffer.buffer;
+			var pos = cas.start;
+			var end = pos + csl;
+			char c = buf[pos++];
+			CharSequenceLookup<T> node = this;
+			while (node != null) {
+				final char[] np = node.prefix;
+				final int npl = np.length;
+				if (npl > 0) {
+					for (int pm = 0; pm < npl ; pm++) {
+						if (np[pm] != c) {
 							return null;
 						}
-						return node.data;
+						if (pos == end) {
+							if (pm < npl - 1) {
+								return null;
+							}
+							return node.data;
+						}
+						c = buf[pos++];
 					}
-					c = cs.charAt(pos++);
 				}
+				if (c < 32 || c > 126) {
+					throw new IllegalArgumentException("Character out of range for CharSequenceLookup " + c);
+				}
+				node = node.children[c - ' '];
+				if (pos == end) {
+					return node == null ? null : node.data;
+				}
+				c = buf[pos++];
 			}
-			if (c < 32 || c > 126) {
-				throw new IllegalArgumentException("Character out of range for CharSequenceLookup " + c);
+		}
+		else {
+			char c = cs.charAt(0);
+			int pos = 1;
+			CharSequenceLookup<T> node = this;
+			while (node != null) {
+				final char[] np = node.prefix;
+				final int npl = np.length;
+				if (npl > 0) {
+					for (int pm = 0; pm < npl ; pm++) {
+						if (np[pm] != c) {
+							return null;
+						}
+						if (pos == csl) {
+							if (pm < npl - 1) {
+								return null;
+							}
+							return node.data;
+						}
+						c = cs.charAt(pos++);
+					}
+				}
+				if (c < 32 || c > 126) {
+					throw new IllegalArgumentException("Character out of range for CharSequenceLookup " + c);
+				}
+				node = node.children[c - ' '];
+				if (pos == csl) {
+					return node == null ? null : node.data;
+				}
+				c = cs.charAt(pos++);
 			}
-			node = node.children[c - ' '];
-			if (pos == csl) {
-				return node == null ? null : node.data;
-			}
-			c = cs.charAt(pos++);
 		}
 		return null;
 	}

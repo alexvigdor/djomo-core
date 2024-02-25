@@ -43,6 +43,9 @@ public class NumberTest {
 						Double round = Double.valueOf(ds);
 						Assert.assertEquals(round, d);
 						Double parsed = json.fromString(ds, Double.class);
+						if(!round.equals(parsed)) {
+							System.out.println("Got "+parsed+" from "+ds+" or "+d);
+						}
 						Assert.assertEquals(parsed, round);
 					}
 				}

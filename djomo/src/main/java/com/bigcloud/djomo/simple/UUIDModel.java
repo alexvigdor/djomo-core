@@ -15,17 +15,17 @@
  *******************************************************************************/
 package com.bigcloud.djomo.simple;
 
-import java.io.EOFException;
-import java.io.IOException;
 import java.lang.reflect.Type;
+import java.nio.CharBuffer;
 import java.util.UUID;
 
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.api.Printer;
-import com.bigcloud.djomo.base.BaseSimpleModel;
-import com.bigcloud.djomo.io.Buffer;
+import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.base.BaseModel;
 
-public class UUIDModel extends BaseSimpleModel<UUID> {
+public class UUIDModel extends BaseModel<UUID>  {
 	private static final char[] hexchars = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 
 	public UUIDModel(Type type, ModelContext context) {
@@ -33,21 +33,17 @@ public class UUIDModel extends BaseSimpleModel<UUID> {
 	}
 
 	@Override
-	public void print(UUID obj, Printer printer) {
-		char[] ucs = new char[38];
+	public void visit(UUID obj, Visitor visitor) {
+		char[] ucs = new char[36];
 		long val = obj.getMostSignificantBits();
 		var hc = hexchars;
-		for (int i = 0; i < 38; i++) {
+		for (int i = 0; i < 36; i++) {
 			switch (i) {
-			case 0:
-			case 37:
-				ucs[i] = '"';
-				break;
-			case 19:
+			case 18:
 				val = obj.getLeastSignificantBits();
-			case 9:
-			case 14:
-			case 24:
+			case 8:
+			case 13:
+			case 23:
 				ucs[i] = '-';
 				break;
 			default:
@@ -56,117 +52,95 @@ public class UUIDModel extends BaseSimpleModel<UUID> {
 				val = val << 4;
 			}
 		}
-		ucs[0] = '"';
-		ucs[37] = '"';
-		printer.raw(ucs, 0, 38);
+		visitor.visitString(CharBuffer.wrap(ucs, 0, 36));
 	}
 
 	@Override
-	public UUID parse(Buffer input, Buffer overflow) throws IOException {
-		int rp = input.readPosition + 1;
-		char[] rb = input.buffer;
-		int len = input.writePosition - rp;
-		if (len > 37) {
-			len = 37;
+	public UUID parse(Parser parser) {
+		CharSequence chars = parser.parseString();
+		if(chars.length() != 36) {
+			throw new IllegalArgumentException("Unexpect UUID length " + chars.length());
 		}
 		long msb = 0;
 		long lsb = 0;
 		int upos = 0;
-		do {
-			for (int i = 0; i < len; i++) {
-				char ch = rb[rp + i];
-				switch (upos++) {
-				case 18:
-					msb = lsb;
-					lsb = 0;
-				case 8:
-				case 13:
-				case 23:
-					if (ch != '-') {
-						throw new IllegalArgumentException("Illegal UUID format " + input.describe());
-					}
+		for (int i = 0; i < 36; i++) {
+			char ch = chars.charAt(i);
+			switch (upos++) {
+			case 18:
+				msb = lsb;
+				lsb = 0;
+			case 8:
+			case 13:
+			case 23:
+				if (ch != '-') {
+					throw new IllegalArgumentException("Illegal UUID format " + chars);
+				}
+				break;
+			default:
+				lsb = lsb << 4;
+				switch (ch) {
+				case '0':
 					break;
-				case 36:
-					if (ch != '"') {
-						throw new IllegalArgumentException("Expected closing quote " + input.describe());
-					}
+				case '1':
+					lsb += 1;
+					break;
+				case '2':
+					lsb += 2;
+					break;
+				case '3':
+					lsb += 3;
+					break;
+				case '4':
+					lsb += 4;
+					break;
+				case '5':
+					lsb += 5;
+					break;
+				case '6':
+					lsb += 6;
+					break;
+				case '7':
+					lsb += 7;
+					break;
+				case '8':
+					lsb += 8;
+					break;
+				case '9':
+					lsb += 9;
+					break;
+				case 'A':
+				case 'a':
+					lsb += 10;
+					break;
+				case 'B':
+				case 'b':
+					lsb += 11;
+					break;
+				case 'C':
+				case 'c':
+					lsb += 12;
+					break;
+				case 'D':
+				case 'd':
+					lsb += 13;
+					break;
+				case 'E':
+				case 'e':
+					lsb += 14;
+					break;
+				case 'F':
+				case 'f':
+					lsb += 15;
 					break;
 				default:
-					lsb = lsb << 4;
-					switch (ch) {
-					case '0':
-						break;
-					case '1':
-						lsb += 1;
-						break;
-					case '2':
-						lsb += 2;
-						break;
-					case '3':
-						lsb += 3;
-						break;
-					case '4':
-						lsb += 4;
-						break;
-					case '5':
-						lsb += 5;
-						break;
-					case '6':
-						lsb += 6;
-						break;
-					case '7':
-						lsb += 7;
-						break;
-					case '8':
-						lsb += 8;
-						break;
-					case '9':
-						lsb += 9;
-						break;
-					case 'A':
-					case 'a':
-						lsb += 10;
-						break;
-					case 'B':
-					case 'b':
-						lsb += 11;
-						break;
-					case 'C':
-					case 'c':
-						lsb += 12;
-						break;
-					case 'D':
-					case 'd':
-						lsb += 13;
-						break;
-					case 'E':
-					case 'e':
-						lsb += 14;
-						break;
-					case 'F':
-					case 'f':
-						lsb += 15;
-						break;
-					default:
-						throw new IllegalArgumentException("Illegal hex char " + ch);
-					}
+					throw new IllegalArgumentException("Illegal hex char " + ch);
 				}
 			}
-			input.readPosition = rp + len;
-			if(upos == 37) {
-				break;
-			}
-			if (!input.refill()) {
-				throw new EOFException();
-			}
-			rp = input.readPosition;
-			len = input.writePosition - rp;
-			if (len > (36 - upos)) {
-				len = 36 - upos;
-			}
-		} while (true);
+		}
 		return new UUID(msb, lsb);
 	}
+	
 
 	@Override
 	public UUID convert(Object o) {
@@ -178,5 +152,9 @@ public class UUIDModel extends BaseSimpleModel<UUID> {
 		}
 		return UUID.fromString(o.toString());
 	}
-
+	
+	@Override
+	public Format getFormat() {
+		return Format.STRING;
+	}
 }

@@ -15,37 +15,18 @@
  *******************************************************************************/
 package com.bigcloud.djomo.simple;
 
-import java.io.IOException;
 import java.util.Base64;
 
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.api.Printer;
-import com.bigcloud.djomo.base.BaseSimpleModel;
-import com.bigcloud.djomo.internal.CharSequenceParser;
-import com.bigcloud.djomo.io.Buffer;
+import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.base.BaseModel;
 
-public class ByteArrayModel extends BaseSimpleModel<byte[]> {
+public class ByteArrayModel extends BaseModel<byte[]> {
 
 	public ByteArrayModel(ModelContext context) {
 		super(byte[].class, context);
-	}
-
-	@Override
-	public void print(byte[] obj, Printer printer) {
-		byte[] bytes = Base64.getEncoder().encode(obj);
-		var len = bytes.length;
-		char[] chars = new char[len+2];
-		chars[0]='"';
-		for(int i=0; i < len; i++) {
-			chars[i+1] = (char) bytes[i];
-		}
-		chars[len+1]='"';
-		printer.raw(chars, 0, len+2);
-	}
-
-	@Override
-	public byte[] parse(Buffer input, Buffer overflow) throws IOException {
-		return Base64.getDecoder().decode(CharSequenceParser.parse(input, overflow).toString());
 	}
 
 	@Override
@@ -57,6 +38,21 @@ public class ByteArrayModel extends BaseSimpleModel<byte[]> {
 			return (byte[]) o;
 		}
 		return Base64.getDecoder().decode(o.toString());
+	}
+
+	@Override
+	public byte[] parse(Parser parser) {
+		return Base64.getDecoder().decode(parser.parseString().toString());
+	}
+
+	@Override
+	public void visit(byte[] obj, Visitor visitor) {
+		visitor.visitString(Base64.getEncoder().encodeToString(obj));
+	}
+
+	@Override
+	public Format getFormat() {
+		return Format.STRING;
 	}
 
 }

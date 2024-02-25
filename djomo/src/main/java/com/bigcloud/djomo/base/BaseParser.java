@@ -15,18 +15,18 @@
  *******************************************************************************/
 package com.bigcloud.djomo.base;
 
-import java.util.function.Consumer;
-
 import com.bigcloud.djomo.Models;
-import com.bigcloud.djomo.api.ComplexModel;
-import com.bigcloud.djomo.api.Field;
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ListModel;
-import com.bigcloud.djomo.api.Maker;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.Parser;
-import com.bigcloud.djomo.api.SimpleModel;
-import com.bigcloud.djomo.filter.FilterParser;
+import com.bigcloud.djomo.api.ParserFilter;
+import com.bigcloud.djomo.api.ParserFilterFactory;
+import com.bigcloud.djomo.simple.BooleanModel;
+import com.bigcloud.djomo.simple.NumberModel;
+import com.bigcloud.djomo.simple.StringModel;
+
 /**
  * Baseline parser support, source agnostic
  * 
@@ -36,84 +36,91 @@ import com.bigcloud.djomo.filter.FilterParser;
 public abstract class BaseParser implements Parser {
 	protected final Models models;
 	protected final Parser parser;
-	
-	public BaseParser(Models models, FilterParser... filters) {
+
+	public BaseParser(Models models, ParserFilterFactory... filters) {
 		this.models = models;
 		Parser end = this;
-		if(filters!=null) {
-			for(int i=0;i<filters.length;i++) {
-				end = filters[i].parser(end);
+		if (filters != null) {
+			for (int i = 0; i < filters.length; i++) {
+				ParserFilter filter = filters[i].newParserFilter();
+				filter.filter(end);
+				end = filter;
 			}
 		}
 		this.parser = end;
 	}
 
-	protected <T> T parseObjectModel(Model<T> model){
-		ObjectModel odef;
-		if (!(model instanceof ObjectModel)) {
-			odef = models.mapModel;
+	protected Object parseObjectModel(Model model) {
+		if (model instanceof ObjectModel || model.getFormat() == Format.OBJECT) {
+			return model.parse(parser);
 		}
-		else {
-			odef = (ObjectModel) model;
-		}
-		var m = parser.parseObject(odef);
-		return (T) m.make();
-	}
-	
-	protected <T> T parseListModel(Model<T> model){
-		ListModel ldef;
-		if (!(model instanceof ListModel)) {
-			ldef = models.listModel;
-		}
-		else {
-			ldef = (ListModel) model;
-		}
-		var m = parser.parseList(ldef);
-		return (T) m.make();
-	}
-	
-	protected <T> T parseStringModel(Model<T> model) {
-		SimpleModel sdef;
-		if(!(model instanceof SimpleModel)) {
-			sdef = models.stringModel;
-		}
-		else {
-			sdef = (SimpleModel) model;
-		}
-		var t = parser.parseSimple(sdef);
-		return (T) t;
-	}
-	
-	protected <T> T parseNumberModel(Model<T> model) {
-		SimpleModel sdef;
-		if(!(model instanceof SimpleModel)) {
-			sdef = models.numberModel;
-		}
-		else {
-			sdef = (SimpleModel) model;
-		}
-		var t = parser.parseSimple(sdef);
-		return (T) t;
+		return models.mapModel.parse(parser);
 	}
 
-	protected <O, M extends Maker<O>> M maker(ComplexModel<O, M> definition){
+	protected Object parseListModel(Model model) {
+		if (model instanceof ListModel || model.getFormat() == Format.LIST) {
+			return model.parse(parser);
+		}
+		return models.listModel.parse(parser);
+	}
+
+	protected Object parseStringModel(Model model) {
+		if (model instanceof StringModel) {
+			return parser.parseString().toString();
+		}
+		return switch (model.getFormat()) {
+		case STRING -> model.parse(parser);
+		case NUMBER, BOOLEAN -> model.convert(parser.parseString().toString());
+		default -> parser.parseString().toString();
+		};
+	}
+
+	protected Object parseNumberModel(Model model) {
+		if (model instanceof NumberModel || model.getFormat() == Format.NUMBER) {
+			return model.parse(parser);
+		}
+		double d = parser.parseDouble();
+		if (Math.rint(d) == d && Double.isFinite(d)) {
+			// Down convert to the simplest representation
+			int i = (int) d;
+			if (i == d) {
+				return i;
+			}
+			return (long) d;
+		}
+		return d;
+	}
+
+	protected <T> T parseBooleanModel(Model<T> model) {
+		if (model instanceof BooleanModel || model.getFormat() == Format.BOOLEAN) {
+			return model.parse(parser);
+		}
+		return (T) (Boolean) parser.parseBoolean();
+	}
+
+	protected <T> T parseNullModel(Model<T> model) {
+		return model.convert(parseNull());
+	}
+
+	protected Object objectMaker(ObjectModel definition) {
 		return definition.maker();
 	}
 
-	protected <V> V parseFieldValue(Field<?, ?, V> field) {
-		return field.model().parse(parser);
+	protected Object listMaker(ListModel definition) {
+		return definition.maker();
 	}
 
 	@Override
-	public <T> void parseListItem(Model<T> definition, Consumer<T> consumer) {
-		consumer.accept(definition.parse(parser));
+	public void parseListItem() {
 	}
+
 	/**
-	 * Entry point to allow filters to intercept top-level object visit; subclasses should extend visit as opposed to filter
+	 * Entry point to allow filters to intercept top-level object visit; subclasses
+	 * should extend visit as opposed to filter
 	 * 
 	 */
 	public final <T> T filter(Model<T> model) {
-		return model.parse(parser);
+		return (T) parser.parse(model);
 	}
 
 	@Override

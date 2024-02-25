@@ -15,13 +15,14 @@
  *******************************************************************************/
 package com.bigcloud.djomo.rs.test;
 
-import com.bigcloud.djomo.filter.TypeVisitorTransform;
+import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.api.visitors.StringVisitor;
 
-public class ToUpper extends TypeVisitorTransform<String> {
+public class ToUpper implements StringVisitor {
 
 	@Override
-	public Object transform(String in) {
-		return in.toUpperCase();
+	public void visitString(CharSequence s, Visitor visitor) {
+		visitor.visitString(s.toString().toUpperCase());
 	}
 
 }

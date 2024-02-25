@@ -22,19 +22,20 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
+import com.bigcloud.djomo.api.Field;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
+import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.base.BaseObjectModel;
 
-public class EnumMapModel<T extends EnumMap<E, V>, E extends Enum<E>, V>
-		extends BaseObjectModel<T, EnumMapMaker<T, E, V>, EnumMapField<T, E, V>, E, V> {
-	final Model<E> keyModel;
-	final Model<V> valueModel;
+public class EnumMapModel<T extends EnumMap>
+		extends BaseObjectModel<T> {
+	final Model keyModel;
+	final Model valueModel;
 
 	public EnumMapModel(Type type, ModelContext context) throws IllegalAccessException {
 		super(type, context);
@@ -48,7 +49,7 @@ public class EnumMapModel<T extends EnumMap<E, V>, E extends Enum<E>, V>
 		}
 	}
 
-	protected Map<CharSequence, EnumMapField<T, E, V>> initFields(ModelContext context) {
+	protected Map<CharSequence, Field> initFields(ModelContext context) {
 		if (typeArgs == null) {
 			return Collections.emptyMap();
 		}
@@ -61,12 +62,12 @@ public class EnumMapModel<T extends EnumMap<E, V>, E extends Enum<E>, V>
 			enumClass = (Class<?>) enumType;
 		}
 		Type valueType = iter.next();
-		Model<V> valueModel = (Model<V>) context.get(valueType);
+		Model valueModel = context.get(valueType);
 		try {
-			E[] values = (E[]) enumClass.getDeclaredMethod("values").invoke(null);
-			Map<CharSequence, EnumMapField<T, E, V>> rval = Arrays.stream(values)
-					.collect(Collectors.toMap(E::name,
-							f -> new EnumMapField<T, E, V>(f, valueModel)));
+			Enum[] values = (Enum[]) enumClass.getDeclaredMethod("values").invoke(null);
+			Map<CharSequence, Field> rval = Arrays.stream(values)
+					.collect(Collectors.toMap(Enum::name,
+							f -> new EnumMapField(f, valueModel)));
 			return rval;
 		} catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException
 				| SecurityException e) {
@@ -75,27 +76,41 @@ public class EnumMapModel<T extends EnumMap<E, V>, E extends Enum<E>, V>
 	}
 
 	@Override
-	public EnumMapMaker<T, E, V> maker(T obj) {
-		var m = maker();
-		m.map.putAll(obj);
+	public Object maker(T obj) {
+		var m = newInstance();
+		m.putAll(obj);
 		return m;
 	}
 
 	@Override
-	public EnumMapMaker<T, E, V> maker() {
-		return new EnumMapMaker<>(this);
+	public Object maker() {
+		return newInstance();
 	}
 
 	@Override
-	public void forEachField(T t, BiConsumer<E, V> consumer) {
+	public void forEachField(T t, BiConsumer consumer) {
 		t.forEach(consumer);
 	}
 	public T newInstance() {
-		return (T) new EnumMap<E, V>(keyModel.getType());
+		return (T) new EnumMap(keyModel.getType());
 	}
 
 	@Override
-	public List<EnumMapField<T, E, V>> fields() {
-		return null;
+	public void visitFields(T t, Visitor visitor) {
+		var m = valueModel;
+		t.forEach((k, v) -> {
+			visitor.visitObjectField(k);
+			if(v == null) {
+				visitor.visitNull();
+			}
+			else {
+				m.visit(v, visitor);
+			}
+		});
+	}
+
+	@Override
+	public T make(Object maker) {
+		return (T) maker;
 	}
 }

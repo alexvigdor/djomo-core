@@ -20,6 +20,7 @@ import java.util.Map;
 
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.Resolver;
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
@@ -31,7 +32,7 @@ public class PolySelector extends Resolver<Poly> {
 	@Override
 	public Poly resolve(Parser parser) {
 		Models models = parser.models();
-		Map data = parser.parse(models.mapModel);
+		Map data = (Map) parser.parseObject(models.mapModel);
 		if (data.containsKey("bar")) {
 			return polyBar.convert(data);
 		}
@@ -42,5 +43,10 @@ public class PolySelector extends Resolver<Poly> {
 	public void init(ModelContext models, Type[] typeArgs) {
 		polyBar = models.get(PolyBar.class);
 		polyFoo = models.get(PolyFoo.class);
+	}
+
+	@Override
+	public Format getFormat() {
+		return Format.OBJECT;
 	}
 }

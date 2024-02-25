@@ -22,18 +22,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
+import com.bigcloud.djomo.api.Field;
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.ObjectModel;
+import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.base.BaseComplexModel;
 
-public class MapModel<T extends Map<K, V>, K, V> extends BaseComplexModel<T, MapMaker<T, K, V>> implements ObjectModel<T, MapMaker<T, K, V>, MapField<T,K,V>, K, V>{
+public class MapModel<T extends Map> extends BaseComplexModel<T> implements ObjectModel<T> {
 	final ModelContext context;
 	final MethodHandle constructor;
-	final Model<K> keyModel;
-	final Model<V> valueModel;
-	
+	final Model keyModel;
+	final Model valueModel;
+
 	public MapModel(Type type, ModelContext context, MethodHandle constructor) {
 		super(type, context);
 		this.context = context;
@@ -41,69 +44,70 @@ public class MapModel<T extends Map<K, V>, K, V> extends BaseComplexModel<T, Map
 		this.constructor = constructor;
 		if (typeArgs != null) {
 			Iterator<Type> ti = typeArgs.values().iterator();
-			keyModel = (Model<K>) context.get(ti.next());
+			keyModel = context.get(ti.next());
 			valueType = ti.next();
 		} else {
 			keyModel = null;
 		}
-		valueModel = (Model<V>) context.get(valueType != null ? valueType : Object.class);
+		valueModel = context.get(valueType != null ? valueType : Object.class);
 	}
 
 	@Override
-	public MapMaker<T, K, V> maker(T obj) {
-		var m = maker();
-		m.map.putAll(obj);
+	public Object maker(T obj) {
+		var m = newInstance();
+		m.putAll(obj);
 		return m;
 	}
 
 	@Override
-	public MapMaker<T, K, V> maker() {
-		return new MapMaker<>(this);
+	public Object maker() {
+		return newInstance();
 	}
 
 	@Override
 	public T convert(Object o) {
-		if(o==null) {
+		if (o == null) {
 			return null;
 		}
 		Model def = context.get(o.getClass());
-		if(def instanceof ObjectModel) {
+		if (def instanceof ObjectModel) {
 			T dest = newInstance();
-			((ObjectModel)def).forEachField(o, (key, val)->{
-				if(valueModel!=null) {
+			((ObjectModel) def).forEachField(o, (key, val) -> {
+				if (valueModel != null) {
 					val = valueModel.convert(val);
 				}
-				if(keyModel != null) {
+				if (keyModel != null) {
 					key = keyModel.convert(key);
 				}
-				dest.put((K)key, (V)val);
+				dest.put(key, val);
 			});
 			return dest;
 		}
-		throw new RuntimeException("Cannot convert object "+o+" of type "+o.getClass()+" to "+type.getTypeName());
+		throw new RuntimeException(
+				"Cannot convert object " + o + " of type " + o.getClass() + " to " + type.getTypeName());
 	}
 
 	@Override
-	public void forEachField(T t, BiConsumer<K, V> consumer) {
+	public void forEachField(T t, BiConsumer consumer) {
 		t.forEach(consumer);
 	}
+
 	@Override
-	public MapField<T, K, V> getField(CharSequence name) {
-		K key;
-		if(keyModel!=null) {
+	public Field getField(CharSequence name) {
+		Object key;
+		if (keyModel != null) {
 			key = keyModel.convert(name);
+		} else {
+			key = name.toString();
 		}
-		else {
-			key = (K) name.toString();
-		}
-		return new MapField<T, K, V>(key, valueModel);
+		return new MapField(key, valueModel);
 	}
 
 	public T newInstance() {
 		try {
 			var c = constructor;
-			if(c == null) {
-				throw new RuntimeException("No constructor for "+type);
+			if (c == null) {
+				throw new RuntimeException("No constructor for " + type);
 			}
 			return (T) c.invoke();
 		} catch (Throwable e) {
@@ -117,8 +121,35 @@ public class MapModel<T extends Map<K, V>, K, V> extends BaseComplexModel<T, Map
 	}
 
 	@Override
-	public List<MapField<T, K, V>> fields() {
+	public T parse(Parser parser) {
+		return (T) parser.parseObject(this);
+	}
+
+	@Override
+	public List<Field> fields() {
 		return null;
 	}
 
+	@Override
+	public Format getFormat() {
+		return Format.OBJECT;
+	}
+
+	@Override
+	public void visitFields(T t, Visitor visitor) {
+		for (Map.Entry entry : ((Map<?, ?>) t).entrySet()) {
+			visitor.visitObjectField(entry.getKey());
+			Object val = entry.getValue();
+			if (val == null) {
+				visitor.visitNull();
+			} else {
+				valueModel.visit(entry.getValue(), visitor);
+			}
+		}
+	}
+
+	@Override
+	public T make(Object maker) {
+		return (T) maker;
+	}
 }

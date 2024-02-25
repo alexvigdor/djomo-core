@@ -15,7 +15,7 @@
  *******************************************************************************/
 /**
  * <p>
- * {@link FilterVisitor} and {@link FilterParser} base classes, and a number of common and composable filter implementations.
+ * Contains a number of common and composable parser and visitor filter implementations.
  * </p><p>
  * Filters can be defined programmatically, or configured using {@link com.bigcloud.djomo.annotation.Visit} and 
  * {@link com.bigcloud.djomo.annotation.Parse} annotations.

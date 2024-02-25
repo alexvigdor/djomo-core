@@ -29,8 +29,8 @@ public class AnyFieldElement implements PathElement {
 	
 	@Override
 	public boolean matches(PathElement path) {
-		if(path instanceof FieldElement) {
-			return parent.matches(path.getParent());
+		if(path instanceof FieldElement fe) {
+			return fe.name != null && parent.matches(path.getParent());
 		}
 		return false;
 	}

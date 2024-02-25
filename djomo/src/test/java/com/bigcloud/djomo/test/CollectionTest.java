@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
@@ -36,10 +35,10 @@ import com.bigcloud.djomo.Json;
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.Resolver;
 import com.bigcloud.djomo.StaticType;
-import com.bigcloud.djomo.api.ListMaker;
 import com.bigcloud.djomo.api.ListModel;
 import com.bigcloud.djomo.api.Model;
-import com.bigcloud.djomo.list.StreamMaker;
+import com.bigcloud.djomo.base.InstanceParser;
+import com.bigcloud.djomo.list.ImmutableList;
 
 public class CollectionTest {
 	@Test
@@ -72,23 +71,22 @@ public class CollectionTest {
 		String data = "[1,2,[3,4]]";
 		Json json = new Json();
 		List parsed = (List) json.fromString(data);
-		Assert.assertEquals(parsed.getClass(), ArrayList.class);
-		Assert.assertEquals(parsed.get(2).getClass(), ArrayList.class);
+		Assert.assertEquals(parsed.getClass(), ImmutableList.class);
+		Assert.assertEquals(parsed.get(2).getClass(), ImmutableList.class);
 		json = new Json(Models.builder()
-				.resolver(new Resolver.Substitute<>(List.class, LinkedList.class))
+				.resolver(new Resolver.Substitute<>(List.class, ArrayList.class))
 				.build());
 		parsed = (List) json.fromString(data);
-		Assert.assertEquals(parsed.getClass(), LinkedList.class);
-		Assert.assertEquals(parsed.get(2).getClass(), LinkedList.class);
+		Assert.assertEquals(parsed.getClass(), ArrayList.class);
+		Assert.assertEquals(parsed.get(2).getClass(), ArrayList.class);
 		parsed = json.fromString(data, Stack.class);
 		Assert.assertEquals(parsed.getClass(), Stack.class);
-		Assert.assertEquals(parsed.get(2).getClass(), LinkedList.class);
+		Assert.assertEquals(parsed.get(2).getClass(), ArrayList.class);
 		Assert.assertEquals(parsed.get(1).getClass(), Integer.class);
-		parsed = json.fromString(data, new StaticType<Vector<Double>>() {});
+		parsed = json.fromString("[1.0,2,3]", new StaticType<Vector<Double>>() {});
 		Assert.assertEquals(parsed.getClass(), Vector.class);
-		Assert.assertEquals(parsed.get(2).getClass(), LinkedList.class);
 		Assert.assertEquals(parsed.get(1).getClass(), Double.class);
-		Assert.assertEquals(((List)parsed.get(2)).get(0).getClass(), Integer.class);
+		Assert.assertEquals(parsed.get(2).getClass(), Double.class);
 	}
 	
 	@Test
@@ -144,18 +142,20 @@ public class CollectionTest {
 	public void testExpandArray() {
 		Models models = new Models();
 		String[] ar = { "1", "2" };
-		var maker = ((ListModel<String[], ListMaker<String[], String>, String>) models.get(ar.getClass())).maker(ar);
-		maker.item("3");
-		Assert.assertEquals(maker.make(), new String[] { "1", "2", "3" });
+		var model = ((ListModel<String[]>) models.get(ar.getClass()));
+		var maker = model.maker(ar);
+		model.parseItem(maker, new InstanceParser(models, "3"));
+		Assert.assertEquals(model.make(maker), new String[] { "1", "2", "3" });
 	}
 
 	@Test
 	public void testStreams() {
-		ListModel<Stream<Integer>, StreamMaker<Stream<Integer>,Integer>, Integer> streamModel = new Models().get(new StaticType<Stream<Integer>>() {});
+		Models models = new Models();
+		ListModel<Stream<Integer>> streamModel = models.get(new StaticType<Stream<Integer>>() {});
 		Assert.assertNull(streamModel.convert(null));
 		var maker = streamModel.maker(Stream.of(1));
-		maker.item(2);
-		Stream<Integer> s = maker.make();
+		streamModel.parseItem(maker, new InstanceParser(models, 2));
+		Stream<Integer> s = streamModel.make(maker);
 		Assert.assertEquals(streamModel.convert(s).collect(Collectors.toList()), List.of(1, 2));
 		Assert.assertEquals(streamModel.convert("11").findFirst().orElseThrow(), 11);
 	}

@@ -15,29 +15,18 @@
  *******************************************************************************/
 package com.bigcloud.djomo.simple;
 
-import java.io.IOException;
 import java.lang.reflect.Type;
 
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.api.Printer;
-import com.bigcloud.djomo.base.BaseSimpleModel;
-import com.bigcloud.djomo.error.ModelException;
-import com.bigcloud.djomo.error.UnexpectedPrimitiveException;
-import com.bigcloud.djomo.io.Buffer;
+import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.base.BaseModel;
 
-public class BooleanModel extends BaseSimpleModel<Boolean> {
+public class BooleanModel extends BaseModel<Boolean> {
 
 	public BooleanModel(Type type, ModelContext context) {
 		super(type, context);
-	}
-
-	@Override
-	public void print(Boolean obj, Printer printer) {
-		if (obj.booleanValue()) {
-			printer.raw("true");
-		} else {
-			printer.raw("false");
-		}
 	}
 
 	@Override
@@ -52,31 +41,18 @@ public class BooleanModel extends BaseSimpleModel<Boolean> {
 	}
 
 	@Override
-	public Boolean parse(Buffer input, Buffer overflow) throws IOException {
-		try {
-			var b = input;
-			var c = b.read();
-			boolean quoted = c == '"';
-			if (quoted) {
-				c = b.read();
-			}
-			if (c == 't') {
-				if ((c = b.read()) == 'r' && (c = b.read()) == 'u' && (c = b.read()) == 'e'
-						&& (!quoted || (c = b.read()) == '"')) {
-					return Boolean.TRUE;
-				}
-				throw new UnexpectedPrimitiveException("Unexepected character in true " + (char) c);
-			} else if (c == 'f') {
-				if ((c = b.read()) == 'a' && (c = b.read()) == 'l' && (c = b.read()) == 's' && (c = b.read()) == 'e'
-						&& (!quoted || (c = b.read()) == '"')) {
-					return Boolean.FALSE;
-				}
-				throw new UnexpectedPrimitiveException("Unexepected character in false " + (char) c);
-			}
-			throw new UnexpectedPrimitiveException("Unexepected character in boolean " + (char) c);
-		} catch (IOException e) {
-			throw new ModelException("Error parsing boolean", e);
-		}
+	public Boolean parse(Parser parser) {
+		return parser.parseBoolean();
+	}
+
+	@Override
+	public void visit(Boolean obj, Visitor visitor) {
+		visitor.visitBoolean(obj.booleanValue());
+	}
+
+	@Override
+	public Format getFormat() {
+		return Format.BOOLEAN;
 	}
 
 }

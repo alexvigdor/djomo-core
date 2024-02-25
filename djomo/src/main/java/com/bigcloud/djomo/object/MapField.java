@@ -19,29 +19,60 @@ import java.util.Map;
 
 import com.bigcloud.djomo.api.Field;
 import com.bigcloud.djomo.api.Model;
+import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.Visitor;
 
-public class MapField<T extends Map<K, V>, K, V> implements Field<T, K, V> {
-	final K key;
-	final Model<V> model;
-	
-	public MapField(K key, Model<V> model) {
+public class MapField implements Field {
+	final Object name;
+	final Object key;
+	final Model model;
+
+	public MapField(Object name, Model model) {
+		this.name = name;
+		this.key = name;
+		this.model = model;
+	}
+
+	private MapField(Object name, Object key, Model model) {
+		this.name = name;
 		this.key = key;
 		this.model = model;
 	}
 
 	@Override
-	public K key() {
+	public Object key() {
 		return key;
 	}
 
 	@Override
-	public Model<V> model() {
+	public Model model() {
 		return model;
 	}
 
 	@Override
-	public V get(T o) {
-		return o.get(key);
+	public Object get(Object o) {
+		return ((Map) o).get(name);
 	}
 
+	@Override
+	public void set(Object destination, Object value) {
+		((Map) destination).put(name, value);
+	}
+
+	@Override
+	public void visit(Object source, Visitor visitor) {
+		visitor.visitObjectField(key);
+		model.visit(((Map) source).get(name), visitor);
+	}
+
+	@Override
+	public void parse(Object dest, Parser parser) {
+		var value = parser.parse(model);
+		((Map) dest).put(name, value);
+	}
+
+	@Override
+	public Field rekey(Object newKey) {
+		return new MapField(name, newKey, model);
+	}
 }

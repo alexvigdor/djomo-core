@@ -32,7 +32,7 @@ import org.testng.annotations.Test;
 import com.bigcloud.djomo.Json;
 import com.bigcloud.djomo.ModelType;
 import com.bigcloud.djomo.StaticType;
-import com.bigcloud.djomo.filter.FilterParser;
+import com.bigcloud.djomo.base.BaseParserFilter;
 import com.bigcloud.djomo.test.ComplexModel.Direction;
 
 import lombok.Builder;
@@ -63,21 +63,21 @@ public class JsonReaderTest {
 	
 	@Test
 	public void testSimpleListReader() throws IOException{
-		String json = "[1,2,3.0,true,null,\"hi\"]";
+		String json = "[1,2,3.1,true,null,\"hi\"]";
 		Object o = Json.fromString(json);
 		assertTrue(o instanceof List);
-		assertEquals(o, Arrays.asList(1,2,3.0,true,null,"hi"));
+		assertEquals(o, Arrays.asList(1,2,3.1,true,null,"hi"));
 	}
 	
 	@Test
 	public void testSimpleMapReader() throws IOException{
-		String json = "{\"a\":1,\"b\":8765876587654321,\"c\":3.0,\"d\":true,\"e\":null,\"f\":\"hi\"}";
+		String json = "{\"a\":1,\"b\":8765876587654321,\"c\":3.1,\"d\":true,\"e\":null,\"f\":\"hi\"}";
 		Object o = Json.fromString(json);
 		assertTrue(o instanceof Map);
 		Map expected = new HashMap<>();
 		expected.put("a", 1);
 		expected.put("b", 8765876587654321l);
-		expected.put("c", 3.0);
+		expected.put("c", 3.1);
 		expected.put("d", true);
 		expected.put("e", null);
 		expected.put("f", "hi");
@@ -129,7 +129,7 @@ public class JsonReaderTest {
 		assertEquals(m5, Map.of("1", "a", "2", "b"));
 		m5 = Json.read(new ByteArrayInputStream(data), new HashMap());
 		assertEquals(m5, Map.of("1", "a", "2", "b"));
-		var m6 = Json.read(new ByteArrayInputStream(data), (Object) null, (FilterParser[]) null);
+		var m6 = Json.read(new ByteArrayInputStream(data), (Object) null, (BaseParserFilter[]) null);
 		assertEquals(m6, Map.of("1", "a", "2", "b"));
 	}
 

@@ -15,143 +15,18 @@
  *******************************************************************************/
 package com.bigcloud.djomo.simple;
 
-import java.io.IOException;
-import java.io.StringReader;
 import java.lang.reflect.Type;
 
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.api.Printer;
-import com.bigcloud.djomo.base.BaseSimpleModel;
-import com.bigcloud.djomo.io.Buffer;
+import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.base.BaseModel;
 
-public class NumberModel<N extends Number> extends BaseSimpleModel<N> {
-	private static final ThreadLocal<char[]> parseBuffer = new ThreadLocal<char[]>() {
-		public char[] initialValue() {
-			return new char[256];
-		}
-	};
+public class NumberModel<N extends Number> extends BaseModel<N> {
 
 	public NumberModel(Type type, ModelContext context) {
 		super(type, context);
-	}
-
-	@Override
-	public void print(N obj, Printer printer) {
-		printer.raw(obj.toString());
-	}
-
-	@Override
-	public N parse(Buffer input, Buffer overflow) throws IOException {
-		// numeric
-		char[] buffer = input.buffer;
-		char[] out = overflow.buffer;
-		int rp = input.readPosition;
-		int wp = input.writePosition;
-		if (rp == wp) {
-			if (!input.refill()) {
-				throw new NumberFormatException(input.describe());
-			}
-			wp = input.writePosition;
-			rp = 0;
-		}
-		int start = rp;
-		char ch = buffer[rp++];
-		boolean quoted = ch == '"';
-		if(quoted) {
-			if (rp == wp) {
-				if (!input.refill()) {
-					throw new NumberFormatException(input.describe());
-				}
-				wp = input.writePosition;
-				rp = 0;
-			}
-			start = rp;
-			ch = buffer[rp++];
-		}
-		int op = 0;
-		boolean negative = ch == '-';
-		if (negative) {
-			if (rp == wp) {
-				if (!input.refill()) {
-					throw new NumberFormatException(input.describe());
-				}
-				wp = input.writePosition;
-				start = rp = 0;
-				out[op++] = '-';
-			}
-			ch = buffer[rp++];
-		}
-		long value = 0;
-		boolean integral = true;
-		PARSE_LOOP: while (true) {
-			while(true) {
-				switch (ch) {
-					case '0': case '1': case '2': case '3': case '4':
-					case '5': case '6': case '7': case '8': case '9':
-						if(integral) {
-							value = value * 10 + (ch - 48);
-						}
-						break;
-					case '+': case '-':
-					case '.':
-					case 'N':
-					case 'I':
-					case 'E': case 'e':
-					case 'a':
-					case 'n': case 'f': case 'i': case 't': case 'y':
-						integral = false;
-						break;
-					case '"':
-						if(!quoted) {
-							rp--;
-						}
-						break PARSE_LOOP;
-					default:
-						rp--;
-						break PARSE_LOOP;
-				}
-				if(rp == wp) {
-					break;
-				}
-				ch = buffer[rp++];
-			}
-			// if we get here, copy contents to overflow and refill buffer
-			int len = rp - start;
-			System.arraycopy(buffer, start, out, op, len);
-			op += len;
-			if (op > 26) {
-				// all supported numbers should fit in 26 characters or less
-				throw new NumberFormatException("Number is too long " + op + " " + input.describe());
-			}
-			rp = 0;
-			if (!input.refill()) {
-				break PARSE_LOOP;
-			}
-			start = 0;
-			wp = input.writePosition;
-			ch = buffer[rp++];
-		}
-		input.readPosition = rp;
-		if(integral) {
-			if (negative) {
-				value = -value;
-			}
-			if (value < Integer.MAX_VALUE && value > Integer.MIN_VALUE) {
-				return convertInt((int) value);
-			}
-			return convertLong(value);
-		}
-		String dstr;
-		if (op == 0) {
-			dstr = new String(buffer, start, rp - start);
-		} else {
-			if (rp > 0) {
-				System.arraycopy(buffer, start, out, op, rp);
-				op += rp;
-			}
-			dstr = new String(out, 0, op);
-		}
-		return convertDouble(Double.parseDouble(dstr));
 	}
 
 	@Override
@@ -169,11 +44,7 @@ public class NumberModel<N extends Number> extends BaseSimpleModel<N> {
 	}
 
 	public N parse(String str) {
-		try (StringReader sr = new StringReader(str);) {
-			return parse(new Buffer(parseBuffer.get(), sr), new Buffer(new char[26]));
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
+		return (N) Double.valueOf(str);
 	}
 
 	protected N convertNumber(Number value) {
@@ -190,6 +61,30 @@ public class NumberModel<N extends Number> extends BaseSimpleModel<N> {
 
 	protected N convertLong(long value) {
 		return (N) Long.valueOf(value);
+	}
+
+	@Override
+	public void visit(N obj, Visitor visitor) {
+		visitor.visitDouble(obj.doubleValue());
+	}
+
+	@Override
+	public N parse(Parser parser) {
+		double d = parser.parseDouble();
+		if(Math.rint(d) == d && Double.isFinite(d)) {
+			// Down convert to the simplest representation
+			int i = (int) d;
+			if(i == d) {
+				return (N) (Integer) i;
+			}
+			return (N) (Long) (long) d;
+		}
+		return (N) (Double) d;
+	}
+	
+	@Override
+	public Format getFormat() {
+		return Format.NUMBER;
 	}
 
 }

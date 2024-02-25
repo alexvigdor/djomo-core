@@ -17,8 +17,12 @@ package com.bigcloud.djomo.path;
 
 public class FieldElement implements PathElement {
 	final PathElement parent;
-	final String name;
-	
+	String name;
+
+	public FieldElement(PathElement parent) {
+		this.parent = parent;
+	}
+
 	public FieldElement(PathElement parent, String name) {
 		this.parent = parent;
 		this.name = name;
@@ -29,11 +33,15 @@ public class FieldElement implements PathElement {
 		return parent;
 	}
 
+	public void setName(String name) {
+		this.name = name;
+	}
+
 	@Override
 	public boolean matches(PathElement path) {
-		if(path instanceof FieldElement) {
+		if (path instanceof FieldElement) {
 			FieldElement fpath = (FieldElement) path;
-			if( name.equals(fpath.name)) {
+			if (name.equals(fpath.name)) {
 				return parent.matches(path.getParent());
 			}
 		}

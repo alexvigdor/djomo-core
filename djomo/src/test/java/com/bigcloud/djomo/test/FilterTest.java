@@ -30,33 +30,42 @@ import org.testng.annotations.Test;
 
 import com.bigcloud.djomo.Json;
 import com.bigcloud.djomo.Models;
-import com.bigcloud.djomo.StaticType;
 import com.bigcloud.djomo.annotation.Parse;
 import com.bigcloud.djomo.annotation.Visit;
+import com.bigcloud.djomo.api.Field;
+import com.bigcloud.djomo.api.Filters;
+import com.bigcloud.djomo.api.ListModel;
 import com.bigcloud.djomo.api.Model;
+import com.bigcloud.djomo.api.ObjectModel;
+import com.bigcloud.djomo.api.ParserFilterFactory;
+import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.api.visitors.ListVisitor;
+import com.bigcloud.djomo.api.visitors.ObjectVisitor;
+import com.bigcloud.djomo.base.BaseParserFilter;
 import com.bigcloud.djomo.error.AnnotationException;
-import com.bigcloud.djomo.filter.CircularReferenceVisitor;
-import com.bigcloud.djomo.filter.ExcludeParser;
-import com.bigcloud.djomo.filter.ExcludeVisitor;
-import com.bigcloud.djomo.filter.FieldParser;
-import com.bigcloud.djomo.filter.FieldParserFunction;
-import com.bigcloud.djomo.filter.FieldVisitor;
-import com.bigcloud.djomo.filter.FieldVisitorFunction;
-import com.bigcloud.djomo.filter.FilterParser;
-import com.bigcloud.djomo.filter.FilterVisitor;
-import com.bigcloud.djomo.filter.IncludeParser;
-import com.bigcloud.djomo.filter.IncludeVisitor;
-import com.bigcloud.djomo.filter.MultiFilterParser;
-import com.bigcloud.djomo.filter.MultiFilterVisitor;
-import com.bigcloud.djomo.filter.OmitNullVisitor;
-import com.bigcloud.djomo.filter.RenameParser;
-import com.bigcloud.djomo.filter.RenameVisitor;
-import com.bigcloud.djomo.filter.TypeParser;
-import com.bigcloud.djomo.filter.TypeVisitor;
-import com.bigcloud.djomo.filter.TypeVisitorTransform;
+import com.bigcloud.djomo.filter.FilterField;
+import com.bigcloud.djomo.filter.FilterListModel;
+import com.bigcloud.djomo.filter.FilterFieldObjectModel;
+import com.bigcloud.djomo.filter.parsers.ExcludeParser;
+import com.bigcloud.djomo.filter.parsers.FieldParser;
+import com.bigcloud.djomo.filter.parsers.IncludeParser;
+import com.bigcloud.djomo.filter.parsers.MultiFilterParser;
+import com.bigcloud.djomo.filter.parsers.RenameParser;
+import com.bigcloud.djomo.filter.parsers.TypeParser;
+import com.bigcloud.djomo.filter.visitors.CircularReferenceVisitor;
+import com.bigcloud.djomo.filter.visitors.ExcludeVisitor;
+import com.bigcloud.djomo.filter.visitors.FieldVisitor;
+import com.bigcloud.djomo.filter.visitors.IncludeVisitor;
+import com.bigcloud.djomo.filter.visitors.MultiFilterVisitor;
+import com.bigcloud.djomo.filter.visitors.OmitNullFieldVisitor;
+import com.bigcloud.djomo.filter.visitors.RenameVisitor;
+import com.bigcloud.djomo.filter.visitors.TypeVisitor;
+
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 public class FilterTest {
-	Json Json = new Json();
+	Json json = new Json();
 	
 	List regularList;
 	List circularList;
@@ -85,39 +94,42 @@ public class FilterTest {
 
 	@Test(expectedExceptions = StackOverflowError.class)
 	public void testCircularReferenceFilterObjectFail() {
-		Json.toString(regularObject);
-		Json.toString(circularObject);
+		json.toString(regularObject);
+		json.toString(circularObject);
 	}
 	
 	@Test
 	public void testCircularReferenceFilterObject() {
-		Json.toString(regularObject, new CircularReferenceVisitor());
-		Json.toString(circularObject, new CircularReferenceVisitor());
+		json.toString(regularObject, new CircularReferenceVisitor());
+		json.toString(circularObject, new CircularReferenceVisitor());
 	}
 	
 	@Test(expectedExceptions = StackOverflowError.class)
 	public void testCircularReferenceFilterListFail() {
-		Json.toString(regularList);
-		Json.toString(circularList);
+		json.toString(regularList);
+		json.toString(circularList);
 	}
 	
 	@Test
 	public void testCircularReferenceFilterList() {
-		Json.toString(regularList, new CircularReferenceVisitor());
-		Json.toString(circularList, new CircularReferenceVisitor());
+		json.toString(regularList, new CircularReferenceVisitor());
+		json.toString(circularList, new CircularReferenceVisitor());
 	}
 
-	public record Gadget(String name, Gear gear, Gauge gauge) {}
+	public interface Named{
+		String name();
+	}
+	public record Gadget(String name, Gear gear, Gauge gauge) implements Named {}
 
-	public record Gear(String name, Double value, Double radius) {}
+	public record Gear(String name, Double value, Double radius) implements Named {}
 
-	public record Gauge(String name, Double value, Double max) {}
+	public record Gauge(String name, Double value, Double max) implements Named {}
 
 	@Visit(value = IncludeVisitor.class, type = Gauge.class, arg = { "name", "value" })
 	@Visit(value = ExcludeVisitor.class, type = Gear.class, arg = "value")
-	@Visit(value = RenameVisitor.class, arg = { "name", "n" }, path = { "gauge.*", "gear.*" })
-	@Visit(OmitNullVisitor.class)
-	@Parse(value = RenameParser.class, arg = { "n", "name" }, path = { "gauge.*", "gear.*" })
+	@Visit(value = RenameVisitor.class, type=Named.class, arg = { "name", "n" }, path = { "gauge.**", "gear.**" })
+	@Visit(OmitNullFieldVisitor.class)
+	@Parse(value = RenameParser.class, type=Named.class, arg = { "n", "name" }, path = { "gauge.*", "gear.*" })
 	@Parse(value = ExcludeParser.class, type = Gauge.class, arg = "value")
 	public class GadgetFilters {}
 
@@ -135,7 +147,7 @@ public class FilterTest {
 	@Test
 	public void testConstructorMatching() {
 		Json json = new Json();
-		FilterParser[] filters = json.getAnnotationProcessor().parserFilters(CustomFilter.class);
+		ParserFilterFactory[] filters = json.getAnnotationProcessor().parserFilters(CustomFilter.class);
 		Assert.assertEquals(filters.length, 1);
 		Assert.assertEquals(filters[0].getClass(), CustomFilter.class);
 		CustomFilter cf = (CustomFilter) filters[0];
@@ -146,7 +158,7 @@ public class FilterTest {
 	}
 
 	@Parse(value = CustomFilter.class, type = Date.class, arg = { "method", "arg1" })
-	public static class CustomFilter extends FilterParser {
+	public static class CustomFilter extends BaseParserFilter {
 		Class clazz;
 		Models models;
 		String method;
@@ -184,18 +196,10 @@ public class FilterTest {
 
 	@Visit(IncludeAndRenameVisitor.class)
 	public static class IncludeAndRenameVisitor extends MultiFilterVisitor {
-		public IncludeAndRenameVisitor(Models models) {
-			super(new IncludeVisitor<>(models.get(Thing.class), "name"),
-					new FieldVisitorFunction<>(Thing.class, String.class, "name", s -> new StringBuilder(s).reverse().toString()),
-					new FieldVisitor<>(Thing.class, "name", new FilterVisitor() {
-						public void visit(Object o) {
-							if (o instanceof String s) {
-								o = s.toUpperCase();
-							}
-							super.visit(o);
-						}
-					}),
-					new TypeVisitor<Thing>(new RenameVisitor("name", "n")) {});
+		public IncludeAndRenameVisitor(Models models) throws IllegalAccessException {
+			super(new IncludeVisitor<>(Thing.class, "name"),
+					new FieldVisitor<>(Thing.class, "name", Filters.visitString((s,v)->v.visitString(new StringBuilder(s).reverse().toString().toUpperCase()))),
+					new RenameVisitor(Thing.class, "name", "n"));
 		}
 	}
 
@@ -209,20 +213,12 @@ public class FilterTest {
 
 	@Parse(IncludeAndRenameParser.class)
 	public static class IncludeAndRenameParser extends MultiFilterParser {
-		public IncludeAndRenameParser(Models models) {
-			super(new TypeParser<Thing>(new RenameParser("n", "name")) {
-			},
-					new FieldParserFunction<>(Thing.class, String.class, String.class, "name", s -> new StringBuilder(s).reverse().toString()),
-					new FieldParser<>(Thing.class, "name", new FilterParser() {
-						public <T> T parse(Model<T> model) {
-							T t = super.parse(model);
-							if (model.getType() == String.class) {
-								t = (T) ((String) t).toLowerCase();
-							}
-							return t;
-						}
-					}),
-					new IncludeParser<>(models.get(Thing.class), "name"));
+		public IncludeAndRenameParser(Models models) throws IllegalAccessException {
+			super(
+					new RenameParser(Thing.class, "n", "name"),
+					new FieldParser<>(Thing.class, "name", Filters.parseString(
+							parser -> new StringBuilder(parser.parseString()).reverse().toString().toLowerCase())),
+					new IncludeParser<>(Thing.class, "name"));
 		}
 	}
 
@@ -231,40 +227,113 @@ public class FilterTest {
 	@Test
 	public void testInjection() throws IOException {
 		Dao<Thing> dao = new Dao<Thing>();
-		List<UUID> ids = new ArrayList<>();
-		List<Thing> things = new ArrayList<>();
+		Things things = new Things();
+		UUIDs uuids = new UUIDs();
+		uuids.main  = UUID.randomUUID();
+		things.main = new Thing("Main thing", "main");
+		dao.put(uuids.main, things.main);
 		for (int i = 0; i < 5; i++) {
 			UUID id = UUID.randomUUID();
 			Thing thing = new Thing("Thing " + i, "thing");
 			dao.put(id, thing);
-			ids.add(id);
-			things.add(thing);
+			uuids.data.add(id);
+			things.data.add(thing);
 		}
-		Json json = Json.builder().inject(dao).scan(DaoLoader.class).build();
-		String str = json.toString(ids);
-		List<Thing> rt = json.fromString(str, new StaticType<List<Thing>>() {});
+		Json json = Json.builder().inject(dao)
+				.scan(DaoListLoader.class, DaoFieldLoader.class)
+				.build();
+		String str = json.toString(uuids);
+		Things rt = json.fromString(str, Things.class);
 		Assert.assertEquals(rt, things);
+	}
+	
+	@EqualsAndHashCode
+	@ToString
+	public static class UUIDs {
+		public UUID main;
+		public List<UUID> data = new ArrayList<>();
+	}
+	@EqualsAndHashCode
+	@ToString
+	public static class Things {
+		public Thing main;
+		public List<Thing> data = new ArrayList<>();
 	}
 
 	@Test(expectedExceptions = AnnotationException.class)
 	public void testMissingVisitorInjection() throws IOException {
-		Json.builder().scan(DaoLoader.class).build();
+		json.builder().scan(DaoListLoader.class).build();
 	}
 
-	@Visit(DaoLoader.class)
-	public static class DaoLoader extends TypeVisitorTransform<UUID> {
+	@Visit(DaoListLoader.class)
+	public static class DaoListLoader implements ListVisitor {
 		final Dao dao;
+		final Model<UUID> uuidModel;
+		final ListModel listLoader;
 
-		public DaoLoader(Dao dao) {
+		public DaoListLoader(Dao dao, Models models) {
 			this.dao = dao;
+			this.uuidModel = models.get(UUID.class);
+			listLoader = new FilterListModel(models.listModel) {
+				@Override
+				public void visitItems(Object t, Visitor visitor) {
+					listModel.stream(t).map(u -> dao.get((UUID)u)).forEach( i -> {
+						if(i!=null) {
+							visitor.visitListItem();
+							visitor.visit(i);
+						}
+					});
+				}
+			};
 		}
 
 		@Override
-		public Object transform(UUID in) {
-			return dao.get(in);
+		public void visitList(Object list, ListModel model, Visitor visitor) {
+			if(model.itemModel() == uuidModel) {
+				model = listLoader;
+			}
+			visitor.visitList(list, model);
 		}
 
 	}
+	@Visit(value=DaoFieldLoader.class,type = UUIDs.class)
+	public static class DaoFieldLoader implements ObjectVisitor {
+		final Dao dao;
+		final ObjectModel filterModel;
+		
+		public DaoFieldLoader(Dao dao, ObjectModel<UUIDs> model,  Models models) {
+			this.dao = dao;
+			Model<UUID> uuidModel = models.get(UUID.class);
+			filterModel = new FilterFieldObjectModel<>(model, model.fields().stream()
+					.map(field -> {
+					if(field.model() == uuidModel) {
+						return new FilterField(field) {
+							
+							@Override
+							public void visit(Object source, Visitor visitor) {
+								visitor.visitObjectField(field.key());
+								visitor.visit(dao.get((UUID) field.get(source)));
+							}
+							
+						};
+					}
+					return field;
+				})
+			);
+			
+		}
+		
+
+		@Override
+		public void visitObject(Object object, ObjectModel model, Visitor visitor) {
+			if(object instanceof UUIDs) {
+				model = filterModel;
+			}
+			visitor.visitObject(object, model);
+		}
+		
+	}
+	
 
 	public static class Dao<T> {
 		private ConcurrentHashMap<UUID, T> data = new ConcurrentHashMap<>();
@@ -280,11 +349,11 @@ public class FilterTest {
 
 	@Test(expectedExceptions = AnnotationException.class)
 	public void testMissingParserInjection() throws IOException {
-		Json.builder().scan(TroubleMaker.class).build();
+		json.builder().scan(TroubleMaker.class).build();
 	}
 
 	@Parse(TroubleMaker.class)
-	public static class TroubleMaker extends FilterParser {
+	public static class TroubleMaker extends BaseParserFilter {
 		public TroubleMaker(String name) {
 
 		}

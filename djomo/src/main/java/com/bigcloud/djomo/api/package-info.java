@@ -14,6 +14,6 @@
  * limitations under the License.
  *******************************************************************************/
 /**
- * All interfaces used in djomo to represent models, fields, makers, visitors, parsers, printers and factories.
+ * All interfaces used in djomo to represent models, fields, visitors, parsers, filters and factories.
  */
 package com.bigcloud.djomo.api;

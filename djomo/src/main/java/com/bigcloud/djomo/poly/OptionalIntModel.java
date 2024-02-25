@@ -18,6 +18,7 @@ package com.bigcloud.djomo.poly;
 import java.lang.reflect.Type;
 import java.util.OptionalInt;
 
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
@@ -42,20 +43,26 @@ public class OptionalIntModel extends BaseModel<OptionalInt> {
 
 	@Override
 	public OptionalInt parse(Parser parser) {
-		Object val = valueModel.parse(parser);
-		if (val == null) {
+		try {
+			int val = parser.parseInt();
+			return OptionalInt.of(val);
+		} catch (NumberFormatException e) {
 			return OptionalInt.empty();
 		}
-		return OptionalInt.of((int) val);
 	}
 
 	@Override
 	public void visit(OptionalInt obj, Visitor visitor) {
 		if (obj.isPresent()) {
-			visitor.visit(obj.getAsInt());
+			visitor.visitInt(obj.getAsInt());
 		} else {
-			visitor.visit(null);
+			visitor.visitNull();
 		}
+	}
+
+	@Override
+	public Format getFormat() {
+		return Format.NUMBER;
 	}
 
 }

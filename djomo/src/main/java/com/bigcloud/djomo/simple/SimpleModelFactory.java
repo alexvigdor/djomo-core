@@ -66,10 +66,10 @@ public class SimpleModelFactory extends BaseModelFactory {
 				return new NumberModel(type, context);
 			}
 			if(rawType == BigDecimal.class) {
-				return new BigDecimalModel(type, context);
+				return magicString(BigDecimal.class, context, null, String.class);
 			}
 			if(rawType == BigInteger.class) {
-				return new BigIntegerModel(type, context);
+				return magicString(BigInteger.class, context, null, String.class);
 			}
 		}
 		else if(Boolean.class.isAssignableFrom(rawType)) {

@@ -32,39 +32,44 @@ import com.bigcloud.djomo.annotation.Parses;
 import com.bigcloud.djomo.annotation.Visit;
 import com.bigcloud.djomo.annotation.Visits;
 import com.bigcloud.djomo.api.Model;
+import com.bigcloud.djomo.api.ParserFilterFactory;
+import com.bigcloud.djomo.api.ParserTypedFilterFactory;
+import com.bigcloud.djomo.api.VisitorFilterFactory;
+import com.bigcloud.djomo.api.VisitorTypedFilterFactory;
 import com.bigcloud.djomo.error.AnnotationException;
-import com.bigcloud.djomo.filter.FilterParser;
-import com.bigcloud.djomo.filter.FilterVisitor;
-import com.bigcloud.djomo.filter.PathParser;
-import com.bigcloud.djomo.filter.PathVisitor;
-import com.bigcloud.djomo.filter.TypeParser;
-import com.bigcloud.djomo.filter.TypeVisitor;
+import com.bigcloud.djomo.filter.parsers.PathParser;
+import com.bigcloud.djomo.filter.parsers.TypeParser;
+import com.bigcloud.djomo.filter.visitors.PathVisitor;
+import com.bigcloud.djomo.filter.visitors.TypeVisitor;
+
 /**
- * Responsible for converting Visit and Parse annotations into FilterVisitors and FilterParsers.
+ * Responsible for converting Visit and Parse annotations into FilterVisitors
+ * and FilterParsers.
  * 
- * Capable of performing some basic constructor injection for filters, including models, types and string args
+ * Capable of performing some basic constructor injection for filters, including
+ * models, types and string args
  * 
  * @author Alex Vigdor
  *
  */
 public class AnnotationProcessor {
-	private final ConcurrentHashMap<Visit, FilterVisitor> visitors = new ConcurrentHashMap<>();
-	private final ConcurrentHashMap<Parse, FilterParser> parsers = new ConcurrentHashMap<>();
+	private final ConcurrentHashMap<Visit, VisitorFilterFactory> visitors = new ConcurrentHashMap<>();
+	private final ConcurrentHashMap<Parse, ParserFilterFactory> parsers = new ConcurrentHashMap<>();
 	private final Models models;
 	private final Object[] dependencies;
-	
+
 	public AnnotationProcessor(Models models, Object... dependencies) {
 		this.models = models;
 		this.dependencies = dependencies.clone();
 	}
 
-	public FilterVisitor[] visitorFilters(Class<?> type) {
+	public VisitorFilterFactory[] visitorFilters(Class<?> type) {
 		return visitorFilters(filters(type, Visit.class));
 	}
 
-	public FilterVisitor[] visitorFilters(Annotation[] annotations) {
+	public VisitorFilterFactory[] visitorFilters(Annotation[] annotations) {
 		PathVisitor.Builder visitorPathBuilder = PathVisitor.builder();
-		ArrayDeque<FilterVisitor> visitorFilters = new ArrayDeque<>();
+		ArrayDeque<VisitorFilterFactory> visitorFilters = new ArrayDeque<>();
 		for (var a : annotations) {
 			if (a instanceof Visit ser) {
 				configure(ser, visitorFilters, visitorPathBuilder);
@@ -77,16 +82,16 @@ public class AnnotationProcessor {
 		if (!visitorPathBuilder.isEmpty()) {
 			visitorFilters.add(visitorPathBuilder.build());
 		}
-		return visitorFilters.toArray(new FilterVisitor[0]);
+		return visitorFilters.toArray(new VisitorFilterFactory[0]);
 	}
 
-	public FilterParser[] parserFilters(Class<?> type) {
+	public ParserFilterFactory[] parserFilters(Class<?> type) {
 		return parserFilters(filters(type, Parse.class));
 	}
 
-	public FilterParser[] parserFilters(Annotation[] annotations) {
+	public ParserFilterFactory[] parserFilters(Annotation[] annotations) {
 		PathParser.Builder parserPathBuilder = PathParser.builder();
-		ArrayDeque<FilterParser> parserFilters = new ArrayDeque<>();
+		ArrayDeque<ParserFilterFactory> parserFilters = new ArrayDeque<>();
 		for (var a : annotations) {
 			if (a instanceof Parse deser) {
 				configure(deser, parserFilters, parserPathBuilder);
@@ -99,19 +104,19 @@ public class AnnotationProcessor {
 		if (!parserPathBuilder.isEmpty()) {
 			parserFilters.add(parserPathBuilder.build());
 		}
-		return parserFilters.toArray(new FilterParser[0]);
+		return parserFilters.toArray(new ParserFilterFactory[0]);
 	}
 
 	private void missingConstructor(Class<?> filterClass) throws InstantiationException {
-		StringBuilder messageBuilder = new StringBuilder("No matching constructor for ").append(filterClass.getName()).append(" ; try adding args or injecting dependencies to mmatch a constructor [");
-		for(Constructor c : filterClass.getConstructors()) {
+		StringBuilder messageBuilder = new StringBuilder("No matching constructor for ").append(filterClass.getName())
+				.append(" ; try adding args or injecting dependencies to mmatch a constructor [");
+		for (Constructor c : filterClass.getConstructors()) {
 			messageBuilder.append("\n\t").append(filterClass.getSimpleName()).append("(");
 			boolean first = true;
-			for(Parameter p: c.getParameters()) {
-				if(first) {
+			for (Parameter p : c.getParameters()) {
+				if (first) {
 					first = false;
-				}
-				else {
+				} else {
 					messageBuilder.append(", ");
 				}
 				messageBuilder.append(p.getParameterizedType().getTypeName()).append(" ").append(p.getName());
@@ -121,26 +126,25 @@ public class AnnotationProcessor {
 		messageBuilder.append("\n]");
 		throw new InstantiationException(messageBuilder.toString());
 	}
-	private void configure(Parse deser, ArrayDeque<FilterParser> filters,
-			PathParser.Builder pathBuilder) {
+
+	private void configure(Parse deser, ArrayDeque<ParserFilterFactory> filters, PathParser.Builder pathBuilder) {
 		try {
-			FilterParser filterParser = parsers.get(deser);
+			ParserFilterFactory filterParser = parsers.get(deser);
 			if (filterParser == null) {
 				var filterClass = deser.value();
 				var filterType = deser.type();
-				filterParser = (FilterParser) typedFilter(filterClass, filterType, deser.arg());
+				filterParser = (ParserFilterFactory) typedFilter(filterClass, filterType, deser.arg());
 				if (filterParser == null) {
-					filterParser = (FilterParser) typedFilter(filterClass, null, deser.arg());
-					if(filterParser == null) {
+					filterParser = (ParserFilterFactory) typedFilter(filterClass, null, deser.arg());
+					if (filterParser == null) {
 						missingConstructor(filterClass);
 					}
 					if (filterType != Object.class) {
-						filterParser = new TypeParser<>(filterType, filterParser);
+						filterParser = new TypeParser(filterType, filterParser.newParserFilter());
 					}
 				}
 				parsers.put(deser, filterParser);
 			}
-			filterParser = filterParser.clone();
 			if (deser.path().length > 0) {
 				for (String path : deser.path()) {
 					pathBuilder.filter(path, filterParser);
@@ -152,62 +156,57 @@ public class AnnotationProcessor {
 			} else {
 				filters.add(filterParser);
 			}
-		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
-				| InvocationTargetException | SecurityException e) {
+		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
+				| SecurityException e) {
 			throw new AnnotationException("Unable to make FilterParser from annotation " + deser, e);
 		}
 	}
 
 	private Object typedFilter(Class filterClass, Class filterType, String[] args)
 			throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
-		CONSTRUCTOR_SEARCH:
-		for (Constructor<?> constructor : filterClass.getConstructors()) {
-			// we'll do our best to construct with matching parameters, including Models, filterType, and string args
+		Object filter = null;
+		CONSTRUCTOR_SEARCH: for (Constructor<?> constructor : filterClass.getConstructors()) {
+			// we'll do our best to construct with matching parameters, including Models,
+			// filterType, and string args
 			Parameter[] parms = constructor.getParameters();
 			boolean foundType = false;
 			Object[] values = new Object[parms.length];
 			int argPointer = 0;
-			PARM_LOOP:
-			for(int i=0; i<parms.length; i++) {
+			PARM_LOOP: for (int i = 0; i < parms.length; i++) {
 				Parameter parm = parms[i];
 				Class parmType = parm.getType();
-				if(parmType == Class.class) {
-					if(filterType == null || foundType) {
+				if (parmType == Class.class) {
+					if (filterType == null || foundType) {
 						continue CONSTRUCTOR_SEARCH;
 					}
 					foundType = true;
 					values[i] = filterType;
-				}
-				else if (parmType == Model.class) {
-					if(filterType == null || foundType) {
+				} else if (Model.class.isAssignableFrom(parmType)) {
+					if (filterType == null || foundType) {
 						continue CONSTRUCTOR_SEARCH;
 					}
 					foundType = true;
 					values[i] = models.get(filterType);
-				}
-				else if(parmType == Models.class) {
+				} else if (parmType == Models.class) {
 					values[i] = models;
-				}
-				else if(parmType == String.class) {
-					if(argPointer == args.length) {
+				} else if (parmType == String.class) {
+					if (argPointer == args.length) {
 						continue CONSTRUCTOR_SEARCH;
 					}
 					values[i] = args[argPointer++];
-				}
-				else if(parmType == String[].class) {
-					if(argPointer == args.length && !parm.isVarArgs()) {
+				} else if (parmType == String[].class) {
+					if (argPointer == args.length && !parm.isVarArgs()) {
 						continue CONSTRUCTOR_SEARCH;
 					}
 					String[] val = args;
-					if(argPointer > 0) {
+					if (argPointer > 0) {
 						val = Arrays.copyOfRange(val, argPointer, args.length);
 					}
-					values[i]=val;
+					values[i] = val;
 					argPointer = args.length;
-				}
-				else {
-					for(Object d: dependencies) {
-						if(parmType.isInstance(d)) {
+				} else {
+					for (Object d : dependencies) {
+						if (parmType.isInstance(d)) {
 							values[i] = d;
 							continue PARM_LOOP;
 						}
@@ -215,33 +214,41 @@ public class AnnotationProcessor {
 					continue CONSTRUCTOR_SEARCH;
 				}
 			}
-			if(filterType == null || foundType) {
-				return constructor.newInstance(values);
+			if (filterType == null || foundType) {
+				filter = constructor.newInstance(values);
+				break;
+			} else if (filterType != null) {
+				if (filterClass.isAssignableFrom(VisitorTypedFilterFactory.class)) {
+					filter = ((VisitorTypedFilterFactory) constructor.newInstance(values)).newVisitorFilter(filterType);
+					break;
+				} else if (filterClass.isAssignableFrom(ParserTypedFilterFactory.class)) {
+					filter = ((ParserTypedFilterFactory) constructor.newInstance(values)).newParserFilter(filterType);
+					break;
+				}
 			}
+
 		}
-		return null;
+		return filter;
 	}
 
-	private void configure(Visit ser, ArrayDeque<FilterVisitor> filters,
-			PathVisitor.Builder pathBuilder) {
+	private void configure(Visit ser, ArrayDeque<VisitorFilterFactory> filters, PathVisitor.Builder pathBuilder) {
 		try {
-			FilterVisitor filterVisitor = visitors.get(ser);
+			VisitorFilterFactory filterVisitor = visitors.get(ser);
 			if (filterVisitor == null) {
 				var filterClass = ser.value();
 				var filterType = ser.type();
-				filterVisitor = (FilterVisitor) typedFilter(filterClass, filterType, ser.arg());
+				filterVisitor = (VisitorFilterFactory) typedFilter(filterClass, filterType, ser.arg());
 				if (filterVisitor == null) {
-					filterVisitor = (FilterVisitor) typedFilter(filterClass, null, ser.arg());
-					if(filterVisitor == null) {
+					filterVisitor = (VisitorFilterFactory) typedFilter(filterClass, null, ser.arg());
+					if (filterVisitor == null) {
 						missingConstructor(filterClass);
 					}
 					if (filterType != Object.class) {
-						filterVisitor = new TypeVisitor<>(filterType, filterVisitor);
+						filterVisitor = new TypeVisitor(filterType, filterVisitor.newVisitorFilter());
 					}
 				}
 				visitors.put(ser, filterVisitor);
 			}
-			filterVisitor = filterVisitor.clone();
 			if (ser.path().length > 0) {
 				for (String path : ser.path()) {
 					pathBuilder.filter(path, filterVisitor);
@@ -252,8 +259,8 @@ public class AnnotationProcessor {
 			} else {
 				filters.add(filterVisitor);
 			}
-		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
-				| InvocationTargetException | SecurityException e) {
+		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
+				| SecurityException e) {
 			throw new AnnotationException("Unable to make FilterVisitor from annotation " + ser, e);
 		}
 	}

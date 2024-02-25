@@ -18,7 +18,8 @@ package com.bigcloud.djomo.simple;
 import java.lang.reflect.Type;
 
 import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.api.Printer;
+import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.Visitor;
 
 public class IntegerModel extends NumberModel<Integer> {
 
@@ -55,18 +56,12 @@ public class IntegerModel extends NumberModel<Integer> {
 	}
 
 	@Override
-	public void print(Integer obj, Printer out) {
-		int l = obj.intValue();
-		int mult = l < 0 ? -1 : 1;
-		char[] buf = new char[11];
-		int pos = 11;
-		do {
-			buf[--pos] = (char) (48 + ((l % 10) * mult));
-			l /= 10;
-		} while (l != 0);
-		if (mult == -1) {
-			buf[--pos] = '-';
-		}
-		out.raw(buf, pos, 11 - pos);
+	public void visit(Integer obj, Visitor visitor) {
+		visitor.visitInt(obj);
+	}
+
+	@Override
+	public Integer parse(Parser parser) {
+		return parser.parseInt();
 	}
 }

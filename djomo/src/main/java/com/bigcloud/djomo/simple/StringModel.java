@@ -15,25 +15,18 @@
  *******************************************************************************/
 package com.bigcloud.djomo.simple;
 
-import java.io.IOException;
-
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.api.Printer;
-import com.bigcloud.djomo.base.BaseSimpleModel;
-import com.bigcloud.djomo.internal.CharSequenceParser;
-import com.bigcloud.djomo.io.Buffer;
+import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.base.BaseModel;
 
-public class StringModel extends BaseSimpleModel<String> {
+public class StringModel extends BaseModel<String> {
 
 	public StringModel(ModelContext context) {
 		super(String.class, context);
 	}
 	
-	@Override
-	public void print(String obj, Printer printer) {
-		printer.quote(obj);
-	}
-
 	@Override
 	public String convert(Object o) {
 		if(o==null) {
@@ -43,8 +36,16 @@ public class StringModel extends BaseSimpleModel<String> {
 	}
 
 	@Override
-	public final String parse(Buffer input, Buffer overflow) throws IOException {
-		return CharSequenceParser.parse(input, overflow).toString();
+	public void visit(String obj, Visitor visitor) {
+		visitor.visitString(obj);
 	}
-	
+
+	@Override
+	public String parse(Parser parser) {
+		return parser.parseString().toString();
+	}
+	@Override
+	public Format getFormat() {
+		return Format.STRING;
+	}
 }

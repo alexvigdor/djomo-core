@@ -24,7 +24,7 @@ import java.lang.reflect.Type;
 import java.nio.channels.Channel;
 
 import com.bigcloud.djomo.Json;
-import com.bigcloud.djomo.filter.FilterParser;
+import com.bigcloud.djomo.api.ParserFilterFactory;
 
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.WebApplicationException;
@@ -66,7 +66,7 @@ public class JsonBodyReader<T> extends JsonContext implements MessageBodyReader<
 			throws IOException, WebApplicationException {
 		// filters by annotation
 		Json json = getJson(type);
-		FilterParser[] filters = json.getAnnotationProcessor().parserFilters(annotations);
+		ParserFilterFactory[] filters = json.getAnnotationProcessor().parserFilters(annotations);
 		if (filters.length == 0) {
 			return (T) json.read(entityStream, genericType == null ? type : genericType);
 		}

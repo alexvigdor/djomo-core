@@ -18,14 +18,13 @@ package com.bigcloud.djomo.api;
 /**
  * A Field represents one key-value pair in an enclosing ObjectModel
  * 
- * @author Alex Vigdor
- *
- * @param <O>
- * @param <K>
- * @param <V>
  */
-public interface Field<O, K, V> {
-	K key();
-	Model<V> model();
-	V get(O o);
+public interface Field {
+	Object key();
+	Model model();
+	Object get(Object source);
+	void set(Object destination, Object value);
+	void visit(Object source, Visitor visitor);
+	void parse(Object destination, Parser parser);
+	Field rekey(Object newKey);
 }

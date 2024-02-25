@@ -19,29 +19,66 @@ import java.util.EnumMap;
 
 import com.bigcloud.djomo.api.Field;
 import com.bigcloud.djomo.api.Model;
+import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.Visitor;
 
-public class EnumMapField<T extends EnumMap<E, V>, E extends Enum<E>, V> implements Field<T, E, V> {
-	final E key;
-	final Model<V> model;
-	
-	public EnumMapField(E key, Model<V> model) {
+public class EnumMapField implements Field {
+	final Enum enumVal;
+	final Model model;
+	final Object key;
+
+	public EnumMapField(Enum enumVal, Model model) {
+		this.enumVal = enumVal;
+		this.key = enumVal;
+		this.model = model;
+	}
+
+	private EnumMapField(Enum enumVal, Model model, Object key) {
+		this.enumVal = enumVal;
 		this.key = key;
 		this.model = model;
 	}
 
 	@Override
-	public E key() {
+	public Object key() {
 		return key;
 	}
 
 	@Override
-	public Model<V> model() {
+	public Model model() {
 		return model;
 	}
 
 	@Override
-	public V get(T o) {
-		return o.get(key);
+	public Object get(Object o) {
+		return ((EnumMap) o).get(enumVal);
+	}
+
+	@Override
+	public void set(Object destination, Object value) {
+		((EnumMap) destination).put(enumVal, value);
+	}
+
+	@Override
+	public void visit(Object source, Visitor visitor) {
+		visitor.visitObjectField(key);
+		Object val = get(source);
+		if (val == null) {
+			visitor.visitNull();
+		} else {
+			model.visit(val, visitor);
+		}
+	}
+
+	@Override
+	public void parse(Object dest, Parser parser) {
+		var value = parser.parse(model);
+		((EnumMap) dest).put(enumVal, value);
+	}
+
+	@Override
+	public Field rekey(Object newKey) {
+		return new EnumMapField(enumVal, model, newKey);
 	}
 
 }

@@ -27,9 +27,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.bigcloud.djomo.api.Field;
 import com.bigcloud.djomo.api.ModelContext;
 
-public class BuilderModel<T> extends ObjectMethodsModel<T, BuilderMaker<T>> {
+public class BuilderModel<T> extends ObjectMethodsModel<T> {
 	final MethodHandle builderMethod;
 	final MethodHandle buildMethod;
 	Class builderClass = null;
@@ -41,11 +42,7 @@ public class BuilderModel<T> extends ObjectMethodsModel<T, BuilderMaker<T>> {
 	}
 
 	@Override
-	public BuilderMaker<T> maker() {
-		return new BuilderMaker<>(this);
-	}
-
-	public Object builder() {
+	public Object maker() {
 		try {
 			return builderMethod.invoke();
 		} catch ( Throwable e) {
@@ -53,20 +50,12 @@ public class BuilderModel<T> extends ObjectMethodsModel<T, BuilderMaker<T>> {
 		}
 	}
 	
-	public T build(Object builder) {
-		try {
-			return (T) buildMethod.invoke(builder);
-		} catch ( Throwable e) {
-			throw new RuntimeException(e);
-		}
-	}
-
 	@Override
-	protected Map<CharSequence, BeanField<T, Object>> initFields(ModelContext context) throws IllegalAccessException {
+	protected Map<CharSequence, Field> initFields(ModelContext context) throws IllegalAccessException {
 		MethodHandles.Lookup lookup = MethodHandles.lookup();
-		var fields = new ConcurrentHashMap<String, BeanField.Builder<T, Object>>();
-		Function<String, BeanField.Builder<T, Object>> fieldLookup = (name) -> fields.computeIfAbsent(name,
-				n -> BeanField.<T, Object>builder().name(n));
+		var fields = new ConcurrentHashMap<String, BeanField.Builder>();
+		Function<String, BeanField.Builder> fieldLookup = (name) -> fields.computeIfAbsent(name,
+				n -> BeanField.builder().name(n));
 		processMethods(lookup, context, fieldLookup);
 		for (Method method : builderClass.getMethods()) {
 			if (!Modifier.isStatic(method.getModifiers())) {
@@ -84,13 +73,13 @@ public class BuilderModel<T> extends ObjectMethodsModel<T, BuilderMaker<T>> {
 			}
 		}
 		return fields.entrySet().stream()
-				.map(e -> new AbstractMap.SimpleEntry<String, BeanField<T,Object>>(e.getKey(), e.getValue().build()))
+				.map(e -> new AbstractMap.SimpleEntry<String, BeanField>(e.getKey(), e.getValue().build()))
 				.collect(Collectors.toMap(Entry::getKey, Entry::getValue));
 	}
 
 	@Override
 	protected void processMethod(Method method, MethodHandles.Lookup lookup, ModelContext context,
-			Function<String, BeanField.Builder<T, Object>> fieldLookup) {
+			Function<String, BeanField.Builder> fieldLookup) {
 		String name = method.getName();
 		if (Modifier.isStatic(method.getModifiers()) && (name.contains("builder") || name.contains("Builder"))
 				&& method.getParameterCount() == 0 && method.trySetAccessible()) {
@@ -104,6 +93,15 @@ public class BuilderModel<T> extends ObjectMethodsModel<T, BuilderMaker<T>> {
 			} catch (NoSuchMethodException | SecurityException e1) {
 				return;
 			}
+		}
+	}
+
+	@Override
+	public T make(Object maker) {
+		try {
+			return (T) buildMethod.invoke(maker);
+		} catch ( Throwable e) {
+			throw new RuntimeException(e);
 		}
 	}
 }

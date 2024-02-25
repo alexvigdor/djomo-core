@@ -21,9 +21,11 @@ import java.io.Writer;
 import java.util.Arrays;
 
 import com.bigcloud.djomo.error.ModelException;
+import com.bigcloud.djomo.internal.CharArraySequence;
 
 public class Buffer extends Writer {
 	private final Reader source;
+	public final CharArraySequence charArraySequence;
 	public char[] buffer;
 	public int readPosition;
 	public int writePosition;
@@ -35,6 +37,7 @@ public class Buffer extends Writer {
 	public Buffer(char[] firstBuffer, Reader source) {
 		buffer = firstBuffer;
 		this.source = source;
+		this.charArraySequence = new CharArraySequence(this);
 	}
 
 	private char[] reserve(final int target) {

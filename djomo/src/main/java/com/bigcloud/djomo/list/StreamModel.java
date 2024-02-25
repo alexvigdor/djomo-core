@@ -20,31 +20,35 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import com.bigcloud.djomo.Models;
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ListModel;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
+import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.base.BaseComplexModel;
 
-public class StreamModel<T extends Stream<I>, I> extends BaseComplexModel<T, StreamMaker<T, I>>
-	implements ListModel<T, StreamMaker<T, I>, I> {
-	final Model<I> itemModel;
+public class StreamModel<T extends Stream> extends BaseComplexModel<T>
+	implements ListModel<T> {
+	final Model itemModel;
 	final Models models;
 	
 	public StreamModel(Type type, ModelContext context, Type valueType) {
 		super(type, context);
-		this.itemModel = (Model<I>) context.get(valueType != null ? valueType : Object.class);
+		this.itemModel = context.get(valueType != null ? valueType : Object.class);
 		this.models = context.models();
 	}
 
 	@Override
-	public StreamMaker<T, I> maker(T obj) {
-		return new StreamMaker<>(this, obj);
+	public Object maker(T obj) {
+		var builder = Stream.builder();
+		obj.forEach(builder::accept);
+		return builder;
 	}
 
 	@Override
-	public StreamMaker<T, I> maker() {
-		return new StreamMaker<>(this);
+	public Object maker() {
+		return Stream.builder();
 	}
 
 	@Override
@@ -60,21 +64,53 @@ public class StreamModel<T extends Stream<I>, I> extends BaseComplexModel<T, Str
 	}
 
 	@Override
-	public void forEachItem(T t, Consumer<I> consumer) {
+	public void forEachItem(T t, Consumer consumer) {
 		t.forEach(consumer);
 	}
 
 	@Override
-	public Stream<I> stream(T t) {
+	public Stream stream(T t) {
 		return t;
 	}
 
 	@Override
-	public Model<I> itemModel() {
+	public Model itemModel() {
 		return itemModel;
 	} 
 	@Override
 	public void visit(T obj, Visitor visitor) {
 		visitor.visitList(obj, this);
+	}
+	@Override
+	public T parse(Parser parser) {
+		return (T) parser.parseList(this);
+	}
+	@Override
+	public Format getFormat() {
+		return Format.LIST;
+	}
+
+	@Override
+	public void visitItems(T t, Visitor visitor) {
+		t.forEach(item -> {
+			visitor.visitListItem();
+			if(item == null) {
+				visitor.visitNull();
+			}
+			else {
+				itemModel.visit(item, visitor);
+			}
+		});
+	}
+	
+	@Override
+	public void parseItem(Object listMaker, Parser parser) {
+		parser.parseListItem();
+		((Stream.Builder)listMaker).add(parser.parse(itemModel));
+	}
+
+	@Override
+	public T make(Object maker) {
+		return (T) ((Stream.Builder)maker).build();
 	}
 }

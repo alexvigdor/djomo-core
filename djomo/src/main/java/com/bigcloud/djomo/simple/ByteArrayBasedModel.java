@@ -15,62 +15,66 @@
  *******************************************************************************/
 package com.bigcloud.djomo.simple;
 
-import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Type;
+import java.util.Base64;
 
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.api.Printer;
-import com.bigcloud.djomo.api.SimpleModel;
-import com.bigcloud.djomo.base.BaseSimpleModel;
+import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.base.BaseModel;
 import com.bigcloud.djomo.error.ModelException;
-import com.bigcloud.djomo.io.Buffer;
 
-public class ByteArrayBasedModel<T> extends BaseSimpleModel<T> {
-	final SimpleModel<byte[]> byteArrayModel;
+public class ByteArrayBasedModel<T> extends BaseModel<T> {
 	final MethodHandle constructor;
 	final MethodHandle toByteArray;
 
 	public ByteArrayBasedModel(Type type, ModelContext context, MethodHandle constructor, MethodHandle toByteArray) {
 		super(type, context);
-		byteArrayModel = (SimpleModel<byte[]>) context.<byte[]>get(byte[].class);
 		this.constructor = constructor;
 		this.toByteArray = toByteArray;
 	}
 
 	@Override
-	public void print(T obj, Printer printer) {
-		try {
-			byteArrayModel.print((byte[]) toByteArray.invoke(obj), printer);
-		} catch (RuntimeException e) {
-			throw e;
-		} catch (Throwable e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	@Override
-	public T parse(Buffer input, Buffer overflow) throws IOException {
-		byte[] bytes = byteArrayModel.parse(input, overflow);
-		try {
-			return (T) constructor.invoke(bytes);
-		} catch (Throwable e) {
-			throw new ModelException(
-					"Error constructing instance of " + type.getName() + " from byte array length " + bytes.length, e);
-		}
-	}
-
-	@Override
 	public T convert(Object o) {
-		byte[] bytes = byteArrayModel.convert(o);
-		if (bytes == null) {
+		if (o == null) {
 			return null;
 		}
+		if (o.getClass() == getType()) {
+			return (T) o;
+		}
 		try {
-			return (T) constructor.invoke(bytes);
+			return (T) constructor.invoke(Base64.getDecoder().decode(o.toString()));
 		} catch (Throwable e) {
 			throw new ModelException("Error converting " + o + " to " + type.getTypeName(), e);
 		}
+	}
+
+	@Override
+	public T parse(Parser parser) {
+		try {
+			return (T) constructor.invoke(Base64.getDecoder().decode(parser.parseString().toString()));
+		} catch (Throwable e) {
+			throw new ModelException(
+					"Error constructing instance of " + type.getName() + " from base64", e);
+		}
+	}
+
+	@Override
+	public void visit(T obj, Visitor visitor) {
+		// TODO Auto-generated method stub
+		try {
+			visitor.visitString(Base64.getEncoder().encodeToString((byte[]) toByteArray.invoke(obj)));
+		} catch (Throwable e) {
+			throw new ModelException(
+					"Error visiting instance of " + type.getName() + " as base64", e);
+		}
+	}
+
+	@Override
+	public Format getFormat() {
+		return Format.STRING;
 	}
 
 }

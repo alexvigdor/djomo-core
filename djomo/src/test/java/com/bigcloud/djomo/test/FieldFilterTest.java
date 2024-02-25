@@ -24,13 +24,11 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import com.bigcloud.djomo.Json;
-import com.bigcloud.djomo.filter.FieldParser;
-import com.bigcloud.djomo.filter.FieldParserFunction;
-import com.bigcloud.djomo.filter.FieldVisitor;
-import com.bigcloud.djomo.filter.FieldVisitorFunction;
-import com.bigcloud.djomo.filter.LimitParser;
-import com.bigcloud.djomo.filter.LimitVisitor;
-import com.bigcloud.djomo.filter.TypeVisitor;
+import com.bigcloud.djomo.api.Filters;
+import com.bigcloud.djomo.filter.parsers.FieldParser;
+import com.bigcloud.djomo.filter.parsers.LimitParser;
+import com.bigcloud.djomo.filter.visitors.FieldVisitor;
+import com.bigcloud.djomo.filter.visitors.LimitVisitor;
 
 public class FieldFilterTest {
 	public static record Feed(List headlines, List links) {
@@ -40,26 +38,26 @@ public class FieldFilterTest {
 
 	@Test
 	public void testFieldFilters() throws IOException {
-		Feed feed = new Feed(List.of("one", Map.of("headlines", List.of("two", "three", "four")), "five", "six"),
+		Feed feed = new Feed(List.of("one", Map.of("hooples", List.of("two", "three", "four")), "five", "six"),
 				List.of("a", "b", "c", "d"));
 		String str = json.toString(feed, new FieldVisitor<Feed>("headlines", new LimitVisitor(2)) {});
 		Assert.assertEquals(str,
-				"{\"headlines\":[\"one\",{\"headlines\":[\"two\",\"three\",\"four\"]}],\"links\":[\"a\",\"b\",\"c\",\"d\"]}");
+				"{\"headlines\":[\"one\",{\"hooples\":[\"two\",\"three\",\"four\"]}],\"links\":[\"a\",\"b\",\"c\",\"d\"]}");
 		Feed feed2 = json.fromString(str, Feed.class, new FieldParser<Feed>("links", new LimitParser(3)) {});
 		str = json.toString(feed2);
 		Assert.assertEquals(str,
-				"{\"headlines\":[\"one\",{\"headlines\":[\"two\",\"three\",\"four\"]}],\"links\":[\"a\",\"b\",\"c\"]}");
+				"{\"headlines\":[\"one\",{\"hooples\":[\"two\",\"three\",\"four\"]}],\"links\":[\"a\",\"b\",\"c\"]}");
 	}
 
 	@Test
 	public void testFieldFunctions() throws IOException {
 		Feed feed = new Feed(List.of("one", "two", "three", "four", "five", "six"), List.of("a", "b", "c", "d"));
 		String str = json.toString(feed,
-				new FieldVisitorFunction<Feed, List<String>>("headlines", hs -> String.join(",", hs)) {});
+				new FieldVisitor<Feed>("headlines", Filters.visitList((list, model, visitor) -> visitor.visitString(String.join(",", (List<String>) list)))){});
 		Assert.assertEquals(str,
 				"{\"headlines\":\"one,two,three,four,five,six\",\"links\":[\"a\",\"b\",\"c\",\"d\"]}");
 		Feed feed2 = json.fromString(str, Feed.class,
-				new FieldParserFunction<Feed, String, List<String>>("headlines", s -> Arrays.asList(s.split(","))) {});
+				new FieldParser<Feed>("headlines", Filters.parseModel((model, parser) -> Arrays.asList(parser.parseString().toString().split(",")))) {});
 		str = json.toString(feed2);
 		Assert.assertEquals(str,
 				"{\"headlines\":[\"one\",\"two\",\"three\",\"four\",\"five\",\"six\"],\"links\":[\"a\",\"b\",\"c\",\"d\"]}");

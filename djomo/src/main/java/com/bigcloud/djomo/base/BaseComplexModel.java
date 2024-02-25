@@ -20,33 +20,42 @@ import java.lang.reflect.Type;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import com.bigcloud.djomo.api.ComplexModel;
-import com.bigcloud.djomo.api.Maker;
+import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.api.ModelContext;
 
-public abstract class BaseComplexModel<T, M extends Maker<T>> extends BaseModel<T> implements ComplexModel<T, M>{
+public abstract class BaseComplexModel<T> extends BaseModel<T> {
 	final protected Map<String, Type> typeArgs;
-	
+
 	public BaseComplexModel(Type type, ModelContext context) {
 		super(type, context);
-		if(type instanceof ParameterizedType) {
+		typeArgs = getTypeArgs(type);
+	}
+
+	public BaseComplexModel(Type type, Models models) {
+		super(type, models);
+		typeArgs = getTypeArgs(type);
+	}
+
+	private Map<String, Type> getTypeArgs(Type type) {
+		Map<String, Type> typeArgs = null;
+		if (type instanceof ParameterizedType) {
 			ParameterizedType pt = (ParameterizedType) type;
 			var args = pt.getActualTypeArguments();
-			var parms = ((Class)pt.getRawType()).getTypeParameters();
+			var parms = ((Class) pt.getRawType()).getTypeParameters();
 			typeArgs = new LinkedHashMap<>();
-			for(int i=0;i<args.length;i++) {
+			for (int i = 0; i < args.length; i++) {
 				typeArgs.put(parms[i].getName(), args[i]);
 			}
+			return typeArgs;
 		}
-		else {
-			typeArgs = null;
-		}
+		return typeArgs;
 	}
+
 	public String toString() {
 		String sup = super.toString();
-		if(typeArgs ==null) {
+		if (typeArgs == null) {
 			return sup;
 		}
-		return sup+" "+typeArgs;
+		return sup + " " + typeArgs;
 	}
 }

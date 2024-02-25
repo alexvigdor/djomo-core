@@ -30,12 +30,16 @@ import com.bigcloud.djomo.Resolver;
 import com.bigcloud.djomo.StaticType;
 import com.bigcloud.djomo.annotation.Parse;
 import com.bigcloud.djomo.annotation.Visit;
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
+import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.Parser;
-import com.bigcloud.djomo.filter.OmitNullVisitor;
-import com.bigcloud.djomo.filter.TypeParserTransform;
-import com.bigcloud.djomo.filter.TypeVisitorTransform;
+import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.api.parsers.ModelParser;
+import com.bigcloud.djomo.api.visitors.ObjectVisitor;
+import com.bigcloud.djomo.filter.parsers.TypeParser;
+import com.bigcloud.djomo.filter.visitors.OmitNullFieldVisitor;
 
 import lombok.Builder;
 import lombok.Value;
@@ -47,7 +51,7 @@ public class TypeTest {
 		test.name= "a";
 		test.recur = new Recur();
 		test.recur.name="b";
-		String json = new Json().toString(test, new OmitNullVisitor());
+		String json = new Json().toString(test, new OmitNullFieldVisitor());
 		assertEquals(json, "{\"name\":\"a\",\"recur\":{\"name\":\"b\"}}");
 	}
 	
@@ -89,27 +93,40 @@ public class TypeTest {
 		assertEquals(mrt, pmap);
 	}
 	
-	public static class PersonVisitor extends TypeVisitorTransform<Person>{
+	public static class PersonVisitor implements ObjectVisitor {
 
 		@Override
-		public Object transform(Person person) {
-			return person.firstName+" "+person.lastName;
+		public void visitObject(Object object, ObjectModel model, Visitor visitor) {
+			if(object instanceof Person person) {
+				visitor.visitString(person.firstName+" "+person.lastName);
+			}
+			else {
+				visitor.visitObject(object, model);
+			}
 		}
 		
 	}
 	
-	public static class PersonParser extends TypeParserTransform<String, Person>{
+	public static class PersonParser implements ModelParser {
+
 
 		@Override
-		public Person transform(String in) {
-			String[] parts = in.split("\\s+", 2);
-			Person person = new Person();
-			person.firstName = parts[0];
-			if(parts.length>1) {
-				person.lastName = parts[1];
+		public Object parse(Model model, Parser parser) {
+			if(model.getType() == Person.class) {
+				String in = parser.parse(parser.models().anyModel).toString();
+				String[] parts = in.split("\\s+", 2);
+				Person person = new Person();
+				person.firstName = parts[0];
+				if(parts.length>1) {
+					person.lastName = parts[1];
+				}
+				return person;
 			}
-			return person;
+			else {
+				return parser.parse(model);
+			}
 		}
+
 		
 	}
 
@@ -122,6 +139,12 @@ public class TypeTest {
 				// TODO Auto-generated method stub
 				return null;
 			}
+
+			@Override
+			public Format getFormat() {
+				// TODO Auto-generated method stub
+				return null;
+			}
 		};
 	}
 
@@ -131,6 +154,12 @@ public class TypeTest {
 
 			@Override
 			public T resolve(Parser parser) {
+				return null;
+			}
+
+			@Override
+			public Format getFormat() {
+				// TODO Auto-generated method stub
 				return null;
 			}
 		};
@@ -148,17 +177,19 @@ public class TypeTest {
 			return null;
 		}
 
+		@Override
+		public Format getFormat() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
 	}
 
 	@Test(expectedExceptions = IllegalArgumentException.class)
 	public <T> void testAmorphousInlineMultiType() {
-		new TypeParserTransform<String, T>() {
+		new TypeParser<T>(null) {
 
-			@Override
-			public T transform(String in) {
-				// TODO Auto-generated method stub
-				return null;
-			}
+	
 
 		};
 	}
@@ -206,7 +237,7 @@ public class TypeTest {
 
 		@Override
 		public Furniture resolve(Parser parser) {
-			Map data = parser.parse(parser.models().mapModel);
+			Map data = (Map) parser.parseObject(parser.models().mapModel);
 			if (data.containsKey("seatHeight")) {
 				return chairModel.convert(data);
 			}
@@ -217,6 +248,11 @@ public class TypeTest {
 		public void init(ModelContext models, Type[] typeArgs) {
 			chairModel = models.get(Chair.class);
 			tableModel = models.get(Table.class);
+		}
+
+		@Override
+		public Format getFormat() {
+			return Format.OBJECT;
 		}
 	}
 }

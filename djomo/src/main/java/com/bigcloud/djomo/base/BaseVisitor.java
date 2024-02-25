@@ -19,9 +19,9 @@ import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.api.ListModel;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ObjectModel;
-import com.bigcloud.djomo.api.SimpleModel;
 import com.bigcloud.djomo.api.Visitor;
-import com.bigcloud.djomo.filter.FilterVisitor;
+import com.bigcloud.djomo.api.VisitorFilter;
+import com.bigcloud.djomo.api.VisitorFilterFactory;
 
 /**
  * Baseline visitor behavior, with filtering, dispatch and recursion
@@ -33,15 +33,15 @@ public abstract class BaseVisitor implements Visitor {
 
 	protected final Models models;
 	protected final Visitor current;
-	protected final SimpleModel<String> stringModel;
 
-	public BaseVisitor(Models models, FilterVisitor... filters) {
+	public BaseVisitor(Models models, VisitorFilterFactory... filters) {
 		this.models = models;
-		this.stringModel = models.stringModel;
 		Visitor curr = this;
 		if (filters != null) {
 			for (int i = filters.length - 1; i >= 0; i--) {
-				curr = filters[i].visitor(curr);
+				VisitorFilter filter = filters[i].newVisitorFilter();
+				filter.filter(curr);
+				curr = filter;
 			}
 		}
 		this.current = curr;
@@ -52,43 +52,37 @@ public abstract class BaseVisitor implements Visitor {
 	}
 
 	@Override
-	public <T> void visitSimple(T model, SimpleModel<T> definition) {
+	public <T> void visitList(T model, ListModel<T> definition) {
+		definition.visitItems(model, current);
 	}
 
 	@Override
-	public <T> void visitList(T model, ListModel<T, ?, ?> definition) {
-		definition.forEachItem(model, current::visitListItem);
+	public <T> void visitObject(T model, ObjectModel<T> definition) {
+		definition.visitFields(model, current);
 	}
 
 	@Override
-	public <T> void visitObject(T model, ObjectModel<T, ?, ?, ?, ?> definition) {
-		definition.forEachField(model, current::visitObjectField);
+	public void visitObjectField(Object name) {
 	}
 
 	@Override
-	public void visitObjectField(Object name, Object value) {
-		current.visit(value);
-	}
-
-	@Override
-	public void visitListItem(Object obj) {
-		current.visit(obj);
+	public void visitListItem() {
 	}
 
 	@Override
 	public void visit(Object o) {
-		if (o instanceof String) {
-			current.visitSimple((String) o, stringModel);
-		} else if (o instanceof Integer) {
-			current.visitSimple((Integer) o, models.intModel);
-		} else if (o instanceof Double) {
-			current.visitSimple((Double) o, models.doubleModel);
-		} else if (o instanceof Boolean) {
-			current.visitSimple((Boolean) o, models.booleanModel);
-		} else if (o instanceof Long) {
-			current.visitSimple((Long) o, models.longModel);
-		} else if (o instanceof Float) {
-			current.visitSimple((Float) o, models.floatModel);
+		if (o instanceof String s) {
+			current.visitString(s);
+		} else if (o instanceof Integer i) {
+			current.visitInt(i.intValue());
+		} else if (o instanceof Double d) {
+			current.visitDouble(d.doubleValue());
+		} else if (o instanceof Boolean b) {
+			current.visitBoolean(b.booleanValue());
+		} else if (o instanceof Long l) {
+			current.visitLong(l.longValue());
+		} else if (o instanceof Float f) {
+			current.visitFloat(f.floatValue());
 		} else if (o == null) {
 			current.visitNull();
 		} else {

@@ -23,17 +23,16 @@ import java.util.function.Function;
 
 import com.bigcloud.djomo.annotation.Ignore;
 import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.api.ObjectMaker;
 import com.bigcloud.djomo.base.BaseObjectModel;
 
-public abstract class ObjectMethodsModel<T, M extends ObjectMaker<T, BeanField<T,Object>, Object>> extends BaseObjectModel<T, M, BeanField<T, Object>, String, Object>  {
+public abstract class ObjectMethodsModel<T> extends BaseObjectModel<T>  {
 
 	public ObjectMethodsModel(Type type, ModelContext context) throws IllegalAccessException {
 		super(type, context);
 	}
 
 	protected void processMethods(MethodHandles.Lookup lookup, ModelContext context,
-			Function<String, BeanField.Builder<T, Object>> fieldLookup) throws IllegalAccessException {
+			Function<String, BeanField.Builder> fieldLookup) throws IllegalAccessException {
 		Method[] methods = type.getMethods();
 		for (Method method : methods) {
 			if (method.getAnnotation(Ignore.class) != null) {
@@ -62,5 +61,5 @@ public abstract class ObjectMethodsModel<T, M extends ObjectMaker<T, BeanField<T
 	}
 
 	protected abstract void processMethod(Method method, MethodHandles.Lookup lookup, ModelContext context,
-			Function<String, BeanField.Builder<T, Object>> fieldLookup) throws IllegalAccessException;
+			Function<String, BeanField.Builder> fieldLookup) throws IllegalAccessException;
 }

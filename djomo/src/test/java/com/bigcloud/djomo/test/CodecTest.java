@@ -25,9 +25,9 @@ import org.testng.annotations.Test;
 import com.bigcloud.djomo.Json;
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.StaticType;
-import com.bigcloud.djomo.filter.IncludeParser;
-import com.bigcloud.djomo.filter.IncludeVisitor;
 import com.bigcloud.djomo.filter.ObjectFieldListCodec;
+import com.bigcloud.djomo.filter.parsers.IncludeParser;
+import com.bigcloud.djomo.filter.visitors.IncludeVisitor;
 
 public class CodecTest {
 	
@@ -45,11 +45,11 @@ public class CodecTest {
 		Models models = new Models();
 		Json json = Json.builder()
 				.models(models)
-				.visit(new IncludeVisitor<>(models.get(Contact.class), "nickName", "phoneNumbers"))
-				.visit(new IncludeVisitor<>(models.get(new StaticType<EnumMap<Device, PhoneNumber>>() {}), "work"))
+				.visit(new IncludeVisitor<>(Contact.class, "nickName", "phoneNumbers"))
+				.visit(new IncludeVisitor<>(EnumMap.class, "work"))
 				.scan(ObjectFieldListCodec.class)
-				.parse(new IncludeParser<>(models.get(Contact.class), "nickName", "phoneNumbers"))
-				.parse(new IncludeParser<>(models.get(new StaticType<EnumMap<Device, PhoneNumber>>() {}), "work"))
+				.parse(new IncludeParser<>(Contact.class, "nickName", "phoneNumbers"))
+				.parse(new IncludeParser<>(EnumMap.class, "work"))
 				.build();
 		Contact sample = sampleContact();
 		String str = json.toString(sample);

@@ -17,12 +17,19 @@ package com.bigcloud.djomo.rs.test;
 
 import java.util.stream.Stream;
 
-import com.bigcloud.djomo.filter.TypeVisitorTransform;
+import com.bigcloud.djomo.api.ObjectModel;
+import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.api.visitors.ObjectVisitor;
 
-public class ThingFlattener extends TypeVisitorTransform<Thing> {
+public class ThingFlattener implements ObjectVisitor {
 
 	@Override
-	public Stream transform(Thing in) {
-		return Stream.concat(Stream.of(in.name()), in.elements().stream());
+	public void visitObject(Object object, ObjectModel model, Visitor visitor) {
+		if(object instanceof Thing in) {
+			visitor.visit( Stream.concat(Stream.of(in.name()), in.elements().stream()));
+		}
+		else {
+			visitor.visitObject(object, model);
+		}
 	}
 }

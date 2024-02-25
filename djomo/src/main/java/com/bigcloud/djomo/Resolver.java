@@ -17,6 +17,7 @@ package com.bigcloud.djomo;
 
 import java.lang.reflect.Type;
 
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
@@ -51,6 +52,12 @@ public abstract class Resolver<T> implements Cloneable {
 	}
 
 	public abstract T resolve(Parser parser);
+	
+	/**
+	 * 
+	 * @return the format this resolver parses from
+	 */
+	public abstract Format getFormat();
 
 	public Resolver<T> clone() {
 		Resolver<T> cloned;
@@ -102,6 +109,11 @@ public abstract class Resolver<T> implements Cloneable {
 			} else {
 				substituteModel = models.get(substituteClass);
 			}
+		}
+
+		@Override
+		public Format getFormat() {
+			return substituteModel.getFormat();
 		}
 	}
 }

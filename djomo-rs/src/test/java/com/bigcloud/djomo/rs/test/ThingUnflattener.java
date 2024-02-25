@@ -17,12 +17,19 @@ package com.bigcloud.djomo.rs.test;
 
 import java.util.List;
 
-import com.bigcloud.djomo.filter.TypeParserTransform;
+import com.bigcloud.djomo.api.Model;
+import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.parsers.ModelParser;
 
-public class ThingUnflattener extends TypeParserTransform<List, Thing> {
+public class ThingUnflattener implements ModelParser {
 
 	@Override
-	public Thing transform(List list) {
-		return new Thing(list.get(0).toString(), list.subList(1, list.size()));
+	public Object parse(Model model, Parser parser) {
+		if (model.getType() == Thing.class) {
+			Object obj = parser.parse(parser.models().listModel);
+			List list = (List) obj;
+			return new Thing(list.get(0).toString(), list.subList(1, list.size()));
+		}
+		return parser.parse(model);
 	}
 }

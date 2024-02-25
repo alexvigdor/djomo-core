@@ -32,12 +32,15 @@ import org.testng.annotations.Test;
 
 import com.bigcloud.djomo.Json;
 import com.bigcloud.djomo.StaticType;
-import com.bigcloud.djomo.filter.ExcludeVisitor;
-import com.bigcloud.djomo.filter.OmitNullVisitor;
-import com.bigcloud.djomo.filter.PathVisitor;
-import com.bigcloud.djomo.filter.TypeVisitorFunction;
-import com.bigcloud.djomo.filter.TypeVisitorTransform;
+import com.bigcloud.djomo.api.Filters;
+import com.bigcloud.djomo.filter.visitors.ExcludeVisitor;
+import com.bigcloud.djomo.filter.visitors.OmitNullFieldVisitor;
+import com.bigcloud.djomo.filter.visitors.OmitNullItemVisitor;
+import com.bigcloud.djomo.filter.visitors.PathVisitor;
 import com.bigcloud.djomo.test.ComplexModel.Direction;
+
+import lombok.Builder;
+import lombok.Value;
 
 public class WriterTest {
 	Json Json = new Json();
@@ -57,9 +60,9 @@ public class WriterTest {
 	public void testJsonWriterTransform() {
 		MutableModel m = MutableModel.builder().name("foo").enabled(true).count(5).build();
 		String json = Json.toString(m,
-				new TypeVisitorFunction<Integer>(i->i*i) {},
-				new TypeVisitorFunction<>(Boolean.class, b->b.toString().toUpperCase()),
-				PathVisitor.builder().filter("name", new TypeVisitorFunction<String>(s-> map("value", s,"lang", "en")) {})
+				Filters.visitInt((i, visitor) -> visitor.visitInt(i*i)),
+				Filters.visitBoolean((b, visitor) -> visitor.visitString(Boolean.valueOf(b).toString().toUpperCase())),
+				PathVisitor.builder().filter("name", Filters.visitString((s, visitor) -> visitor.visit(map("value", s,"lang", "en"))))
 				.build());
 		assertEquals(json, "{\"name\":{\"value\":\"foo\",\"lang\":\"en\"},\"enabled\":\"TRUE\",\"count\":25}");
 	}
@@ -68,7 +71,7 @@ public class WriterTest {
 	public void testJsonWriterExclude() {
 		MutableModel m = MutableModel.builder().name("foo").enabled(true).count(5).build();
 		CharArrayWriter caWriter = new CharArrayWriter();
-		String json = Json.toString(m, new ExcludeVisitor("enabled"));
+		String json = Json.toString(m, new ExcludeVisitor(MutableModel.class, "enabled"));
 		assertEquals(json, "{\"name\":\"foo\",\"count\":5}");
 	}
 
@@ -92,7 +95,7 @@ public class WriterTest {
 	@Test
 	public void testJsonWriterOmitNull() {
 		MutableModel m = MutableModel.builder().build();
-		String json = Json.toString(m, new OmitNullVisitor());
+		String json = Json.toString(m, new OmitNullFieldVisitor());
 		assertEquals(json, "{\"enabled\":false,\"count\":0}");
 	}
 	
@@ -106,27 +109,28 @@ public class WriterTest {
 	@Test
 	public void testJsonWriterOmitNullList() {
 		List<?> m = list("1", null, "2");
-		String json = Json.toString(m, new OmitNullVisitor());
+		String json = Json.toString(m, new OmitNullItemVisitor());
 		assertEquals(json, "[\"1\",\"2\"]");
 	}
 
 	@Test
 	public void testJsonWriterComplex() {
 		List<?> m = List.of(
-				map(
-						"title", "abc",
-						"description", null,
-						"george", "washington"
-						),
-				map( 
-						"title", "xyz",
-						"description", "foo"
-						)
+				Basic.builder().title("abc").language("en").build(),
+				Basic.builder().title("xyz").description("foo").build()
 				);
 
 		String json = Json.toString(m,
-				new OmitNullVisitor(), new ExcludeVisitor("george"));
-		assertEquals(json, "[{\"title\":\"abc\"},{\"title\":\"xyz\",\"description\":\"foo\"}]");
+				new OmitNullFieldVisitor(), new ExcludeVisitor(Basic.class, "language"));
+		assertEquals(json, "[{\"title\":\"abc\"},{\"description\":\"foo\",\"title\":\"xyz\"}]");
+	}
+	
+	@Value
+	@Builder
+	static class Basic{
+		String title;
+		String description;
+		String language;
 	}
 	
 	@Test
@@ -158,7 +162,7 @@ public class WriterTest {
 					)
 				)
 				;
-		String json = Json.toString(testData, new OmitNullVisitor());
+		String json = Json.toString(testData, new OmitNullFieldVisitor(), new OmitNullItemVisitor());
 		assertEquals(json,"[{\"b\":{\"a\":\"foo\"}}]");
 	}
 	

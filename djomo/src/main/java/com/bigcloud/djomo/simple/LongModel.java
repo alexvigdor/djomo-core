@@ -18,7 +18,8 @@ package com.bigcloud.djomo.simple;
 import java.lang.reflect.Type;
 
 import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.api.Printer;
+import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.Visitor;
 
 public class LongModel extends NumberModel<Long> {
 
@@ -55,18 +56,12 @@ public class LongModel extends NumberModel<Long> {
 	}
 
 	@Override
-	public void print(Long obj, Printer out) {
-		long l = obj.longValue();
-		int mult = l < 0 ? -1 : 1;
-		char[] buf = new char[20];
-		int pos = 20;
-		do {
-			buf[--pos] = (char) (48 + ((l % 10) * mult));
-			l /= 10;
-		} while (l != 0);
-		if (mult == -1) {
-			buf[--pos] = '-';
-		}
-		out.raw(buf, pos, 20 - pos);
+	public void visit(Long obj, Visitor visitor) {
+		visitor.visitLong(obj);
+	}
+
+	@Override
+	public Long parse(Parser parser) {
+		return parser.parseLong();
 	}
 }

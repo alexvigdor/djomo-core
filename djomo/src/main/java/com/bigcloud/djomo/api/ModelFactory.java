@@ -26,9 +26,6 @@ import com.bigcloud.djomo.Models;
  * Given a type, a ModelFactory should only return a Model if it recognizes that type;
  * the ModelFactory should return null for an unrecognized or unsupported type, to allow the next factory in the chain to process it.
  * </p>
- * <p>
- * A created Model must implement {@link SimpleModel}, {@link ListModel} or {@link ObjectModel}.
- * </p>
  * 
  * @author Alex Vigdor
  *

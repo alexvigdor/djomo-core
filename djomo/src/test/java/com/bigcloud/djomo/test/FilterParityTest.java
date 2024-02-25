@@ -30,15 +30,18 @@ import com.bigcloud.djomo.annotation.Order;
 import com.bigcloud.djomo.annotation.Parse;
 import com.bigcloud.djomo.annotation.Resolve;
 import com.bigcloud.djomo.annotation.Visit;
+import com.bigcloud.djomo.api.Field;
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.Parser;
-import com.bigcloud.djomo.filter.FilterVisitor;
-import com.bigcloud.djomo.filter.LimitParser;
-import com.bigcloud.djomo.filter.LimitVisitor;
-import com.bigcloud.djomo.filter.RenameParser;
-import com.bigcloud.djomo.filter.RenameVisitor;
+import com.bigcloud.djomo.base.BaseParserFilter;
+import com.bigcloud.djomo.base.BaseVisitorFilter;
+import com.bigcloud.djomo.filter.parsers.LimitParser;
+import com.bigcloud.djomo.filter.parsers.RenameParser;
+import com.bigcloud.djomo.filter.visitors.LimitVisitor;
+import com.bigcloud.djomo.filter.visitors.RenameVisitor;
 
 import lombok.Builder;
 import lombok.Data;
@@ -76,7 +79,7 @@ public class FilterParityTest {
 	public static class ParityModelParserFilter extends RenameParser{
 
 		public ParityModelParserFilter() {
-			super(Map.of("real-name", "realName", "alt-name", "altName"));
+			super(ParityModel.class, "real-name", "realName", "alt-name", "altName");
 		}
 
 	}
@@ -84,7 +87,7 @@ public class FilterParityTest {
 	public static class ParityModelVisitorFilter extends RenameVisitor {
 
 		public ParityModelVisitorFilter() {
-			super(Map.of("realName", "real-name", "altName", "alt-name"));
+			super(ParityModel.class, "realName", "real-name", "altName", "alt-name");
 		}
 
 	}
@@ -116,7 +119,6 @@ public class FilterParityTest {
 		Assert.assertEquals(output, "{\"id\":\"root\",\"contents\":[{\"id\":\"branch1\",\"contents\":[{\"id\":\"subbranch1c\",\"color\":\"red\",\"contents\":[{\"id\":\"subsub\",\"subcontents\":[{\"id\":\"subsubsub\",\"contents\":[]}]}]},{\"id\":\"subbranch2\",\"contents\":[{\"id\":\"subsub2\",\"contents\":[]},{\"id\":\"subsubbranch3\",\"color\":\"green\",\"contents\":[{\"id\":\"subsubsub3\",\"subcontents\":[]},{\"id\":\"subsubsub3b\",\"subcontents\":[{\"id\":\"1\",\"contents\":[{\"id\":\"11\",\"contents\":[]},{\"id\":\"12\",\"contents\":[]}]},{\"id\":\"2\",\"color\":\"blue\",\"contents\":[{\"id\":\"21\",\"subcontents\":[]},{\"id\":\"22\",\"subcontents\":[]}]},{\"id\":\"3\",\"contents\":[]}]},{\"id\":\"subsubsub3c\",\"subcontents\":[]}]}]},{\"id\":\"subbranch3\",\"contents\":[]}]}]}");
 		Thing round = json.fromString(output, Thing.class);
 		String rj = json.toString(round);
-		//System.out.println(rj);
 		Assert.assertEquals(rj,"{\"id\":\"root\",\"contents\":[{\"id\":\"branch1\",\"contents\":[{\"id\":\"subbranch1c\",\"color\":\"red\",\"contents\":[{\"id\":\"subsub\",\"subcontents\":[{\"id\":\"subsubsub\",\"contents\":[]}]}]},{\"id\":\"subbranch2\",\"contents\":[{\"id\":\"subsub2\",\"contents\":[]},{\"id\":\"subsubbranch3\",\"color\":\"green\",\"contents\":[{\"id\":\"subsubsub3\",\"subcontents\":[]},{\"id\":\"subsubsub3b\",\"subcontents\":[{\"id\":\"1\",\"contents\":[{\"id\":\"11\",\"contents\":[]},{\"id\":\"12\",\"contents\":[]}]},{\"id\":\"2\",\"color\":\"blue\",\"contents\":[{\"id\":\"21\",\"subcontents\":[]},{\"id\":\"22\",\"subcontents\":[]}]}]}]}]}]}]}");
 		Locale.setDefault(Locale.UK);
 		output = json.toString(testData);
@@ -130,7 +132,7 @@ public class FilterParityTest {
 	@Resolve(ThingResolver.class)
 	@Parse(value = RenameParser.class, arg = { "id", "iD" }, type=Thing.class)
 	@Visit(value = RenameVisitor.class, arg = { "iD", "id" }, type=Thing.class)
-	@Parse(value = RenameParser.class, arg = { "subcontents", "contents" }, path = "**.contents[*].subcontents")
+	@Parse(value = RenameParser.class, arg = { "subcontents", "contents" }, path = "**.contents[*].subcontents", type=Thing.class)
 	@Visit(value = ColorContentsVisitor.class)
 	@Visit(ColorLocaleVisitor.class)
 	@Parse(ColorLocaleParser.class)
@@ -146,7 +148,7 @@ public class FilterParityTest {
 
 		@Override
 		public Thing resolve(Parser parser) {
-			Thing maxThing = parser.parse(colorThingModel);
+			Thing maxThing = colorThingModel.parse(parser);
 			if (maxThing instanceof ColorThing) {
 				if (((ColorThing) maxThing).getColor() == null) {
 					return plainThingModel.convert(maxThing);
@@ -160,36 +162,45 @@ public class FilterParityTest {
 			colorThingModel = models.get(ColorThingImpl.class);
 			plainThingModel = models.get(ThingImpl.class);
 		}
+
+		@Override
+		public Format getFormat() {
+			return Format.OBJECT;
+		}
 	}
 
-	public static class ColorLocaleVisitor extends FilterVisitor {
+	public static class ColorLocaleVisitor extends BaseVisitorFilter {
 		@Override
-		public void visitObjectField(Object name, Object value) {
+		public void visitObjectField(Object name) {
 			String n = name.toString();
 			if (n.equals("color")) {
 				if (Locale.getDefault() == Locale.UK) {
 					name = "colour";
 				}
 			}
-			visitor.visitObjectField(name, value);
+			visitor.visitObjectField(name);
 		}
 
 	}
 
-	public static class ColorLocaleParser extends RenameParser {
-
-		public ColorLocaleParser() {
-			super("colour", "color");
+	public static class ColorLocaleParser extends BaseParserFilter {
+		
+		@Override
+		public Field parseObjectField(ObjectModel model, CharSequence field) {
+			if(field.equals("colour")) {
+				field = "color";
+			}
+			return super.parseObjectField(model, field);
 		}
 
 	}
 	
-	public static class ColorContentsVisitor extends FilterVisitor {
+	public static class ColorContentsVisitor extends BaseVisitorFilter {
 		Object parent;
 		Object grandParent;
 
 		@Override
-		public <T> void visitObject(T model, ObjectModel<T, ?, ?, ?, ?> definition) {
+		public <T> void visitObject(T model, ObjectModel<T> definition) {
 			Object op = parent, og = grandParent;
 			grandParent = op;
 			parent = model;
@@ -199,11 +210,11 @@ public class FilterParityTest {
 		}
 
 		@Override
-		public void visitObjectField(Object name, Object value) {
+		public void visitObjectField(Object name) {
 			if (grandParent instanceof ColorThing && name.equals("contents")) {
 				name = "subcontents";
 			}
-			visitor.visitObjectField(name, value);
+			visitor.visitObjectField(name);
 		}
 
 	}

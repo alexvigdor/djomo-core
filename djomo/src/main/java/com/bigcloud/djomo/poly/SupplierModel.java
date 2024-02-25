@@ -19,6 +19,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.function.Supplier;
 
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
@@ -53,6 +54,11 @@ public class SupplierModel<V> extends BaseModel<Supplier<V>> {
 	@Override
 	public void visit(Supplier<V> obj, Visitor visitor) {
 		visitor.visit(obj.get());
+	}
+
+	@Override
+	public Format getFormat() {
+		return valueModel.getFormat();
 	}
 
 }

@@ -18,8 +18,7 @@ package com.bigcloud.djomo.json;
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.api.ListModel;
 import com.bigcloud.djomo.api.ObjectModel;
-import com.bigcloud.djomo.api.Printer;
-import com.bigcloud.djomo.filter.FilterVisitor;
+import com.bigcloud.djomo.api.VisitorFilterFactory;
 import com.bigcloud.djomo.io.CharSink;
 
 /**
@@ -28,13 +27,14 @@ import com.bigcloud.djomo.io.CharSink;
  * @author Alex Vigdor
  *
  */
-public class JsonWriter extends BaseJsonWriter implements Printer, AutoCloseable {
+public class JsonWriter extends BaseJsonWriter implements AutoCloseable {
 
-	public JsonWriter(Models context, CharSink sink, FilterVisitor... filters) {
+	public JsonWriter(Models context, CharSink sink, VisitorFilterFactory... filters) {
 		super(context, sink, filters);
 	}
 
-	public <T> void visitObject(T model, ObjectModel<T, ?, ?, ?, ?> definition) {
+	@Override
+	public <T> void visitObject(T model, ObjectModel<T> definition) {
 		char[] buf = buffer;
 		int p;
 		if ((p = pos) == BUF_LEN) {
@@ -44,7 +44,7 @@ public class JsonWriter extends BaseJsonWriter implements Printer, AutoCloseable
 		buf[p] = '{';
 		pos = p + 1;
 		first = true;
-		definition.forEachField(model, current::visitObjectField);
+		definition.visitFields(model, current);
 		if ((p = pos) == BUF_LEN) {
 			sink.next(BUF_LEN);
 			p = 0;
@@ -54,7 +54,8 @@ public class JsonWriter extends BaseJsonWriter implements Printer, AutoCloseable
 		first = false;
 	}
 
-	public <T> void visitList(T model, ListModel<T, ?, ?> definition) {
+	@Override
+	public <T> void visitList(T model, ListModel<T> definition) {
 		char[] buf = buffer;
 		int p;
 		if ((p = pos) == BUF_LEN) {
@@ -64,7 +65,7 @@ public class JsonWriter extends BaseJsonWriter implements Printer, AutoCloseable
 		buf[p] = '[';
 		pos = p + 1;
 		first = true;
-		definition.forEachItem(model, current::visitListItem);
+		definition.visitItems(model, current);
 		if ((p = pos) == BUF_LEN) {
 			sink.next(BUF_LEN);
 			p = 0;
@@ -74,7 +75,8 @@ public class JsonWriter extends BaseJsonWriter implements Printer, AutoCloseable
 		first = false;
 	}
 
-	public void visitObjectField(Object name, Object value) {
+	@Override
+	public void visitObjectField(Object name) {
 		char[] buf = buffer;
 		int p;
 		if (!first) {
@@ -87,17 +89,17 @@ public class JsonWriter extends BaseJsonWriter implements Printer, AutoCloseable
 		} else {
 			first = false;
 		}
-		quote(name.toString());
+		visitString(name.toString());
 		if ((p = pos) == BUF_LEN) {
 			sink.next(BUF_LEN);
 			p = 0;
 		}
 		buf[p] = ':';
 		pos = p + 1;
-		current.visit(value);
 	}
 
-	public void visitListItem(Object value) {
+	@Override
+	public void visitListItem() {
 		if (!first) {
 			int p;
 			if ((p = pos) == BUF_LEN) {
@@ -109,7 +111,6 @@ public class JsonWriter extends BaseJsonWriter implements Printer, AutoCloseable
 		} else {
 			first = false;
 		}
-		current.visit(value);
 	}
 
 }

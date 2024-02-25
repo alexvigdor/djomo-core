@@ -25,11 +25,15 @@
 module com.bigcloud.djomo {
 	exports com.bigcloud.djomo;
 	exports com.bigcloud.djomo.api;
+	exports com.bigcloud.djomo.api.parsers;
+	exports com.bigcloud.djomo.api.visitors;
 	exports com.bigcloud.djomo.annotation;
 	exports com.bigcloud.djomo.base;
 	exports com.bigcloud.djomo.io;
 	exports com.bigcloud.djomo.json;
 	exports com.bigcloud.djomo.filter;
+	exports com.bigcloud.djomo.filter.parsers;
+	exports com.bigcloud.djomo.filter.visitors;
 	exports com.bigcloud.djomo.error;
 	exports com.bigcloud.djomo.poly;
 	exports com.bigcloud.djomo.list;
