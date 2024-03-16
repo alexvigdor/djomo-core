@@ -20,8 +20,8 @@ import java.util.Arrays;
 import java.util.function.Consumer;
 
 public class ImmutableList extends AbstractList {
-	Object[] items;
-	int pointer = 0;
+	Object[] items = new Object[32];
+	int pointer;
 
 	public int size() {
 		return pointer;
@@ -29,7 +29,7 @@ public class ImmutableList extends AbstractList {
 
 	@Override
 	public Object get(int index) {
-		if (index >= pointer || index < 0) {
+		if (index < 0 || index >= pointer) {
 			throw new IndexOutOfBoundsException(index);
 		}
 		return items[index];
@@ -45,14 +45,13 @@ public class ImmutableList extends AbstractList {
 	}
 
 	protected void addItem(Object item) {
+		int p = pointer;
 		var _items = items;
-		var p = pointer;
-		if (_items == null) {
-			_items = items = new Object[16];
-		} else if (p == _items.length) {
-			_items = items = Arrays.copyOf(_items, p + p);
+		if (p == _items.length) {
+			items = _items = Arrays.copyOf(_items, p * 2);
 		}
 		_items[p] = item;
 		pointer = p + 1;
 	}
+
 }

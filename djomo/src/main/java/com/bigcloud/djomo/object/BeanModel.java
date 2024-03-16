@@ -41,17 +41,13 @@ public class BeanModel<T> extends ObjectMethodsModel<T> {
 
 	@Override
 	public Object maker() {
-		return newInstance();
-	}
-
-	public T newInstance() {
 		try {
 			return (T) constructor.invoke();
 		} catch (Throwable e) {
 			throw new RuntimeException("Unable to create instance of " + type.getName(), e);
 		}
 	}
-
+	
 	@Override
 	protected Map<CharSequence, Field> initFields(ModelContext context) throws IllegalAccessException {
 		MethodHandles.Lookup lookup = MethodHandles.lookup();

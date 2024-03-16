@@ -45,7 +45,7 @@ public class FieldVisitor<T> extends BaseVisitorFilter {
 		this.type = type;
 		this.fieldModels = init(field, filterVisitor);
 	}
-	
+
 	private FilterFieldObjectModels init(String field, VisitorFilterFactory filterVisitor) {
 		return new FilterFieldObjectModels(model -> model.fields().stream().map(f -> {
 			if (f.key().toString().equals(field)) {

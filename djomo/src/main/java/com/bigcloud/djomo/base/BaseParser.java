@@ -25,7 +25,6 @@ import com.bigcloud.djomo.api.ParserFilter;
 import com.bigcloud.djomo.api.ParserFilterFactory;
 import com.bigcloud.djomo.simple.BooleanModel;
 import com.bigcloud.djomo.simple.NumberModel;
-import com.bigcloud.djomo.simple.StringModel;
 
 /**
  * Baseline parser support, source agnostic
@@ -65,9 +64,6 @@ public abstract class BaseParser implements Parser {
 	}
 
 	protected Object parseStringModel(Model model) {
-		if (model instanceof StringModel) {
-			return parser.parseString().toString();
-		}
 		return switch (model.getFormat()) {
 		case STRING -> model.parse(parser);
 		case NUMBER, BOOLEAN -> model.convert(parser.parseString().toString());

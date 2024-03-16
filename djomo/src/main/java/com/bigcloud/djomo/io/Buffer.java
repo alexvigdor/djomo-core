@@ -80,24 +80,141 @@ public class Buffer extends Writer {
 		reserve(wp + 1)[wp] = (char) c;
 	}
 
-	public boolean refill() throws IOException {
-		if ((writePosition = source.read(buffer)) == -1) {
+	public boolean refill() {
+		try {
+			writePosition = source.read(buffer);
+		} catch (IOException e) {
+			throw new ModelException("Error reading input", e);
+		}
+		if (writePosition == -1) {
 			return false;
 		}
 		readPosition = 0;
 		return true;
 	}
+	
+	public void refillStrict() {
+		if(!refill()) {
+			throw new ModelException("Unexpected EOF");
+		}
+	}
 
-	public int read() throws IOException {
+	public char seek() {
 		int rp = readPosition;
-		if (rp == writePosition) {
-			if ((writePosition = source.read(buffer)) == -1) {
-				return -1;
+		var buf = buffer;
+		while(true) {
+			int wp = writePosition;
+			while(rp < wp) {
+				char c = buf[rp];
+				switch(c) {
+					case ' ':
+					case '\t':
+					case '\n':
+					case '\r':
+					case '\f':
+					case ',':
+						++rp;
+						break;
+					default:
+						readPosition = rp;
+						writePosition = wp;
+						return c;
+				}
 			}
+			refillStrict();
 			rp = 0;
 		}
-		readPosition = rp + 1;
-		return buffer[rp];
+	}
+	
+	public char seek(char gobble) {
+		int rp = readPosition;
+		var buf = buffer;
+		while(true) {
+			int wp = writePosition;
+			while(rp < wp) {
+				char c = buf[rp];
+				switch(c) {
+					case ' ':
+					case '\t':
+					case '\n':
+					case '\r':
+					case '\f':
+					case ',':
+						++rp;
+						break;
+					default:
+						if(c == gobble) {
+							++rp;
+						}
+						readPosition = rp;
+						writePosition = wp;
+						return c;
+				}
+			}
+			refillStrict();
+			rp = 0;
+		}
+	}
+	
+	public void expect(char target) {
+		int rp = readPosition;
+		var buf = buffer;
+		while(true) {
+			int wp = writePosition;
+			while(rp < wp) {
+				char c = buf[rp++];
+				switch(c) {
+					case ' ':
+					case '\t':
+					case '\n':
+					case '\r':
+					case '\f':
+						break;
+					default:
+						if(c != target) {
+							throw new ModelException("Expected "+target+" but found " + c+" at "+ describe());
+						}
+						readPosition =  rp ;
+						writePosition = wp;
+						return;
+				}
+			}
+			refillStrict();
+			rp = 0;
+		}
+	}
+	
+	public void expect(char[] target) {
+		int rp = readPosition;
+		var buf = buffer;
+		int tp = 0;
+		while(true) {
+			int wp = writePosition;
+			while(rp < wp) {
+				char c = buf[rp++];
+				switch(c) {
+					case ' ':
+					case '\t':
+					case '\n':
+					case '\r':
+					case '\f':
+						if(tp == 0) {
+							break;
+						}
+					default:
+						if(c != target[tp++]) {
+							throw new ModelException("Expected "+new String(target)+" but found " + describe());
+						}
+						if(tp == target.length) {
+							readPosition = rp;
+							writePosition = wp;
+							return;
+						}
+				}
+			}
+			refillStrict();
+			rp = 0;
+		}
 	}
 
 	public void unread() {

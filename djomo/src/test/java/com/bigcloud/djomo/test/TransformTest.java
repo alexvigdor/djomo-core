@@ -91,8 +91,8 @@ public class TransformTest {
 				new FieldParser<SomeType>("loos", Filters.parseModel((model, parser) ->
 						Arrays.stream(parser.parseString().toString().split(",")).map(k -> k.split("=")).collect(Collectors.toMap(a -> a[0], a -> a[1]))
 					)) {},
-				new FieldParser<SomeType>("bars", Filters.parseString((parser) -> 
-					Json.models().listModel.parse(parser).stream().map(Object::toString).collect(Collectors.joining(",")).toString())) {},
+				new FieldParser<SomeType>("bars", Filters.parseString(parser -> 
+				Json.models().listModel.parse(parser).stream().map(Object::toString).collect(Collectors.joining(",")).toString())) {},
 				new FieldParser(SomeType.class, "eeks", Filters.parseModel((model, parser) ->  new TreeSet(Json.models().mapModel.parse(parser).values()) )),
 				new FieldParser(SomeType.class, "leeks", Filters.parseModel(Map.class, (model, parser) -> 
 					Json.models().listModel.parse(parser).stream().collect(Collectors.toMap(s -> s, s -> s))))

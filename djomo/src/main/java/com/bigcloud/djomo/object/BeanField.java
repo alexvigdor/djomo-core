@@ -163,9 +163,10 @@ public class BeanField implements Field, Cloneable {
 				return;
 			}
 			try {
-				if (value != null) {
-					m.invoke(dest, value.toString());
+				if(value != null) {
+					value = value.toString();
 				}
+				m.invoke(dest, value);
 			} catch (Throwable e) {
 				throw new SetFieldException("Error setting " + name + " = " + value + " for " + dest + " ("
 						+ dest.getClass().getName() + ")", e);

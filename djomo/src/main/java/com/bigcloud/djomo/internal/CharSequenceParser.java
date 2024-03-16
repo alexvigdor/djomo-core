@@ -15,9 +15,6 @@
  *******************************************************************************/
 package com.bigcloud.djomo.internal;
 
-import java.io.EOFException;
-import java.io.IOException;
-
 import com.bigcloud.djomo.io.Buffer;
 /**
  * This class parses and returns a volatile char sequence representing a decoded string;
@@ -27,10 +24,11 @@ import com.bigcloud.djomo.io.Buffer;
  *
  */
 public class CharSequenceParser {
-	public static CharSequence parse(Buffer readBuffer, Buffer writeBuffer) throws IOException {
-		// happy path; first character is already known to be a quote
-		int rp = readBuffer.readPosition+1, start = rp;
+
+	public static CharSequence parse(Buffer readBuffer, Buffer writeBuffer) {
+		int rp = readBuffer.readPosition + 1, start = rp;
 		int wp = readBuffer.writePosition;
+		// happy path; first character is already known to be a quote
 		char[] rb = readBuffer.buffer;
 		char r = 0;
 		for (; rp < wp; rp++) {
@@ -52,9 +50,7 @@ public class CharSequenceParser {
 		OUTER: while (true) {
 			if (rp == wp) {
 				writeBuffer.write(rb, start, rp - start);
-				if (!readBuffer.refill()) {
-					throw new EOFException("Expected closing quote, reached EOF instead");
-				}
+				readBuffer.refillStrict();
 				rp = start = 0;
 				wp = readBuffer.writePosition;
 			}
@@ -72,9 +68,7 @@ public class CharSequenceParser {
 			if (r == '\\') {
 				writeBuffer.write(rb, start, rp - 1 - start);
 				if (rp == wp) {
-					if (!readBuffer.refill()) {
-						throw new EOFException("Expected closing quote, reached EOF instead");
-					}
+					readBuffer.refillStrict();
 					rp = start = 0;
 					wp = readBuffer.writePosition;
 				}
@@ -101,9 +95,7 @@ public class CharSequenceParser {
 						int chars = 0;
 						ESCAPE: while (true) {
 							if (rp == wp) {
-								if (!readBuffer.refill()) {
-									throw new EOFException("Expected closing quote, reached EOF instead");
-								}
+								readBuffer.refillStrict();
 								rp = start = 0;
 								wp = readBuffer.writePosition;
 							}

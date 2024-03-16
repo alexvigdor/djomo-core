@@ -15,14 +15,12 @@
  *******************************************************************************/
 package com.bigcloud.djomo.test;
 
-import java.io.EOFException;
 import java.io.IOException;
 
 import org.testng.annotations.Test;
 
 import com.bigcloud.djomo.Json;
 import com.bigcloud.djomo.error.ModelException;
-import com.bigcloud.djomo.error.UnexpectedPrimitiveException;
 
 public class ErrorTest {
 	Json Json = new Json();
@@ -30,7 +28,7 @@ public class ErrorTest {
 	public void ok1() throws IOException {
 		Json.fromString("[null]");
 	}
-	@Test(expectedExceptions = {UnexpectedPrimitiveException.class})
+	@Test(expectedExceptions = {ModelException.class})
 	public void typo1() throws IOException {
 		Json.fromString("[nul]");
 	}
@@ -38,7 +36,7 @@ public class ErrorTest {
 	public void ok2() throws IOException {
 		Json.fromString("[false]");
 	}
-	@Test(expectedExceptions = {UnexpectedPrimitiveException.class})
+	@Test(expectedExceptions = {ModelException.class})
 	public void typo2() throws IOException {
 		Json.fromString("[fals]");
 	}
@@ -46,7 +44,7 @@ public class ErrorTest {
 	public void ok3() throws IOException {
 		Json.fromString("[true]");
 	}
-	@Test(expectedExceptions = {UnexpectedPrimitiveException.class})
+	@Test(expectedExceptions = {ModelException.class})
 	public void typo3() throws IOException {
 		Json.fromString("[tru]");
 	}
@@ -62,7 +60,7 @@ public class ErrorTest {
 	public void typo6() throws IOException {
 		Json.fromString("{\"ok\":\"\\");
 	}
-	@Test(expectedExceptions = {UnexpectedPrimitiveException.class})
+	@Test(expectedExceptions = {ModelException.class})
 	public void typo7() throws IOException {
 		Json.fromString("{\"ok\":fal");
 	}

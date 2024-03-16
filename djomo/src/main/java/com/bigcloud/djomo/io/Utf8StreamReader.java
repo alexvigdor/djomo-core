@@ -20,7 +20,7 @@ import java.io.InputStream;
 import java.io.Reader;
 
 public class Utf8StreamReader extends Reader {
-	private static final int BUF_LEN = 4096;
+	private static final int BUF_LEN = 8192;
 	private static final ThreadLocal<byte[]> localUtf8Buffer = new ThreadLocal<>() {
 		public byte[] initialValue() {
 			return new byte[BUF_LEN];

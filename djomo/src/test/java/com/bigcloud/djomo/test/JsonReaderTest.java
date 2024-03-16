@@ -132,10 +132,23 @@ public class JsonReaderTest {
 		var m6 = Json.read(new ByteArrayInputStream(data), (Object) null, (BaseParserFilter[]) null);
 		assertEquals(m6, Map.of("1", "a", "2", "b"));
 	}
+	
+	@Test
+	public void testNullStringField() throws IOException {
+		String data = "{ \"name\": \"foo\", \"description\": null, \"count\":  -1, \"weight\":  -3.2E12, \"validated\":  true}";
+		var read = Json.fromString(data, Element.class);
+		assertEquals(read.name, "foo");
+		assertEquals(read.description, null);
+		assertEquals(read.count, -1);
+		assertEquals(read.weight, -3.2e12);
+		assertEquals(read.validated, true);
+	}
 
 	@Data
 	@Builder
 	public static class Weirdo{
 		Map<Long,Boolean> data;
 	}
+	
+	public static record Element(String name, String description, int count, double weight, boolean validated) {};
 }
