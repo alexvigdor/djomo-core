@@ -4,11 +4,11 @@ a small, fast and extensible java library for reading and writing JSON and perfo
 
 ## What is djomo?
 
-djomo is an experimental (but refined) JSON library for Java designed according to the Open/Closed principle, to allow the composition of arbitrary parser and serializer features on top of a fast, lean core. 
+djomo is a JSON processing library for Java designed according to the Open/Closed principle, to allow the composition of arbitrary parser and serializer features on top of a fast, lean core. 
 
-A pair of interfaces (`Parser`, `Visitor`) and base classes (`FilterParser`, `FilterVisitor`) allow users to implement complex filters that intercept each step of parsing or serializing.  A matching pair of annotations (`@Parse`, `@Visit`) allow declarative use of any filter with dependency injection and filter scoping based on path and type.
+A pair of interfaces (`Parser`, `Visitor`) represent all the operations involved in parsing and serializing objects, and corresponding filter interfaces (`ParserFilter`, `VisitorFilter`) allow you to implement filters that can intercept each step of parsing or serializing. A `Filters` helper class makes it easy to create specialized filters using functional interfaces like `IntVisitor` and `IntParser`. A matching pair of annotations (`@Parse`, `@Visit`) allow declarative use of any filter with dependency injection and filter scoping based on path and type.
 
-Another set of interfaces represent data Models (which might be `ListModel`, `ObjectModel` or `SimpleModel`), and users can apply custom Models for unique data types by developing a `ModelFactory` plugin, or by writing a filter that injects a custom Model into the Parser or Visitor.
+Another set of interfaces represent data Models (which might be `ListModel`, `ObjectModel`), and users can apply custom Models for unique data types by developing a `ModelFactory` plugin, or by writing a filter that injects a custom Model into the Parser or Visitor.
 
 Provided filter implementations include limiting the set of fields visited for an object, renaming object fields, excluding null values, checking for circular references, limiting collection sizes, reducing objects to lists of field values, and applying path-based filters to specific locations in a model.  Additional base classes make it simple to write filters to transform one data type to another, to inject computed field values, or to transform a specific field of an object. Filters are applied in a feed-forward and just-in-time fashion, avoiding extra data copies, mutations or the overhead of processing and holding a complete transformed data model in memory.
 
@@ -50,8 +50,6 @@ Now let's serialize and parse regular collections; while in this example `Map.of
 Json json = new Json();
 Map data = Map.of("name", "John Doe", "age", 42, "aliases", List.of("Johnny", "Jawn"));
 String str = json.toString(data);
-System.out.println(str); 
-	// {"age":42,"aliases":["Johnny","Jawn"],"name":"John Doe"}
 Object round = json.fromString(str);
 assertEquals(round, data);
 ```
@@ -92,8 +90,7 @@ Json json = new Json();
 String str = "[1,2,3,4]";
 Object data = json.fromString(str, ModelType.of(List.class, Double.class));
 String round = json.toString(data);
-System.out.println(round); 
-	// [1.0,2.0,3.0,4.0]
+assertEquals(round, "[1.0,2.0,3.0,4.0]");
 ```
 
 You can also parse into an existing object to perform a merge of the models.  This can be used to support partial updates with list merging.  Using the MyBean class above:
@@ -104,8 +101,7 @@ String str1 = "{\"name\":\"First\",\"age\":1,\"aliases\":[\"uno\"]}";
 String str2 = "{\"name\":\"Second\",\"aliases\":[\"dos\"]}";
 MyBean mb = json.fromString(str1, MyBean.class);
 mb = json.fromString(str2, mb);
-System.out.println(json.toString(mb)); 
-	// {"age":1,"aliases":["uno","dos"],"name":"Second"}
+assertEquals(json.toString(mb), "{\"age\":1,\"aliases\":[\"uno\",\"dos\"],\"name\":\"Second\"}");
 ```
 
 #### Resolver: Parsing to interfaces and abstract classes
@@ -179,25 +175,27 @@ public static class CarPartResolver extends Resolver<CarPart> {
 	Model<Windshield> windshieldModel;
 
 	@Override
-	public void init(Models models, Type[] args) {
-		mapModel = models.mapModel;
+	public void init(ModelContext models, Type[] args) {
+		mapModel = models.get(Map.class);
 		wheelModel = models.get(Wheel.class);
 		windshieldModel = models.get(Windshield.class);
 	}
 
 	@Override
 	public CarPart resolve(Parser parser) {
-		var data = parser.parse(mapModel);
-		var type = data.get("type");
-		Model<? extends CarPart> model;
-		if ("wheel".equals(type)) {
-			model = wheelModel;
-		} else if ("windshield".equals(type)) {
-			model = windshieldModel;
-		} else {
-			throw new IllegalArgumentException("Unknown part " + type);
-		}
+		var data = mapModel.parse(parser);
+		String type = String.valueOf(data.get("type"));
+		Model<? extends CarPart> model = switch (type) {
+			case "wheel" -> wheelModel;
+			case "windshield" -> windshieldModel;
+			default -> throw new IllegalArgumentException("Unknown part " + type);
+		};
 		return model.convert(data);
+	}
+
+	@Override
+	public Format getFormat() {
+		return Format.OBJECT;
 	}
 }
 
@@ -210,106 +208,125 @@ assertEquals(parts.get(1).getClass(), Windshield.class);
 
 #### Filters: customizing the parser and visitor
 
-Now let's have a look at the more general purpose extension mechanism, filters.  Filters allow you to modify the behavior of Visitors and Parsers; to warmup, let's use a plain Visitor just to log what's happening while we visit a model.
+Now let's have a look at the more general purpose extension mechanism, filters.  Filters allow you to modify the behavior of Visitors and Parsers.  Let's use a FilterVisitor to log our progress as we serialize an object to json.  The BaseVisitorFilter base class implements Visitor with a default pass through for all methods, so you can just extend the method(s) of interest.
+
 
 ```
-import com.bigcloud.djomo.base.BaseVisitor;
-List data = List.of(1, Map.of("a", "b", "c", "d"), 2);
-new BaseVisitor() {
-	@Override
-	public void visit(Object o) {
-		System.out.println("Start visit " + o);
-		super.visit(o);
-		System.out.println("End visit " + o);
-	}
-}.visit(data);
+import com.bigcloud.djomo.base.BaseVisitorFilter;
 
-/* prints out
-Start visit [1, {c=d, a=b}, 2]
-Start visit 1
-End visit 1
-Start visit {c=d, a=b}
-Start visit d
-End visit d
-Start visit b
-End visit b
-End visit {c=d, a=b}
-Start visit 2
-End visit 2
-End visit [1, {c=d, a=b}, 2]
+List data = List.of(1, Map.of("a", "b", "c", "d"), 2);
+
+new Json().toString(data, new BaseVisitorFilter() {
+	@Override
+	public <T> void visitObject(T object, ObjectModel<T> definition) {
+		System.out.println("Start visit object " + object);
+		super.visitObject(object, definition);
+		System.out.println("End visit object " + object);
+	}
+
+	@Override
+	public <T> void visitList(T list, ListModel<T> definition) {
+		System.out.println("Start visit list " + list);
+		super.visitList(list, definition);
+		System.out.println("End visit list " + list);
+	}
+
+	@Override
+	public void visitInt(int value) {
+		System.out.println("visit int " + value);
+		super.visitInt(value);
+	}
+
+	@Override
+	public void visitString(CharSequence value) {
+		System.out.println("visit string " + value);
+		super.visitString(value);
+	}
+
+	@Override
+	public void visitObjectField(Object name) {
+		System.out.println("visit field " + name);
+		super.visitObjectField(name);
+	}
+});
+/* Prints out:
+Start visit list [1, {c=d, a=b}, 2]
+visit int 1
+Start visit object {c=d, a=b}
+visit field c
+visit string d
+visit field a
+visit string b
+End visit object {c=d, a=b}
+visit int 2
+End visit list [1, {c=d, a=b}, 2]
 */
 ```
 
 The log output above shows the recursive nature of the call stack, where all the objects beneath a given node are visited before the parent node visit is complete.  This makes it easy to use local variables on the call stack to maintain filter state, which can be very efficient.
 
-A FilterVisitor allows you to wire additional logic into another visitor - now let's use a FilterVisitor to log our progress as we serialize the object to json.  This produces the exact same output as above; instead of extending BaseVisitor however we have extended FilterVisitor, to add our custom logic to an existing visitor (in this case the json writer).  The FilterVisitor base class implements Visitor with a default pass through for all methods, so you can just extend the method(s) of interest.
+A ParserFilter allows similar customization of a parser, using a simple BaseParserFilter base class that by default passes through all parse methods:
 
 ```
-import com.bigcloud.djomo.filter.FilterVisitor;
-json.toString(data, new FilterVisitor() {
-	@Override
-	public void visit(Object o) {
-		System.out.println("Start visit " + o);
-		super.visit(o);
-		System.out.println("End visit " + o);
-	}
-});
-```
-
-A ParserFilter allows similar customization of a parser, using a simple FilterParser base class that by default passes through all parse methods:
-
-```
-import com.bigcloud.djomo.filter.FilterParser;
+import com.bigcloud.djomo.base.BaseParserFilter;
 String str = "[1,{\"c\":\"d\",\"a\":\"b\"},2]";
-json.fromString(str, new FilterParser() {
+json.fromString(str, new BaseParserFilter() {
+
 	@Override
-	public <T> T parse(Model<T> model) {
-		System.out.println("Parsing model " + model.getType());
-		T t = parser.parse(model);
-		System.out.println("Done Parsing model " + model.getType() + " " + t);
-		return t;
+	public Object parseObject(ObjectModel model) {
+		System.out.println("Parsing object " + model.getType());
+		var obj = super.parseObject(model);
+		System.out.println("Done Parsing object " + model.getType() + " " + obj);
+		return obj;
+	}
+
+	@Override
+	public Field parseObjectField(ObjectModel model, CharSequence field) {
+		System.out.println("Parsing field " + field);
+		return super.parseObjectField(model, field);
+	}
+
+	@Override
+	public Object parseList(ListModel model) {
+		System.out.println("Parsing list " + model.getType());
+		var list = super.parseList(model);
+		System.out.println("Done Parsing list " + model.getType() + " " + list);
+		return list;
+	}
+
+	@Override
+	public double parseDouble() {
+		var i = super.parseDouble();
+		System.out.println("Parsed double " + i);
+		return i;
+	}
+
+	@Override
+	public CharSequence parseString() {
+		var s = super.parseString();
+		System.out.println("Parsed string " + s);
+		return s;
 	}
 });
 /* prints out
-Parsing model class java.lang.Object
-Parsing model class java.lang.Object
-Done Parsing model class java.lang.Object 1
-Parsing model class java.lang.Object
-Parsing model class java.lang.Object
-Done Parsing model class java.lang.Object d
-Parsing model class java.lang.Object
-Done Parsing model class java.lang.Object b
-Done Parsing model class java.lang.Object {c=d, a=b}
-Parsing model class java.lang.Object
-Done Parsing model class java.lang.Object 2
-Done Parsing model class java.lang.Object [1, {c=d, a=b}, 2]
+Parsing list interface java.util.List
+Parsed double 1.0
+Parsing object class java.util.LinkedHashMap
+Parsing field c
+Parsed string d
+Parsing field a
+Parsed string b
+Done Parsing object class java.util.LinkedHashMap {c=d, a=b}
+Parsed double 2.0
+Done Parsing list interface java.util.List [1, {c=d, a=b}, 2]
 */
 ```
 
-There are common filters you might find the occasion to use, such as the CircularReferenceVisitor that detects if the same instance is already in the visit stack and blocks it to prevent infinite looping.
+There are common filters you might have use for, such as OmitNull filters that allows more compact serialization by omitting null valued fields and list items
 
 ```
-import com.bigcloud.djomo.filter.CircularReferenceVisitor;
-Map self = new HashMap();
-self.put("a", "b");
-self.put("self", self);
-self.put("related", List.of("other", self));
-try {
-	String json = Json.toString(self);
-}
-catch(StackOverflowError e) {
-	System.out.println(e);
-		//java.lang.StackOverflowError
-}
-String json = Json.toString(self, new CircularReferenceVisitor());
-System.out.println(json);
-	// {"a":"b","related":["other"]}
-```
-
-Or the OmitNull filter that allows more compact serialization by omitting null valued fields and list items
-
-```
-import com.bigcloud.djomo.filter.OmitNullVisitor;
+import com.bigcloud.djomo.filter.visitors.OmitNullFieldVisitor;
+import com.bigcloud.djomo.filter.visitors.OmitNullItemVisitor;
 Map data = new HashMap();
 data.put("a", "b");
 data.put("c", null);
@@ -317,7 +334,7 @@ data.put("d", Arrays.asList(1, null, 2));
 String str = json.toString(data);
 System.out.println(str);
 	// {"a":"b","c":null,"d":[1,null,2]}
-str = json.toString(data, new OmitNullVisitor());
+str = json.toString(data, new OmitNullFieldVisitor(), new OmitNullItemVisitor());
 System.out.println(str);
 	// {"a":"b","d":[1,2]}
 ```
@@ -325,8 +342,8 @@ System.out.println(str);
 it is also possible to install filters at the time the Json is being built, so that all calls through that Json object will invoke those filters.  We could repeat the previous example with a permanently attached filter:
 
 ```
-json = Json.builder().visit(new OmitNullVisitor()).build();
-str = json.toString(data);
+json = Json.builder().visit(new OmitNullFieldVisitor(), new OmitNullItemVisitor()).build();
+String str = json.toString(data);
 System.out.println(str);
 	// {"a":"b","d":[1,2]}
 ```
@@ -338,7 +355,8 @@ The examples so far show how to pass a concrete filter into a parse or visit ope
 ```
 import com.bigcloud.djomo.annotation.Visit;
 
-@Visit(OmitNullVisitor.class)
+@Visit(OmitNullFieldVisitor.class)
+@Visit(OmitNullItemVisitor.class)
 public class MyFilter{}
 
 String str = json.toString(data, json.getAnnotationProcessor().visitorFilters(MyFilter.class));
@@ -378,9 +396,9 @@ class Dao {
 	}
 }
 
-import com.bigcloud.djomo.filter.TypeVisitorTransform;
+import com.bigcloud.djomo.api.visitors.LongVisitor;
 
-class ExpandFilter extends TypeVisitorTransform<Long> {
+class ExpandFilter implements LongVisitor {
 	Dao dao;
 
 	public ExpandFilter(Dao dao) {
@@ -388,8 +406,8 @@ class ExpandFilter extends TypeVisitorTransform<Long> {
 	}
 
 	@Override
-	public String transform(Long in) {
-		return dao.getData(in);
+	public void visitLong(long i, Visitor visitor) {
+		visitor.visit(dao.getData(i));
 	}
 
 }
@@ -418,11 +436,12 @@ System.out.println(str);
 A trio of common filters support common operations on fields during either visit or parse; field renaming, field including and field excluding.  These can be combined with a `type` to narrow the effect to specific classes.
 
 ```
-import com.bigcloud.djomo.filter.ExcludeParser;
-import com.bigcloud.djomo.filter.ExcludeVisitor;
-import com.bigcloud.djomo.filter.IncludeVisitor;
-import com.bigcloud.djomo.filter.RenameParser;
-import com.bigcloud.djomo.filter.RenameVisitor;
+import com.bigcloud.djomo.filter.parsers.ExcludeParser;
+import com.bigcloud.djomo.filter.parsers.RenameParser;
+import com.bigcloud.djomo.filter.visitors.ExcludeVisitor;
+import com.bigcloud.djomo.filter.visitors.IncludeVisitor;
+import com.bigcloud.djomo.filter.visitors.OmitNullFieldVisitor;
+import com.bigcloud.djomo.filter.visitors.RenameVisitor;
 
 public record Gadget(String name, Gear gear, Gauge gauge) {}
 
@@ -433,7 +452,7 @@ public record Gauge(String name, Double value, Double max) {}
 @Visit(value = IncludeVisitor.class, type = Gauge.class, arg = { "name", "value" })
 @Visit(value = ExcludeVisitor.class, type = Gear.class, arg = "value")
 @Visit(value = RenameVisitor.class, arg = { "name", "n" })
-@Visit(OmitNullVisitor.class)
+@Visit(OmitNullFieldVisitor.class)
 @Parse(value = RenameParser.class, arg = { "n", "name" })
 @Parse(value = ExcludeParser.class, type = Gauge.class, arg = "value")
 public class GadgetFilters {}
@@ -462,13 +481,13 @@ public static record Feed(String name, List<String> ids) {}
 	
 Feed feed = new Feed("Hello World", List.of("1", "2", "3", "4", "5", "6", "7"));
 String str = json.toString(feed, 
-	new FieldVisitor<Feed>("ids", new LimitVisitor(5)) {}, 
-	new FieldVisitorFunction<Feed, String>("name", s -> new StringBuilder(s).reverse().toString()) {});
+	new FieldVisitor<Feed>("ids", new LimitVisitor(5)) {},
+	new FieldVisitor<Feed>("name", Filters.visitString((s, v) -> v.visitString(new StringBuilder(s).reverse()))) {});
 System.out.println(str);
 	// {"ids":["1","2","3","4","5"],"name":"dlroW olleH"}
 Feed roundTrip = json.fromString(str, Feed.class,
 	new FieldParser<Feed>("ids", new LimitParser(3)) {},
-	new FieldParserFunction<Feed, String, String>("name", s -> new StringBuilder(s).reverse().toString()) {});
+	new FieldParser<Feed>("name", Filters.parseString(p -> new StringBuilder(p.parseString()).reverse())) {});
 System.out.println(json.toString(roundTrip));
 	// {"ids":["1","2","3"],"name":"Hello World"}
 ```
@@ -489,20 +508,23 @@ public class Contact {
 @Visit(ContactVisitor.class)
 public interface ContactFilters {}
 
-public class ContactVisitor extends TypeVisitorTransform<Contact> {
+public class ContactVisitor extends TypeVisitor<Contact> {
+
 	@Override
-	public Object transform(Contact contact) {
+	protected void visitType(Contact contact, ObjectModel<Contact> model) {
 		String fullName = contact.getFirstName();
 		if (contact.getLastName() != null) {
 			fullName = fullName + " " + contact.getLastName();
 		}
-		return fullName;
+		visitString(fullName);
 	}
 }
 
-public class ContactParser extends TypeParserTransform<String, Contact> {
+public class ContactParser extends TypeParser<Contact> {
+
 	@Override
-	public Contact transform(String fullName) {
+	public Contact parseType(Model<Contact> model) {
+		String fullName = parser.parseString().toString();
 		String[] nameParts = fullName.split("\\s+", 2);
 		Contact.ContactBuilder builder = Contact.builder();
 		builder.firstName(nameParts[0]);

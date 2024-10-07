@@ -38,9 +38,9 @@ import com.bigcloud.djomo.api.VisitorFilterFactory;
 import com.bigcloud.djomo.api.VisitorTypedFilterFactory;
 import com.bigcloud.djomo.error.AnnotationException;
 import com.bigcloud.djomo.filter.parsers.PathParser;
-import com.bigcloud.djomo.filter.parsers.TypeParser;
+import com.bigcloud.djomo.filter.parsers.TypeParserFilter;
 import com.bigcloud.djomo.filter.visitors.PathVisitor;
-import com.bigcloud.djomo.filter.visitors.TypeVisitor;
+import com.bigcloud.djomo.filter.visitors.TypeVisitorFilter;
 
 /**
  * Responsible for converting Visit and Parse annotations into FilterVisitors
@@ -140,7 +140,7 @@ public class AnnotationProcessor {
 						missingConstructor(filterClass);
 					}
 					if (filterType != Object.class) {
-						filterParser = new TypeParser(filterType, filterParser.newParserFilter());
+						filterParser = new TypeParserFilter<>(filterType, filterParser.newParserFilter());
 					}
 				}
 				parsers.put(deser, filterParser);
@@ -244,7 +244,7 @@ public class AnnotationProcessor {
 						missingConstructor(filterClass);
 					}
 					if (filterType != Object.class) {
-						filterVisitor = new TypeVisitor(filterType, filterVisitor.newVisitorFilter());
+						filterVisitor = new TypeVisitorFilter<>(filterType, filterVisitor.newVisitorFilter());
 					}
 				}
 				visitors.put(ser, filterVisitor);

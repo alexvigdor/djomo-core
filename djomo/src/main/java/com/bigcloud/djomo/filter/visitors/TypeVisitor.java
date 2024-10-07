@@ -16,67 +16,42 @@
 package com.bigcloud.djomo.filter.visitors;
 
 import com.bigcloud.djomo.api.ObjectModel;
-import com.bigcloud.djomo.api.Visitor;
-import com.bigcloud.djomo.api.VisitorFilter;
 import com.bigcloud.djomo.base.BaseVisitorFilter;
 import com.bigcloud.djomo.internal.ConcreteType;
 /**
- * Selectively apply another FilterVisitor only when visiting a given type.
+ * Selectively apply custom logic only when visiting a given type.
  * 
  * @author Alex Vigdor
  *
- * @param <T> the type of object to which the wrapped filter should be applied
+ * @param <T> the type of object to which the custom logic should be applied
  */
-public class TypeVisitor<T> extends BaseVisitorFilter {
+public abstract class TypeVisitor<T> extends BaseVisitorFilter {
 	final Class<T> type;
-	VisitorFilter filterVisitor;
-	Visitor target;
 
-	public TypeVisitor(VisitorFilter filterVisitor) {
+	public TypeVisitor() {
 		type = ConcreteType.get(this.getClass(), 0);
-		this.filterVisitor = filterVisitor;
 	}
 
-	public TypeVisitor(int index, VisitorFilter filterVisitor) {
+	public TypeVisitor(int index) {
 		type = ConcreteType.get(this.getClass(), index);
-		this.filterVisitor = filterVisitor;
 	}
 
-	public TypeVisitor(Class<T> type, VisitorFilter filterVisitor) {
+	public TypeVisitor(Class<T> type) {
 		this.type = type;
-		this.filterVisitor = filterVisitor;
 	}
 
 	public Class<T> getType() {
 		return type;
 	}
 
-	public TypeVisitor<T> clone() {
-		TypeVisitor<T> clone = (TypeVisitor<T>) super.clone();
-		clone.filterVisitor = filterVisitor.newVisitorFilter();
-		return clone;
-	}
-
 	@Override
-	public void filter(Visitor visitor) {
-		this.target = visitor;
-		var fv = filterVisitor;
-		if(this.visitor != fv) {
-			this.visitor = visitor;
-		}
-		fv.filter(visitor);
-	}
-
-	@Override
-	public <T> void visitObject(T obj, ObjectModel<T> model) {
-		var c = this.visitor;
-		if (obj != null && type.isInstance(obj)) {
-			(this.visitor = filterVisitor).visitObject(obj, model);
+	public <O> void visitObject(O obj, ObjectModel<O> model) {
+		if (type.isInstance(obj)) {
+			visitType((T)obj, (ObjectModel<T>) model);	
 		} else {
-			(this.visitor = target).visitObject(obj, model);
+			this.visitor.visitObject(obj, model);
 		}
-		this.visitor = c;
 	}
 
-
+	protected abstract void visitType(T obj, ObjectModel<T> model);
 }

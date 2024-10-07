@@ -48,10 +48,6 @@ public abstract class BaseVisitor implements Visitor {
 	}
 
 	@Override
-	public void visitNull() {
-	}
-
-	@Override
 	public <T> void visitList(T model, ListModel<T> definition) {
 		definition.visitItems(model, current);
 	}
@@ -59,14 +55,6 @@ public abstract class BaseVisitor implements Visitor {
 	@Override
 	public <T> void visitObject(T model, ObjectModel<T> definition) {
 		definition.visitFields(model, current);
-	}
-
-	@Override
-	public void visitObjectField(Object name) {
-	}
-
-	@Override
-	public void visitListItem() {
 	}
 
 	@Override

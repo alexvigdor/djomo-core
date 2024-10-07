@@ -50,6 +50,7 @@ import com.bigcloud.djomo.filter.visitors.OmitNullItemVisitor;
 import com.bigcloud.djomo.filter.visitors.PathVisitor;
 import com.bigcloud.djomo.filter.visitors.RenameVisitor;
 import com.bigcloud.djomo.filter.visitors.TypeVisitor;
+import com.bigcloud.djomo.filter.visitors.TypeVisitorFilter;
 
 import lombok.Builder;
 import lombok.Value;
@@ -246,11 +247,11 @@ public class TransformTest {
 		};
 		
 		String json = Json.toString(vals,
-				new TypeVisitor<>(Map.class, PathVisitor.builder().filter("**", toUpper).build()));
+				new TypeVisitorFilter<>(Map.class, PathVisitor.builder().filter("**", toUpper).build()));
 
 		assertEquals(json, "{\"abc\":\"DEF\",\"ghi\":\"JKL\",\"pqr\":\"[{ABC=XYZ}, MNO]\"}");
 		json = Json.toString(vals,
-				new TypeVisitor<>(Map.class, PathVisitor.builder().filter("**.abc", toUpper).build()));
+				new TypeVisitorFilter<>(Map.class, PathVisitor.builder().filter("**.abc", toUpper).build()));
 
 		assertEquals(json, "{\"abc\":\"DEF\",\"ghi\":\"jkl\",\"pqr\":[{\"abc\":\"XYZ\"},\"mno\"]}");
 	}

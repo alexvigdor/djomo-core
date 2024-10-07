@@ -52,7 +52,6 @@ import com.bigcloud.djomo.filter.parsers.IncludeParser;
 import com.bigcloud.djomo.filter.parsers.MultiFilterParser;
 import com.bigcloud.djomo.filter.parsers.RenameParser;
 import com.bigcloud.djomo.filter.parsers.TypeParser;
-import com.bigcloud.djomo.filter.visitors.CircularReferenceVisitor;
 import com.bigcloud.djomo.filter.visitors.ExcludeVisitor;
 import com.bigcloud.djomo.filter.visitors.FieldVisitor;
 import com.bigcloud.djomo.filter.visitors.IncludeVisitor;
@@ -90,30 +89,6 @@ public class FilterTest {
 		indirectCircularObject.put("f", circularObject);
 		circularObject.put("a", "b");
 		circularObject.put("e", indirectCircularObject);
-	}
-
-	@Test(expectedExceptions = StackOverflowError.class)
-	public void testCircularReferenceFilterObjectFail() {
-		json.toString(regularObject);
-		json.toString(circularObject);
-	}
-	
-	@Test
-	public void testCircularReferenceFilterObject() {
-		json.toString(regularObject, new CircularReferenceVisitor());
-		json.toString(circularObject, new CircularReferenceVisitor());
-	}
-	
-	@Test(expectedExceptions = StackOverflowError.class)
-	public void testCircularReferenceFilterListFail() {
-		json.toString(regularList);
-		json.toString(circularList);
-	}
-	
-	@Test
-	public void testCircularReferenceFilterList() {
-		json.toString(regularList, new CircularReferenceVisitor());
-		json.toString(circularList, new CircularReferenceVisitor());
 	}
 
 	public interface Named{

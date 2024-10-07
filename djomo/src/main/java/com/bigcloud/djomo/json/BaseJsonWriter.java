@@ -24,7 +24,7 @@ import com.bigcloud.djomo.internal.DoublePrinter;
 import com.bigcloud.djomo.internal.FloatPrinter;
 import com.bigcloud.djomo.io.CharSink;
 
-public class BaseJsonWriter extends BaseVisitor implements AutoCloseable {
+public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseable {
 	private static final char[] NULL = { 'n', 'u', 'l', 'l' };
 	protected static final int BUF_LEN = 4096;
 	private static final ThreadLocal<char[]> localBuffer = new ThreadLocal<>() {

@@ -27,7 +27,7 @@ import com.bigcloud.djomo.filter.FilterFieldObjectModel;
 import com.bigcloud.djomo.filter.FilterObjectModel;
 
 /**
- * Prevent null field values or list items from being visited
+ * Prevent null field values from being visited
  * 
  * @author Alex Vigdor
  *
@@ -51,25 +51,27 @@ public class OmitNullFieldVisitor extends BaseVisitorFilter {
 					}
 				};
 			}
-			return new FilterFieldObjectModel(model, fields.stream().map(field -> {
-				var fm = field.model();
-				if (fm.getType().isPrimitive()) {
-					return field;
-				}
-				return new FilterField(field) {
-					@Override
-					public void visit(Object source, Visitor visitor) {
-						Object val = field.get(source);
-						if (val != null) {
-							visitor.visitObjectField(field.key());
-							fm.visit(val, visitor);
-						}
-					}
-				};
-			}));
+			return new FilterFieldObjectModel(model, fields.stream().map(this::filterField));
 		});
 	}
-
+	
+	private Field filterField(Field field) {
+		var fm = field.model();
+		if (fm.getType().isPrimitive()) {
+			return field;
+		}
+		return new FilterField(field) {
+			@Override
+			public void visit(Object source, Visitor visitor) {
+				Object val = field.get(source);
+				if (val != null) {
+					visitor.visitObjectField(field.key());
+					fm.visit(val, visitor);
+				}
+			}
+		};
+	}
+	
 	@Override
 	public <O> void visitObject(O obj, ObjectModel<O> model) {
 		visitor.visitObject(obj, getOmitModel(model));

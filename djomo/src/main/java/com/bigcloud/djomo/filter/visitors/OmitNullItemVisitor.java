@@ -23,7 +23,7 @@ import com.bigcloud.djomo.api.ListModel;
 import com.bigcloud.djomo.base.BaseVisitorFilter;
 
 /**
- * Prevent null field values or list items from being visited
+ * Prevent null list items from being visited
  * 
  * @author Alex Vigdor
  *
