@@ -51,11 +51,7 @@ public class OptionalModel<V> extends BaseModel<Optional<V>> {
 
 	@Override
 	public void visit(Optional<V> obj, Visitor visitor) {
-		if (obj.isPresent()) {
-			visitor.visit(obj.get());
-		} else {
-			visitor.visit(null);
-		}
+		valueModel.tryVisit(obj.orElse(null), visitor);
 	}
 	
 	@Override

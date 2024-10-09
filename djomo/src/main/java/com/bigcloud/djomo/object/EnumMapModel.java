@@ -100,12 +100,7 @@ public class EnumMapModel<T extends EnumMap>
 		var m = valueModel;
 		t.forEach((k, v) -> {
 			visitor.visitObjectField(k);
-			if(v == null) {
-				visitor.visitNull();
-			}
-			else {
-				m.visit(v, visitor);
-			}
+			m.tryVisit(v, visitor);
 		});
 	}
 

@@ -64,4 +64,9 @@ public class FilterModel<T> implements Model<T> {
 		return delegate.models();
 	}
 
+	@Override
+	public void tryVisit(T obj, Visitor visitor) {
+		delegate.tryVisit(obj, visitor);
+	}
+
 }

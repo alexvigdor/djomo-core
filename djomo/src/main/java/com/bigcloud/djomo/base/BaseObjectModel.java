@@ -127,6 +127,21 @@ public abstract class BaseObjectModel<T> extends BaseComplexModel<T> implements 
 	}
 
 	@Override
+	public void tryVisit(T obj, Visitor visitor) {
+		if(obj == null) {
+			visitor.visitNull();
+			return;
+		}
+		Class c = obj.getClass();
+		if(c == type) {
+			visitor.visitObject(obj, this);
+		}
+		else {
+			((Model)models.get(c)).visit(obj, visitor);
+		}
+	}
+
+	@Override
 	public T parse(Parser parser) {
 		return (T) parser.parseObject(this);
 	}

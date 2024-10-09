@@ -51,7 +51,8 @@ public class AtomicReferenceModel<V> extends BaseModel<AtomicReference<V>> {
 
 	@Override
 	public void visit(AtomicReference<V> obj, Visitor visitor) {
-		visitor.visit(obj.get());
+		V val = obj.get();
+		valueModel.tryVisit(val, visitor);
 	}
 
 	@Override

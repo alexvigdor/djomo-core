@@ -81,4 +81,9 @@ public class FilterObjectModel<O> implements ObjectModel<O> {
 		return objectModel.make(maker);
 	}
 
+	@Override
+	public void tryVisit(O obj, Visitor visitor) {
+		objectModel.tryVisit(obj, visitor);
+	}
+
 }

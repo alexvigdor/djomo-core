@@ -62,7 +62,7 @@ public class MapField implements Field {
 	@Override
 	public void visit(Object source, Visitor visitor) {
 		visitor.visitObjectField(key);
-		model.visit(((Map) source).get(name), visitor);
+		model.tryVisit(((Map) source).get(name), visitor);
 	}
 
 	@Override

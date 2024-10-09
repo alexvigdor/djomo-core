@@ -21,6 +21,7 @@ import java.lang.reflect.Type;
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
+import com.bigcloud.djomo.api.Visitor;
 
 public abstract class BaseModel<T> implements Model<T> {
 	final protected Class<T> type;
@@ -41,6 +42,16 @@ public abstract class BaseModel<T> implements Model<T> {
 			this.type = (Class<T>) pt.getRawType();
 		} else {
 			this.type = (Class<T>) type;
+		}
+	}
+
+	@Override
+	public void tryVisit(T obj, Visitor visitor) {
+		if(obj == null) {
+			visitor.visitNull();
+		}
+		else {
+			visit(obj, visitor);
 		}
 	}
 

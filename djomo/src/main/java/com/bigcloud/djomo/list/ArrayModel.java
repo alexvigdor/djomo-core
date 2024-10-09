@@ -23,25 +23,16 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import com.bigcloud.djomo.Models;
-import com.bigcloud.djomo.api.Format;
-import com.bigcloud.djomo.api.ListModel;
-import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
-import com.bigcloud.djomo.base.BaseComplexModel;
+import com.bigcloud.djomo.base.BaseListModel;
 
-public class ArrayModel<T> extends BaseComplexModel<T> implements ListModel<T>{
+public class ArrayModel<T> extends BaseListModel<T> {
 	final Class<?> componentType;
-	final Models models;
-	final Model itemModel;
 
 	public ArrayModel(Type type, ModelContext context) {
-		super(type, context);
+		super(type, context, context.get(((Class) type).getComponentType() ));
 		this.componentType = getType().getComponentType();
-		this.models = context.models();
-		this.itemModel = context.get(componentType);
 	}
 
 	@Override
@@ -57,25 +48,6 @@ public class ArrayModel<T> extends BaseComplexModel<T> implements ListModel<T>{
 	@Override
 	public Object maker() {
 		return new ArrayList();
-	}
-
-	@Override
-	public T convert(Object o) {
-		if (o == null) {
-			return null;
-		}
-		if (o.getClass() == getType()) {
-			return (T) o;
-		}
-		Model<?> def = models.get(o.getClass());
-		List maker = (List) maker();
-		if (def instanceof ListModel) {
-			((ListModel) def).forEachItem(o, i -> maker.add(itemModel.convert(i)));
-		} 
-		else {
-			maker.add(itemModel.convert(o));
-		}
-		return make(maker);
 	}
 
 	@Override
@@ -101,46 +73,14 @@ public class ArrayModel<T> extends BaseComplexModel<T> implements ListModel<T>{
 	}
 
 	@Override
-	public Model itemModel() {
-		return itemModel;
-	}
-
-	@Override
-	public void visit(T obj, Visitor visitor) {
-		visitor.visitList(obj, this);
-	}
-
-	@Override
-	public T parse(Parser parser) {
-		return (T) parser.parseList(this);
-	}
-	
-	@Override
-	public Format getFormat() {
-		return Format.LIST;
-	}
-
-	@Override
 	public void visitItems(T t, Visitor visitor) {
 		var m = itemModel;
 		int len = Array.getLength(t);
 		for (int i = 0; i < len; i++) {
 			visitor.visitListItem();
 			var o = Array.get(t, i);
-			if(o == null) {
-				visitor.visitNull();
-			}
-			else {
-				m.visit(o, visitor);
-			}
+			m.tryVisit(o, visitor);
 		}
-	}
-
-	@Override
-	public void parseItem(Object listMaker, Parser parser) {
-		// TODO Auto-generated method stub
-		parser.parseListItem();
-		((List)listMaker).add(parser.parse(itemModel));
 	}
 
 	@Override
@@ -153,4 +93,10 @@ public class ArrayModel<T> extends BaseComplexModel<T> implements ListModel<T>{
 		}
 		return (T) array;
 	}
+
+	@Override
+	protected void addItem(Object maker, Object item) {
+		((List)maker).add(item);
+	}
+
 }

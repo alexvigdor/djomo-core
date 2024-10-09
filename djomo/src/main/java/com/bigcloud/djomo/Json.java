@@ -182,25 +182,25 @@ public class Json {
 
 	public void write(Object data, Writer writer, VisitorFilterFactory... filters) {
 		try (var jw = new JsonWriter(models, new WriterSink(writer), filters(filters))) {
-			jw.filter(data);
+			jw.visit(data);
 		}
 	}
 
 	public void write(Object data, Writer writer, String indentChars, VisitorFilterFactory... filters) {
 		try (var jw = new IndentingJsonWriter(models, new WriterSink(writer), indentChars, filters(filters))) {
-			jw.filter(data);
+			jw.visit(data);
 		}
 	}
 
 	public void write(Object data, OutputStream out, VisitorFilterFactory... filters) {
 		try (var jw = new JsonWriter(models, new Utf8StreamSink(out), filters(filters))) {
-			jw.filter(data);
+			jw.visit(data);
 		}
 	}
 
 	public void write(Object data, OutputStream out, String indentChars, VisitorFilterFactory... filters) {
 		try (var jw = new IndentingJsonWriter(models, new Utf8StreamSink(out), indentChars, filters(filters))) {
-			jw.filter(data);
+			jw.visit(data);
 		}
 	}
 
@@ -227,7 +227,7 @@ public class Json {
 	public String toString(Object data, VisitorFilterFactory... filters) {
 		var sink = new CharArraySink();
 		try (var jw = new JsonWriter(models, sink, filters(filters))) {
-			jw.filter(data);
+			jw.visit(data);
 		}
 		return sink.toString();
 	}
@@ -235,7 +235,7 @@ public class Json {
 	public String toString(Object data, String indent, VisitorFilterFactory... filters) {
 		var sink = new CharArraySink();
 		try (var jw = new IndentingJsonWriter(models, sink, indent, filters(filters))) {
-			jw.filter(data);
+			jw.visit(data);
 		}
 		return sink.toString();
 	}

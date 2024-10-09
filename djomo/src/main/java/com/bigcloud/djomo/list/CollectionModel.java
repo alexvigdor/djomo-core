@@ -21,26 +21,16 @@ import java.util.Collection;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import com.bigcloud.djomo.Models;
-import com.bigcloud.djomo.api.Format;
-import com.bigcloud.djomo.api.ListModel;
-import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
-import com.bigcloud.djomo.base.BaseComplexModel;
+import com.bigcloud.djomo.base.BaseListModel;
 
-public class CollectionModel<T extends Collection> extends BaseComplexModel<T>
-		implements ListModel<T> {
+public class CollectionModel<T extends Collection> extends BaseListModel<T> {
 	final MethodHandle constructor;
-	final Models models;
-	final Model itemModel;
 
 	public CollectionModel(Type type, ModelContext context, MethodHandle constructor, Type valueType) {
-		super(type, context);
+		super(type, context,  context.get(valueType != null ? valueType : Object.class));
 		this.constructor = constructor;
-		this.models = context.models();
-		this.itemModel = context.get(valueType != null ? valueType : Object.class);
 	}
 
 	@Override
@@ -56,25 +46,6 @@ public class CollectionModel<T extends Collection> extends BaseComplexModel<T>
 	}
 
 	@Override
-	public T convert(Object o) {
-		if (o == null) {
-			return null;
-		}
-		if (o.getClass() == getType()) {
-			return (T) o;
-		}
-		Model def = models.get(o.getClass());
-		T maker = (T) maker();
-		if (def instanceof ListModel) {
-			((ListModel) def).forEachItem(o, i -> maker.add(itemModel.convert(i)));
-		}
-		else {
-			maker.add(itemModel.convert(o));
-		}
-		return maker;
-	}
-
-	@Override
 	public void forEachItem(T t, Consumer consumer) {
 		t.forEach(consumer);
 	}
@@ -82,11 +53,6 @@ public class CollectionModel<T extends Collection> extends BaseComplexModel<T>
 	@Override
 	public Stream stream(T t) {
 		return t.stream();
-	}
-
-	@Override
-	public Model itemModel() {
-		return itemModel;
 	}
 
 	public T newInstance() {
@@ -100,41 +66,23 @@ public class CollectionModel<T extends Collection> extends BaseComplexModel<T>
 			throw new RuntimeException(e);
 		}
 	}
-	@Override
-	public void visit(T obj, Visitor visitor) {
-		visitor.visitList(obj, this);
-	}
-	@Override
-	public T parse(Parser parser) {
-		return (T) parser.parseList(this);
-	}
-	@Override
-	public Format getFormat() {
-		return Format.LIST;
-	}
 
 	@Override
 	public void visitItems(T t, Visitor visitor) {
 		var m = itemModel;
 		t.forEach(i -> {
 			visitor.visitListItem();
-			if(i == null) {
-				visitor.visitNull();
-			}
-			else {
-				m.visit(i, visitor);
-			}
+			m.tryVisit(i, visitor);
 		});
 	}
 	
 	@Override
-	public void parseItem(Object listMaker, Parser parser) {
-		parser.parseListItem();
-		((Collection)listMaker).add(parser.parse(itemModel));
+	public T make(Object maker) {
+		return (T) maker;
 	}
 
 	@Override
-	public T make(Object maker) {
-		return (T) maker;
+	protected void addItem(Object maker, Object item) {
+		((T)maker).add(item);
 	}
 }

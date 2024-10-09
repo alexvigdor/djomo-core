@@ -21,6 +21,7 @@ import java.lang.reflect.Type;
 
 import com.bigcloud.djomo.Resolver;
 import com.bigcloud.djomo.api.Format;
+import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
@@ -31,6 +32,7 @@ public class ResolverModel<T> extends BaseModel<T> {
 	private final Resolver<T> resolver;
 	private final ModelContext context;
 	private final Type[] typeArgs;
+	private final Model visitModel;
 
 	public ResolverModel(Type type, ModelContext context, Resolver<T> resolver) {
 		super(type, context);
@@ -48,6 +50,12 @@ public class ResolverModel<T> extends BaseModel<T> {
 		this.context = context;
 		this.resolver = resolver.clone();
 		this.resolver.init(context, typeArgs);
+		if(this.resolver instanceof Resolver.Substitute sub) {
+			this.visitModel = sub.getSubstitute();
+		}
+		else {
+			this.visitModel = models.anyModel;
+		}
 	}
 
 	@Override
@@ -62,8 +70,7 @@ public class ResolverModel<T> extends BaseModel<T> {
 
 	@Override
 	public void visit(T obj, Visitor visitor) {
-		visitor.visit(obj);
-		//throw new UnsupportedOperationException();
+		visitModel.visit(obj, visitor);
 	}
 
 	public Resolver<T> getResolver() {

@@ -137,14 +137,11 @@ public class MapModel<T extends Map> extends BaseComplexModel<T> implements Obje
 
 	@Override
 	public void visitFields(T t, Visitor visitor) {
+		Model m = valueModel;
 		for (Map.Entry entry : ((Map<?, ?>) t).entrySet()) {
 			visitor.visitObjectField(entry.getKey());
 			Object val = entry.getValue();
-			if (val == null) {
-				visitor.visitNull();
-			} else {
-				valueModel.visit(entry.getValue(), visitor);
-			}
+			m.tryVisit(val, visitor);
 		}
 	}
 

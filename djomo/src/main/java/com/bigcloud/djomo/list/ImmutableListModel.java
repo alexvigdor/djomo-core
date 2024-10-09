@@ -20,57 +20,19 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import com.bigcloud.djomo.Models;
-import com.bigcloud.djomo.api.Format;
-import com.bigcloud.djomo.api.ListModel;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
-import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
-import com.bigcloud.djomo.base.BaseComplexModel;
+import com.bigcloud.djomo.base.BaseListModel;
 
 /**
  * specialized default immutable list implementation, use a Resolver to parse to
  * a different list type
  */
-public class ImmutableListModel extends BaseComplexModel<List> implements ListModel<List> {
-	final Model itemModel;
-	final Models models;
+public class ImmutableListModel extends BaseListModel<List> {
 
 	public ImmutableListModel(Type type, ModelContext context, Type valueType) {
-		super(type, context);
-		this.itemModel = context.get(valueType != null ? valueType : Object.class);
-		this.models = context.models();
-	}
-
-	@Override
-	public List convert(Object o) {
-		if (o == null) {
-			return null;
-		}
-		Model def = models.get(o.getClass());
-		ImmutableList maker = new ImmutableList();
-		if (def instanceof ListModel) {
-			((ListModel) def).forEachItem(o, i -> maker.addItem(itemModel.convert(i)));
-		} else {
-			maker.addItem(itemModel.convert(o));
-		}
-		return maker;
-	}
-
-	@Override
-	public void visit(List obj, Visitor visitor) {
-		visitor.visitList(obj, this);
-	}
-
-	@Override
-	public List parse(Parser parser) {
-		return (List) parser.parseList(this);
-	}
-
-	@Override
-	public Format getFormat() {
-		return Format.LIST;
+		super(type, context, context.get(valueType != null ? valueType : Object.class));
 	}
 
 	@Override
@@ -81,11 +43,6 @@ public class ImmutableListModel extends BaseComplexModel<List> implements ListMo
 	@Override
 	public Stream stream(List t) {
 		return t.stream();
-	}
-
-	@Override
-	public Model itemModel() {
-		return itemModel;
 	}
 
 	@Override
@@ -105,22 +62,17 @@ public class ImmutableListModel extends BaseComplexModel<List> implements ListMo
 		final Model m = itemModel;
 		t.forEach(i -> {
 			visitor.visitListItem();
-			if (i == null) {
-				visitor.visitNull();
-			} else {
-				m.visit(i, visitor);
-			}
+			m.tryVisit(i, visitor);
 		});
-	}
-
-	@Override
-	public void parseItem(Object listMaker, Parser parser) {
-		parser.parseListItem();
-		((ImmutableList) listMaker).addItem(parser.parse(itemModel));
 	}
 
 	@Override
 	public ImmutableList make(Object maker) {
 		return (ImmutableList) maker;
+	}
+
+	@Override
+	protected void addItem(Object maker, Object item) {
+		((ImmutableList)maker).addItem(item);
 	}
 }

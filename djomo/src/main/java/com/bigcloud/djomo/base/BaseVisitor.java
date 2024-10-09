@@ -78,16 +78,6 @@ public abstract class BaseVisitor implements Visitor {
 		}
 	}
 
-	/**
-	 * Entry point to allow filters to intercept top-level object visit; subclasses
-	 * should extend visit as opposed to filter
-	 * 
-	 * @param o
-	 */
-	public final void filter(Object o) {
-		current.visit(o);
-	}
-
 	@Override
 	public Models models() {
 		return models;

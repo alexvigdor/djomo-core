@@ -53,7 +53,8 @@ public class SupplierModel<V> extends BaseModel<Supplier<V>> {
 
 	@Override
 	public void visit(Supplier<V> obj, Visitor visitor) {
-		visitor.visit(obj.get());
+		V val = obj.get();
+		valueModel.tryVisit(val, visitor);
 	}
 
 	@Override

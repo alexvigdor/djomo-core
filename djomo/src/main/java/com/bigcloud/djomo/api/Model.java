@@ -58,6 +58,13 @@ public interface Model<T> {
 	 */
 	void visit(T obj, Visitor visitor);
 	/**
+	 * In cases where the model was not already looked up based on the object and the object has not been tested for null, make an effort to visit
+	 * potentially null, or potentially dispatching to the model for a subclass.
+	 * @param obj
+	 * @param visitor
+	 */
+	void tryVisit(T obj, Visitor visitor);
+	/**
 	 * Retrieve the owning Models instance
 	 * @return
 	 */

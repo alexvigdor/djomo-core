@@ -60,11 +60,13 @@ public class FutureModel<V> extends BaseModel<Future<V>> {
 
 	@Override
 	public void visit(Future<V> obj, Visitor visitor) {
+		V value;
 		try {
-			visitor.visit(obj.get());
+			value = obj.get();
 		} catch (InterruptedException | ExecutionException e) {
-			throw new RuntimeException("Error resolving future model", e);
+			throw new RuntimeException("Error resolving future", e);
 		}
+		valueModel.tryVisit(value, visitor);
 	}
 
 	@Override

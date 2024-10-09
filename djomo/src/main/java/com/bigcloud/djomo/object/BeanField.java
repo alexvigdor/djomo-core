@@ -86,11 +86,7 @@ public class BeanField implements Field, Cloneable {
 	public void visit(Object source, Visitor visitor) {
 		visitor.visitObjectField(key);
 		Object val = get(source);
-		if (val == null) {
-			visitor.visitNull();
-		} else {
-			model.visit(val, visitor);
-		}
+		model.tryVisit(val, visitor);
 	}
 
 	@Override
