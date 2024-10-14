@@ -46,12 +46,24 @@ public abstract class BaseModel<T> implements Model<T> {
 	}
 
 	@Override
+	public T convert(Object o) {
+		if (o == null) {
+			return null;
+		}
+		if (o.getClass() == getType()) {
+			return (T) o;
+		}
+		InstanceParser mp = new InstanceParser(models, o);
+		return mp.filter(this);
+	}
+
+	@Override
 	public void tryVisit(T obj, Visitor visitor) {
 		if(obj == null) {
 			visitor.visitNull();
 		}
 		else {
-			visit(obj, visitor);
+			visitor.visit(obj, this);
 		}
 	}
 

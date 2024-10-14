@@ -17,6 +17,7 @@ package com.bigcloud.djomo.base;
 
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.api.ListModel;
+import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.api.VisitorFilter;
@@ -85,6 +86,11 @@ public class BaseVisitorFilter implements VisitorFilter, Cloneable {
 	@Override
 	public void visit(Object obj) {
 		visitor.visit(obj);
+	}
+	
+	@Override
+	public <T> void visit(T obj, Model<T> model) {
+		visitor.visit(obj, model);
 	}
 
 	@Override

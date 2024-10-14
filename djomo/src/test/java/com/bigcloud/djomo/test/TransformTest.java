@@ -40,7 +40,6 @@ import com.bigcloud.djomo.filter.parsers.LimitParser;
 import com.bigcloud.djomo.filter.parsers.OmitNullItemParser;
 import com.bigcloud.djomo.filter.parsers.PathParser;
 import com.bigcloud.djomo.filter.parsers.RenameParser;
-import com.bigcloud.djomo.filter.parsers.TypeParser;
 import com.bigcloud.djomo.filter.visitors.ExcludeVisitor;
 import com.bigcloud.djomo.filter.visitors.FieldVisitor;
 import com.bigcloud.djomo.filter.visitors.IncludeVisitor;
@@ -49,8 +48,6 @@ import com.bigcloud.djomo.filter.visitors.OmitNullFieldVisitor;
 import com.bigcloud.djomo.filter.visitors.OmitNullItemVisitor;
 import com.bigcloud.djomo.filter.visitors.PathVisitor;
 import com.bigcloud.djomo.filter.visitors.RenameVisitor;
-import com.bigcloud.djomo.filter.visitors.TypeVisitor;
-import com.bigcloud.djomo.filter.visitors.TypeVisitorFilter;
 
 import lombok.Builder;
 import lombok.Value;
@@ -222,38 +219,6 @@ public class TransformTest {
 		Map nmap = new LinkedHashMap<>(map);
 		nmap.remove("abc");
 		return nmap;
-	}
-
-	@Test
-	public void testPathInTypeFilter() {
-		Map vals = new LinkedHashMap<>();
-		vals.put("abc", "def");
-		vals.put("ghi", "jkl");
-		List sub = new ArrayList<>();
-		Map subval = new LinkedHashMap<>();
-		subval.put("abc", "xyz");
-		sub.add(subval);
-		vals.put("pqr", sub);
-		sub.add("mno");
-		BaseVisitorFilter toUpper = new BaseVisitorFilter() {
-			@Override
-			public void visitString(CharSequence value) {
-				visitor.visitString(value.toString().toUpperCase());
-			}
-			@Override
-			public void visitList(Object o, ListModel m) {
-				visitString(o.toString());
-			}
-		};
-		
-		String json = Json.toString(vals,
-				new TypeVisitorFilter<>(Map.class, PathVisitor.builder().filter("**", toUpper).build()));
-
-		assertEquals(json, "{\"abc\":\"DEF\",\"ghi\":\"JKL\",\"pqr\":\"[{ABC=XYZ}, MNO]\"}");
-		json = Json.toString(vals,
-				new TypeVisitorFilter<>(Map.class, PathVisitor.builder().filter("**.abc", toUpper).build()));
-
-		assertEquals(json, "{\"abc\":\"DEF\",\"ghi\":\"jkl\",\"pqr\":[{\"abc\":\"XYZ\"},\"mno\"]}");
 	}
 
 	@Test

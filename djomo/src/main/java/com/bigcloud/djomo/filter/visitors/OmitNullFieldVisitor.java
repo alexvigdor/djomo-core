@@ -66,7 +66,7 @@ public class OmitNullFieldVisitor extends BaseVisitorFilter {
 				Object val = field.get(source);
 				if (val != null) {
 					visitor.visitObjectField(field.key());
-					fm.visit(val, visitor);
+					visitor.visit(val, fm);
 				}
 			}
 		};

@@ -110,18 +110,6 @@ public abstract class BaseObjectModel<T> extends BaseComplexModel<T> implements 
 	}
 
 	@Override
-	public T convert(Object o) {
-		if (o == null) {
-			return null;
-		}
-		if (o.getClass() == getType()) {
-			return (T) o;
-		}
-		InstanceParser mp = new InstanceParser(models, o);
-		return mp.filter(this);
-	}
-
-	@Override
 	public void visit(T obj, Visitor visitor) {
 		visitor.visitObject(obj, this);
 	}
@@ -137,7 +125,7 @@ public abstract class BaseObjectModel<T> extends BaseComplexModel<T> implements 
 			visitor.visitObject(obj, this);
 		}
 		else {
-			((Model)models.get(c)).visit(obj, visitor);
+			visitor.visitObject(obj, (ObjectModel)models.get(c));
 		}
 	}
 

@@ -30,6 +30,7 @@ import com.bigcloud.djomo.Models;
  * @author Alex Vigdor
  *
  */
+@FunctionalInterface
 public interface ModelFactory {
 	Model<?> create(Type type, ModelContext context);
 }

@@ -17,6 +17,7 @@ package com.bigcloud.djomo.filter.visitors;
 
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.api.ListModel;
+import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.api.VisitorFilter;
@@ -45,6 +46,10 @@ public class BlackHoleVisitor implements VisitorFilter{
 
 	@Override
 	public void visit(Object obj) {
+	}
+	
+	@Override
+	public <T> void visit(T obj, Model<T> model) {
 	}
 
 	@Override

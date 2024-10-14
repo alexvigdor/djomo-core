@@ -26,6 +26,7 @@ import com.bigcloud.djomo.api.visitors.FloatVisitor;
 import com.bigcloud.djomo.api.visitors.IntVisitor;
 import com.bigcloud.djomo.api.visitors.ListVisitor;
 import com.bigcloud.djomo.api.visitors.LongVisitor;
+import com.bigcloud.djomo.api.visitors.ModelVisitor;
 import com.bigcloud.djomo.api.visitors.ObjectFieldVisitor;
 import com.bigcloud.djomo.api.visitors.ObjectVisitor;
 import com.bigcloud.djomo.api.visitors.StringVisitor;
@@ -72,7 +73,12 @@ public interface Filters {
 	static VisitorFilter visitObjectField(Class type, ObjectFieldVisitor objectFieldVisitor) {
 		return objectFieldVisitor.newVisitorFilter(type);
 	}
-	
+	static VisitorFilter visitModel(ModelVisitor modelVisitor) {
+		return modelVisitor.newVisitorFilter();
+	}
+	static VisitorFilter visitModel(Class type, ModelVisitor modelVisitor) {
+		return modelVisitor.newVisitorFilter(type);
+	}
 	static ParserFilter parseList(ListParser listParser) {
 		return listParser.newParserFilter();
 	}

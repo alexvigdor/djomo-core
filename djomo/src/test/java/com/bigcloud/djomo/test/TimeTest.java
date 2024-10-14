@@ -40,6 +40,7 @@ import org.testng.annotations.Test;
 
 import com.bigcloud.djomo.Json;
 import com.bigcloud.djomo.Models;
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.error.ModelException;
 import com.bigcloud.djomo.simple.DateFormatModelFactory;
 
@@ -61,11 +62,19 @@ public class TimeTest {
 	public void testFormat() throws IOException {
 		TimeBean bean = bean();
 		String plain = Json.toString(bean, "  ");
+		var full = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL);
+		var medium = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM);
 		Json custom = new Json(Models.builder()
-				.factory(new DateFormatModelFactory(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL),
-						ZonedDateTime.class))
-				.factory(new DateFormatModelFactory(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM),
-						LocalDate.class))
+				.model(ZonedDateTime.class,
+						Format.STRING,
+						(zdt, visitor) -> visitor.visitString(full.format(zdt)),
+						parser -> full.parse(parser.parseString(), ZonedDateTime::from)
+				)
+				.model(LocalDate.class,
+						Format.STRING,
+						(zdt, visitor) -> visitor.visitString(medium.format(zdt)),
+						parser -> medium.parse(parser.parseString(), LocalDate::from)
+				)
 				.build());
 		String formatted = custom.toString(bean);
 		Assert.assertNotEquals(formatted, plain);

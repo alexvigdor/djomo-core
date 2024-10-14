@@ -27,16 +27,24 @@ import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import com.bigcloud.djomo.Resolver.Substitute;
+import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ListModel;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.ModelFactory;
 import com.bigcloud.djomo.api.ObjectModel;
+import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.ParserFilter;
+import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.api.VisitorFilter;
+import com.bigcloud.djomo.base.BaseModel;
+import com.bigcloud.djomo.base.BaseModelFactory;
 import com.bigcloud.djomo.list.ListModelFactory;
 import com.bigcloud.djomo.object.ObjectModelFactory;
 import com.bigcloud.djomo.poly.AnyModel;
@@ -239,6 +247,56 @@ public class Models {
 				this.factories.add(factory);
 			}
 			return this;
+		}
+
+		/**
+		 * Register an explicit model producer function based on type
+		 * 
+		 * @param type
+		 * @param model
+		 * @return
+		 */
+		public <T> Builder model(Class<T> type, BiFunction<Class<T>, ModelContext, Model<T>> modelProducer) {
+			return factory(new BaseModelFactory() {
+
+				@Override
+				public Model<?> create(Type lookupType, ModelContext context) {
+					Class rawType = getRawType(lookupType);
+					if (type.isAssignableFrom(rawType)) {
+						return modelProducer.apply(rawType, context);
+					}
+					return null;
+				}
+			});
+		}
+
+		/**
+		 * Register an explicit model based on type, format, visitor and parser
+		 * functions
+		 * 
+		 * @param type
+		 * @param model
+		 * @return
+		 */
+		public <T> Builder model(Class<T> type, Format format, BiConsumer<T, Visitor> visitor,
+				Function<Parser, T> parser) {
+			return model(type, (realType, context) -> new BaseModel<T>(realType, context) {
+
+				@Override
+				public Format getFormat() {
+					return format;
+				}
+
+				@Override
+				public T parse(Parser source) {
+					return parser.apply(source);
+				}
+
+				@Override
+				public void visit(T obj, Visitor dest) {
+					visitor.accept(obj, dest);
+				}
+			});
 		}
 
 		public Models build() {

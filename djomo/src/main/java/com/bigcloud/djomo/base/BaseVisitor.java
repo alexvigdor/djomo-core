@@ -56,6 +56,11 @@ public abstract class BaseVisitor implements Visitor {
 	public <T> void visitObject(T model, ObjectModel<T> definition) {
 		definition.visitFields(model, current);
 	}
+	
+	@Override
+	public <T> void visit(T object, Model<T> definition) {
+		definition.visit(object, current);
+	}
 
 	@Override
 	public void visit(Object o) {
@@ -74,7 +79,7 @@ public abstract class BaseVisitor implements Visitor {
 		} else if (o == null) {
 			current.visitNull();
 		} else {
-			((Model) models.get(o.getClass())).visit(o, current);
+			visit(o, (Model) models.get(o.getClass()));
 		}
 	}
 

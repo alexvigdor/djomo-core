@@ -38,8 +38,6 @@ import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.api.parsers.ModelParser;
 import com.bigcloud.djomo.api.visitors.ObjectVisitor;
-import com.bigcloud.djomo.filter.parsers.TypeParser;
-import com.bigcloud.djomo.filter.parsers.TypeParserFilter;
 import com.bigcloud.djomo.filter.visitors.OmitNullFieldVisitor;
 
 import lombok.Builder;
@@ -188,9 +186,17 @@ public class TypeTest {
 
 	@Test(expectedExceptions = IllegalArgumentException.class)
 	public <T> void testAmorphousInlineMultiType() {
-		new TypeParserFilter<T>(null) {
+		new Resolver<T>() {
 
-	
+			@Override
+			public T resolve(Parser parser) {
+				return null;
+			}
+
+			@Override
+			public Format getFormat() {
+				return null;
+			}
 
 		};
 	}

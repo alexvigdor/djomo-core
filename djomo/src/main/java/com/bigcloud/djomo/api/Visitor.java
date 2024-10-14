@@ -34,6 +34,8 @@ public interface Visitor {
 	<T> void visitObject(T object, ObjectModel<T> model);
 
 	void visitObjectField(Object name);
+	
+	<T> void visit(T object, Model<T> model);
 
 	void visit(Object obj);
 

@@ -75,6 +75,16 @@ public abstract class BaseListModel<T> extends BaseComplexModel<T> implements Li
 		parser.parseListItem();
 		addItem(listMaker, parser.parse(itemModel));
 	}
+	
+	@Override
+	public void tryVisit(T obj, Visitor visitor) {
+		if(obj == null) {
+			visitor.visitNull();
+		}
+		else {
+			visitor.visitList(obj, this);
+		}
+	}
 
 	protected abstract void addItem(Object maker, Object item);
 }

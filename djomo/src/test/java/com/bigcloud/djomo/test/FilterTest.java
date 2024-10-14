@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
@@ -32,7 +33,6 @@ import com.bigcloud.djomo.Json;
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.annotation.Parse;
 import com.bigcloud.djomo.annotation.Visit;
-import com.bigcloud.djomo.api.Field;
 import com.bigcloud.djomo.api.Filters;
 import com.bigcloud.djomo.api.ListModel;
 import com.bigcloud.djomo.api.Model;
@@ -40,6 +40,7 @@ import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.ParserFilterFactory;
 import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.api.visitors.ListVisitor;
+import com.bigcloud.djomo.api.visitors.ModelVisitor;
 import com.bigcloud.djomo.api.visitors.ObjectVisitor;
 import com.bigcloud.djomo.base.BaseParserFilter;
 import com.bigcloud.djomo.error.AnnotationException;
@@ -51,17 +52,18 @@ import com.bigcloud.djomo.filter.parsers.FieldParser;
 import com.bigcloud.djomo.filter.parsers.IncludeParser;
 import com.bigcloud.djomo.filter.parsers.MultiFilterParser;
 import com.bigcloud.djomo.filter.parsers.RenameParser;
-import com.bigcloud.djomo.filter.parsers.TypeParser;
 import com.bigcloud.djomo.filter.visitors.ExcludeVisitor;
 import com.bigcloud.djomo.filter.visitors.FieldVisitor;
 import com.bigcloud.djomo.filter.visitors.IncludeVisitor;
 import com.bigcloud.djomo.filter.visitors.MultiFilterVisitor;
 import com.bigcloud.djomo.filter.visitors.OmitNullFieldVisitor;
+import com.bigcloud.djomo.filter.visitors.PathVisitor;
 import com.bigcloud.djomo.filter.visitors.RenameVisitor;
-import com.bigcloud.djomo.filter.visitors.TypeVisitor;
 
+import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
+import lombok.Value;
 
 public class FilterTest {
 	Json json = new Json();
@@ -336,5 +338,67 @@ public class FilterTest {
 		public TroubleMaker(Dao dao, String name) {
 
 		}
+	}
+	
+	public static class GuidDao {
+		Map<UUID, GuidDoc> items = new ConcurrentHashMap<>();
+
+		public GuidDoc getData(UUID id) {
+			return items.get(id);
+		}
+
+		public void setData(UUID id, GuidDoc data) {
+			items.put(id, data);
+		}
+	}
+
+	@Value
+	@Builder
+	public static class GuidDoc {
+		String title;
+		UUID parent;
+		List<UUID> children;
+	}
+
+	public static class GuidExpander implements ModelVisitor {
+		final GuidDao dao;
+
+		public GuidExpander(GuidDao dao) {
+			this.dao = dao;
+		}
+
+		@Override
+		public <T> void visitModel(T object, Model<T> model, Visitor visitor) {
+			if (object instanceof UUID uuid) {
+				visitor.visit(dao.getData(uuid));
+			} else {
+				visitor.visit(object, model);
+			}
+		}
+
+	}
+
+	@Test
+	public void expandGuid() {
+		GuidDao dao = new GuidDao();
+		UUID docId = UUID.randomUUID();
+		UUID parentId = UUID.randomUUID();
+		List<UUID> children = Stream.generate(UUID::randomUUID).limit(5).toList();
+		dao.setData(parentId, GuidDoc.builder().title("Parent").children(List.of(docId)).build());
+		for (int i = 1; i <= children.size(); i++) {
+			dao.setData(children.get(i - 1), GuidDoc.builder().title("Child " + i).parent(docId).build());
+		}
+		GuidDoc doc = GuidDoc.builder().title("Document").parent(parentId).children(children).build();
+		dao.setData(docId, doc);
+		Json json = Json.builder().visit(
+				PathVisitor.builder()
+						.filter("**", new GuidExpander(dao))
+						.filter("**", new OmitNullFieldVisitor())
+						.filter("**.parent", new ExcludeVisitor(GuidDoc.class, "children"))
+						.filter("**.children[*]", new ExcludeVisitor(GuidDoc.class, "parent"))
+						.build())
+				.build();
+		String str = json.toString(doc);
+		Assert.assertEquals(str, "{\"children\":[{\"title\":\"Child 1\"},{\"title\":\"Child 2\"},{\"title\":\"Child 3\"},{\"title\":\"Child 4\"},{\"title\":\"Child 5\"}],\"parent\":{\"title\":\"Parent\"},\"title\":\"Document\"}");
 	}
 }

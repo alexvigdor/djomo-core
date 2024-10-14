@@ -144,7 +144,7 @@ public class SampleApp {
 	@GET
 	@Path("partial")
 	@Produces("application/json")
-	@Visit(value = DynamicExcludeFilter.class, type=Doc.class)
+	@Visit(value = DynamicExcludeFilter.class)
 	public Doc partial(@QueryParam("exclude") List<String> excludes) {
 		dynamicExcludes.set(excludes);
 		return new Doc("Title", "Author", "Body");
@@ -173,7 +173,7 @@ public class SampleApp {
 	@Consumes("application/json")
 	@Produces("application/json")
 	public Thing readlabel(
-			@Parse(value = ParseLabeller.class, type = Number.class)
+			@Parse(value = ParseLabeller.class)
 			Thing<Number> body) {
 		return body;
 	}
@@ -222,10 +222,10 @@ public class SampleApp {
 		@Override
 		public Object parse(Model model, Parser parser) {
 			var obj = parser.parse(model);
-			if(obj != null) {
+			if(obj instanceof Number) {
 				return "("+obj.getClass().getSimpleName()+") "+obj;
 			}
-			return null;
+			return obj;
 		}
 		
 	}

@@ -144,6 +144,16 @@ public class MapModel<T extends Map> extends BaseComplexModel<T> implements Obje
 			m.tryVisit(val, visitor);
 		}
 	}
+	
+	@Override
+	public void tryVisit(T obj, Visitor visitor) {
+		if(obj == null) {
+			visitor.visitNull();
+		}
+		else {
+			visitor.visitObject(obj, this);
+		}
+	}
 
 	@Override
 	public T make(Object maker) {
