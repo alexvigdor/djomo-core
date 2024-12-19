@@ -83,16 +83,16 @@ public class TransformTest {
 		String json = Json.toString(input);
 		SomeType st = Json.fromString(json, SomeType.class, 
 				Filters.parseString(parser -> parser.parseString().toString().toUpperCase()),
-				new FieldParser<SomeType>("foos", Filters.parseModel((model, parser) -> 
+				new FieldParser<SomeType>("foos", Filters.parseList((model, parser) -> 
 						Arrays.asList(parser.parseString().toString().split(","))
 					)) {},
-				new FieldParser<SomeType>("loos", Filters.parseModel((model, parser) ->
+				new FieldParser<SomeType>("loos", Filters.parseObject((model, parser) ->
 						Arrays.stream(parser.parseString().toString().split(",")).map(k -> k.split("=")).collect(Collectors.toMap(a -> a[0], a -> a[1]))
 					)) {},
 				new FieldParser<SomeType>("bars", Filters.parseString(parser -> 
 				Json.models().listModel.parse(parser).stream().map(Object::toString).collect(Collectors.joining(",")).toString())) {},
-				new FieldParser(SomeType.class, "eeks", Filters.parseModel((model, parser) ->  new TreeSet(Json.models().mapModel.parse(parser).values()) )),
-				new FieldParser(SomeType.class, "leeks", Filters.parseModel(Map.class, (model, parser) -> 
+				new FieldParser(SomeType.class, "eeks", Filters.parseList((model, parser) ->  new TreeSet(Json.models().mapModel.parse(parser).values()) )),
+				new FieldParser(SomeType.class, "leeks", Filters.<Map>parseObject((model, parser) -> 
 					Json.models().listModel.parse(parser).stream().collect(Collectors.toMap(s -> s, s -> s))))
 			);
 		assertEquals(Json.toString(st, "  "), Json.toString(makeTestObject(), "  "));
@@ -145,13 +145,10 @@ public class TransformTest {
 	@Test
 	public void testNameTransform() throws IOException {
 		Map data = map("test-thing", "123", "other-thing", "456");
-		String json = Json.toString(data, Filters.visitObjectField(
-				(name, visitor) -> visitor.visitObjectField("test-thing".equals(name) ? "testThing" : name)));
+		String json = Json.toString(data,
+				new RenameVisitor(Map.class, "test-thing", "testThing"));
 		assertEquals("{\"testThing\":\"123\",\"other-thing\":\"456\"}", json);
-		Object rt = Json.fromString(json, Filters.parseObjectField((model, field, parser) -> parser
-				.parseObjectField(model, field.equals("testThing") ? "test-thing" : field)
-
-		));
+		Object rt = Json.fromString(json, new RenameParser(Map.class, "test-thing", "testThing"));
 		assertEquals(rt, data);
 	}
 	

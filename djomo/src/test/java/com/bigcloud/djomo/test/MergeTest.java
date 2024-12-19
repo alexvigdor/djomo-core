@@ -20,15 +20,14 @@ import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import com.bigcloud.djomo.Json;
-import com.bigcloud.djomo.StaticType;
 import com.bigcloud.djomo.filter.parsers.ExcludeParser;
 import com.bigcloud.djomo.filter.parsers.OmitNullItemParser;
+import com.bigcloud.djomo.filter.visitors.OmitNullFieldVisitor;
 import com.bigcloud.djomo.test.ComplexModel.Direction;
 
 public class MergeTest {
@@ -51,7 +50,7 @@ public class MergeTest {
 				.history(new EnumMap(Map.of(ComplexModel.Direction.SOUTH, List.of(-1l,-2l,-3l), ComplexModel.Direction.EAST,  List.of(-4l,-5l))))
 				.build();
 		
-		String mj = Json.toString(mb);
+		String mj = Json.toString(mb, new OmitNullFieldVisitor());
 		ComplexModel merged = Json.fromString(mj, ma);
 		Assert.assertEquals(Json.toString(merged), "{\"children\":null,\"direction\":\"WEST\",\"history\":{\"NORTH\":[1,2,3],\"SOUTH\":[-1,-2,-3],\"EAST\":[4,5,6,-4,-5]},\"models\":[{\"count\":0,\"enabled\":true,\"name\":\"foo\"},{\"count\":4,\"enabled\":false,\"name\":\"bar\"},null,{\"count\":0,\"enabled\":false,\"name\":\"update\"}]}");
 	}
@@ -73,7 +72,7 @@ public class MergeTest {
 				.history(new EnumMap(Map.of(ComplexModel.Direction.SOUTH, List.of(-1l,-2l,-3l), ComplexModel.Direction.EAST,  List.of(-4l,-5l))))
 				.build();
 		
-		String mj = Json.toString(mb);
+		String mj = Json.toString(mb, new OmitNullFieldVisitor());
 		ComplexModel merged = Json.fromString(mj, ma, new OmitNullItemParser(), new ExcludeParser(ComplexModel.class, "history"));
 		Assert.assertEquals(Json.toString(merged), "{\"children\":null,\"direction\":\"WEST\",\"history\":{\"NORTH\":[1,2,3],\"EAST\":[4,5,6]},\"models\":[{\"count\":0,\"enabled\":true,\"name\":\"foo\"},{\"count\":4,\"enabled\":false,\"name\":\"bar\"},{\"count\":0,\"enabled\":false,\"name\":\"update\"}]}");
 	}

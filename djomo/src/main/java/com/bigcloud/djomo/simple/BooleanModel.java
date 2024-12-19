@@ -17,7 +17,6 @@ package com.bigcloud.djomo.simple;
 
 import java.lang.reflect.Type;
 
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
@@ -48,11 +47,6 @@ public class BooleanModel extends BaseModel<Boolean> {
 	@Override
 	public void visit(Boolean obj, Visitor visitor) {
 		visitor.visitBoolean(obj.booleanValue());
-	}
-
-	@Override
-	public Format getFormat() {
-		return Format.BOOLEAN;
 	}
 
 }

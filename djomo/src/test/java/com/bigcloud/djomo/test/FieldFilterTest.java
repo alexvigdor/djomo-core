@@ -40,10 +40,14 @@ public class FieldFilterTest {
 	public void testFieldFilters() throws IOException {
 		Feed feed = new Feed(List.of("one", Map.of("hooples", List.of("two", "three", "four")), "five", "six"),
 				List.of("a", "b", "c", "d"));
-		String str = json.toString(feed, new FieldVisitor<Feed>("headlines", new LimitVisitor(2)) {});
+		var visitorFilter = new FieldVisitor<Feed>("headlines", new LimitVisitor(2)) {};
+		Assert.assertEquals(visitorFilter.getType(), Feed.class);
+		String str = json.toString(feed, visitorFilter);
 		Assert.assertEquals(str,
 				"{\"headlines\":[\"one\",{\"hooples\":[\"two\",\"three\",\"four\"]}],\"links\":[\"a\",\"b\",\"c\",\"d\"]}");
-		Feed feed2 = json.fromString(str, Feed.class, new FieldParser<Feed>("links", new LimitParser(3)) {});
+		var parserFilter = new FieldParser<Feed>("links", new LimitParser(3)) {};
+		Assert.assertEquals(parserFilter.getType(), Feed.class);
+		Feed feed2 = json.fromString(str, Feed.class, parserFilter);
 		str = json.toString(feed2);
 		Assert.assertEquals(str,
 				"{\"headlines\":[\"one\",{\"hooples\":[\"two\",\"three\",\"four\"]}],\"links\":[\"a\",\"b\",\"c\"]}");
@@ -57,7 +61,7 @@ public class FieldFilterTest {
 		Assert.assertEquals(str,
 				"{\"headlines\":\"one,two,three,four,five,six\",\"links\":[\"a\",\"b\",\"c\",\"d\"]}");
 		Feed feed2 = json.fromString(str, Feed.class,
-				new FieldParser<Feed>("headlines", Filters.parseModel((model, parser) -> Arrays.asList(parser.parseString().toString().split(",")))) {});
+				new FieldParser<Feed>("headlines", Filters.parseList((model, parser) -> Arrays.asList(parser.parseString().toString().split(",")))) {});
 		str = json.toString(feed2);
 		Assert.assertEquals(str,
 				"{\"headlines\":[\"one\",\"two\",\"three\",\"four\",\"five\",\"six\"],\"links\":[\"a\",\"b\",\"c\",\"d\"]}");

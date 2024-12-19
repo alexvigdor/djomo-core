@@ -15,16 +15,12 @@
  *******************************************************************************/
 package com.bigcloud.djomo.filter.visitors;
 
-import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-
 import com.bigcloud.djomo.api.Field;
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.base.BaseVisitorFilter;
 import com.bigcloud.djomo.filter.FilterField;
-import com.bigcloud.djomo.filter.FilterFieldObjectModel;
-import com.bigcloud.djomo.filter.FilterObjectModel;
+import com.bigcloud.djomo.filter.FilterFieldObjectModels;
 
 /**
  * Prevent null field values from being visited
@@ -33,40 +29,23 @@ import com.bigcloud.djomo.filter.FilterObjectModel;
  *
  */
 public class OmitNullFieldVisitor extends BaseVisitorFilter {
-	final ConcurrentHashMap<ObjectModel<?>, ObjectModel<?>> omitModels = new ConcurrentHashMap<>();
+	FilterFieldObjectModels omitModels;
 
-	private ObjectModel getOmitModel(ObjectModel model) {
-		return omitModels.computeIfAbsent(model, om -> {
-			List<Field> fields = om.fields();
-			if (fields == null) {
-				return new FilterObjectModel<>(model) {
-					@Override
-					public void visitFields(Object t, Visitor visitor) {
-						objectModel.forEachField(t, (k, v) -> {
-							if (v != null) {
-								visitor.visitObjectField(k);
-								visitor.visit(v);
-							}
-						});
-					}
-				};
-			}
-			return new FilterFieldObjectModel(model, fields.stream().map(this::filterField));
-		});
+	public OmitNullFieldVisitor() {
+		omitModels = new FilterFieldObjectModels(stream -> stream.map(this::filterField));
 	}
 	
 	private Field filterField(Field field) {
-		var fm = field.model();
-		if (fm.getType().isPrimitive()) {
+		if (field.model().getType().isPrimitive()) {
 			return field;
 		}
 		return new FilterField(field) {
 			@Override
 			public void visit(Object source, Visitor visitor) {
-				Object val = field.get(source);
+				Object val = get(source);
 				if (val != null) {
-					visitor.visitObjectField(field.key());
-					visitor.visit(val, fm);
+					visitor.visitObjectField(key());
+					visitor.visit(val, model());
 				}
 			}
 		};
@@ -74,7 +53,7 @@ public class OmitNullFieldVisitor extends BaseVisitorFilter {
 	
 	@Override
 	public <O> void visitObject(O obj, ObjectModel<O> model) {
-		visitor.visitObject(obj, getOmitModel(model));
+		visitor.visitObject(obj, omitModels.getFilteredObjectModel(model));
 	}
 
 }

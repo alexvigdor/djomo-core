@@ -18,7 +18,6 @@ package com.bigcloud.djomo.poly;
 import java.lang.reflect.Type;
 import java.util.OptionalLong;
 
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
@@ -43,12 +42,7 @@ public class OptionalLongModel extends BaseModel<OptionalLong> {
 
 	@Override
 	public OptionalLong parse(Parser parser) {
-		try {
-			long val = parser.parseLong();
-			return OptionalLong.of(val);
-		} catch (NumberFormatException e) {
-			return OptionalLong.empty();
-		}
+		return convert(parser.parse());
 	}
 
 	@Override
@@ -60,8 +54,4 @@ public class OptionalLongModel extends BaseModel<OptionalLong> {
 		}
 	}
 	
-	@Override
-	public Format getFormat() {
-		return Format.NUMBER;
-	}
 }

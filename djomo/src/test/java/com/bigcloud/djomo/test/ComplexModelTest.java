@@ -23,7 +23,6 @@ import java.util.Map;
 import org.testng.annotations.Test;
 
 import com.bigcloud.djomo.Models;
-import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.test.ComplexModel.Direction;
 
 public class ComplexModelTest {

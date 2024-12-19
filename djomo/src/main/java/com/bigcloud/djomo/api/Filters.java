@@ -15,9 +15,13 @@
  *******************************************************************************/
 package com.bigcloud.djomo.api;
 
+import com.bigcloud.djomo.api.parsers.BooleanParser;
+import com.bigcloud.djomo.api.parsers.DoubleParser;
+import com.bigcloud.djomo.api.parsers.FloatParser;
+import com.bigcloud.djomo.api.parsers.IntParser;
 import com.bigcloud.djomo.api.parsers.ListParser;
+import com.bigcloud.djomo.api.parsers.LongParser;
 import com.bigcloud.djomo.api.parsers.ModelParser;
-import com.bigcloud.djomo.api.parsers.ObjectFieldParser;
 import com.bigcloud.djomo.api.parsers.ObjectParser;
 import com.bigcloud.djomo.api.parsers.StringParser;
 import com.bigcloud.djomo.api.visitors.BooleanVisitor;
@@ -27,13 +31,12 @@ import com.bigcloud.djomo.api.visitors.IntVisitor;
 import com.bigcloud.djomo.api.visitors.ListVisitor;
 import com.bigcloud.djomo.api.visitors.LongVisitor;
 import com.bigcloud.djomo.api.visitors.ModelVisitor;
-import com.bigcloud.djomo.api.visitors.ObjectFieldVisitor;
 import com.bigcloud.djomo.api.visitors.ObjectVisitor;
 import com.bigcloud.djomo.api.visitors.StringVisitor;
 
 /**
- * Convenience method for converting functional interface implementations
- * into visitor filters.
+ * Convenience method for converting functional interface implementations into
+ * visitor filters.
  * 
  * @author Alex Vigdor
  *
@@ -42,72 +45,88 @@ public interface Filters {
 	static VisitorFilter visitInt(IntVisitor intVisitor) {
 		return intVisitor.newVisitorFilter();
 	}
-	
+
 	static VisitorFilter visitBoolean(BooleanVisitor booleanVisitor) {
 		return booleanVisitor.newVisitorFilter();
 	}
+
 	static VisitorFilter visitLong(LongVisitor longVisitor) {
 		return longVisitor.newVisitorFilter();
 	}
+
 	static VisitorFilter visitFloat(FloatVisitor floatVisitor) {
 		return floatVisitor.newVisitorFilter();
 	}
+
 	static VisitorFilter visitDouble(DoubleVisitor doubleVisitor) {
 		return doubleVisitor.newVisitorFilter();
 	}
+
 	static VisitorFilter visitString(StringVisitor stringVisitor) {
 		return stringVisitor.newVisitorFilter();
 	}
+
 	static VisitorFilter visitList(ListVisitor listVisitor) {
 		return listVisitor.newVisitorFilter();
 	}
-	static VisitorFilter visitObject(ObjectVisitor objectVisitor) {
+
+	static VisitorFilter visitObject(ObjectVisitor<?> objectVisitor) {
 		return objectVisitor.newVisitorFilter();
 	}
-	static VisitorFilter visitObject(Class type, ObjectVisitor objectVisitor) {
+
+	static <T> VisitorFilter visitObject(Class<T> type, ObjectVisitor<T> objectVisitor) {
 		return objectVisitor.newVisitorFilter(type);
 	}
-	static VisitorFilter visitObjectField(ObjectFieldVisitor objectFieldVisitor) {
-		return objectFieldVisitor.newVisitorFilter();
-	}
-	static VisitorFilter visitObjectField(Class type, ObjectFieldVisitor objectFieldVisitor) {
-		return objectFieldVisitor.newVisitorFilter(type);
-	}
-	static VisitorFilter visitModel(ModelVisitor modelVisitor) {
+
+	static VisitorFilter visitModel(ModelVisitor<?> modelVisitor) {
 		return modelVisitor.newVisitorFilter();
 	}
-	static VisitorFilter visitModel(Class type, ModelVisitor modelVisitor) {
+
+	static <T> VisitorFilter visitModel(Class<T> type, ModelVisitor<T> modelVisitor) {
 		return modelVisitor.newVisitorFilter(type);
 	}
+
+	static ParserFilter parseInt(IntParser intParser) {
+		return intParser.newParserFilter();
+	}
+
+	static ParserFilter parseBoolean(BooleanParser booleanParser) {
+		return booleanParser.newParserFilter();
+	}
+
+	static ParserFilter parseLong(LongParser longParser) {
+		return longParser.newParserFilter();
+	}
+
+	static ParserFilter parseFloat(FloatParser floatParser) {
+		return floatParser.newParserFilter();
+	}
+
+	static ParserFilter parseDouble(DoubleParser doubleParser) {
+		return doubleParser.newParserFilter();
+	}
+
 	static ParserFilter parseList(ListParser listParser) {
 		return listParser.newParserFilter();
 	}
-	
+
 	static ParserFilter parseString(StringParser stringParser) {
 		return stringParser.newParserFilter();
 	}
-	
-	static ParserFilter parseObject(ObjectParser objectParser) {
+
+	static ParserFilter parseObject(ObjectParser<?> objectParser) {
 		return objectParser.newParserFilter();
 	}
-	
-	static ParserFilter parseObject(Class type, ObjectParser objectParser) {
+
+	static <T> ParserFilter parseObject(Class<T> type, ObjectParser<T> objectParser) {
 		return objectParser.newParserFilter(type);
 	}
-	
-	static ParserFilter parseObjectField(ObjectFieldParser objectFieldParser) {
-		return objectFieldParser.newParserFilter();
-	}
-	
-	static ParserFilter parseObjectField(Class type, ObjectFieldParser objectFieldParser) {
-		return objectFieldParser.newParserFilter(type);
-	}
-	
-	static ParserFilter parseModel(ModelParser objectParser) {
+
+	static ParserFilter parseModel(ModelParser<?> objectParser) {
 		return objectParser.newParserFilter();
 	}
-	
-	static ParserFilter parseModel(Class type, ModelParser objectParser) {
+
+	static <T> ParserFilter parseModel(Class<T> type, ModelParser<T> objectParser) {
 		return objectParser.newParserFilter(type);
 	}
 }

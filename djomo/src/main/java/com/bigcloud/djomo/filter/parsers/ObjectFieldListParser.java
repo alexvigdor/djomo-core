@@ -18,8 +18,6 @@ package com.bigcloud.djomo.filter.parsers;
 import java.util.List;
 
 import com.bigcloud.djomo.api.Field;
-import com.bigcloud.djomo.api.Format;
-import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.base.BaseParserFilter;
@@ -35,15 +33,13 @@ import com.bigcloud.djomo.filter.FilterListModel;
 public class ObjectFieldListParser extends BaseParserFilter {
 
 	@Override
-	public Object parse(Model model) {
-		if (model instanceof ObjectModel om) {
-			var fields = om.fields();
-			if (fields != null) {
-				var listParserModel = new ListParserModel(om, fields);
-				return parser.parse(listParserModel);
-			}
+	public Object parseObject(ObjectModel model) {
+		var fields = model.fields();
+		if (fields != null) {
+			var listParserModel = new ListParserModel(model, fields);
+			return parser.parse(listParserModel);
 		}
-		return parser.parse(model);
+		return parser.parseObject(model);
 	}
 
 	private static class ListParserModel<T> extends FilterListModel<T> {
@@ -78,11 +74,6 @@ public class ObjectFieldListParser extends BaseParserFilter {
 		}
 
 		@Override
-		public Format getFormat() {
-			return Format.LIST;
-		}
-
-		@Override
 		public T parse(Parser parser) {
 			return (T) parser.parseList(this);
 		}
@@ -95,7 +86,7 @@ public class ObjectFieldListParser extends BaseParserFilter {
 				c.parse(listMaker, parser);
 			}
 			else {
-				parser.models().anyModel.parse(parser);
+				parser.parse();
 			}
 		}
 		

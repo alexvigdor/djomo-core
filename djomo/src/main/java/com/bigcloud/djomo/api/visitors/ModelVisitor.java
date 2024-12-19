@@ -21,20 +21,23 @@ import com.bigcloud.djomo.api.VisitorFilter;
 import com.bigcloud.djomo.api.VisitorFilterFactory;
 import com.bigcloud.djomo.api.VisitorTypedFilterFactory;
 import com.bigcloud.djomo.base.BaseVisitorFilter;
+import com.bigcloud.djomo.internal.ConcreteType;
 
 @FunctionalInterface
-public interface ModelVisitor extends VisitorFilterFactory, VisitorTypedFilterFactory {
-	<T> void visitModel(T object, Model<T> model, Visitor visitor);
+public interface ModelVisitor<M> extends VisitorFilterFactory, VisitorTypedFilterFactory {
+	void visitModel(M object, Model<M> model, Visitor visitor);
 
 	@Override
 	default VisitorFilter newVisitorFilter() {
-		return new BaseVisitorFilter() {
-			@Override
-			public <T> void visit(T object, Model<T> model) {
-				ModelVisitor.this.visitModel(object, model, visitor);
-			}
-
-		};
+		// check for concrete type M on implementation class
+		return ConcreteType.tryGet(this.getClass(), 0)
+				.map(this::newVisitorFilter)
+				.orElseGet(() -> new BaseVisitorFilter() {
+					@Override
+					public <T> void visit(T object, Model<T> model) {
+						ModelVisitor.this.visitModel((M) object, (Model<M>) model, visitor);
+					}
+				});
 	}
 
 	@Override
@@ -43,7 +46,7 @@ public interface ModelVisitor extends VisitorFilterFactory, VisitorTypedFilterFa
 			@Override
 			public <T> void visit(T object, Model<T> model) {
 				if (boundingType.isInstance(object)) {
-					ModelVisitor.this.visitModel(object, model, visitor);
+					ModelVisitor.this.visitModel((M) object, (Model<M>) model, visitor);
 				} else {
 					visitor.visit(object, model);
 				}
@@ -51,4 +54,5 @@ public interface ModelVisitor extends VisitorFilterFactory, VisitorTypedFilterFa
 
 		};
 	}
+
 }

@@ -51,7 +51,7 @@ public abstract class InjectVisitor<T> extends BaseVisitorFilter {
 		this.injectModels = new FilterFieldObjectModels(this::init);
 	}
 
-	private Stream<Field> init(ObjectModel model) {
+	private Stream<Field> init(Stream<Field> fields) {
 		return Stream.concat(Stream.of(new FilterField(null) {
 			@Override
 			public Object key() {
@@ -64,7 +64,7 @@ public abstract class InjectVisitor<T> extends BaseVisitorFilter {
 				visitor.visit(value((T) source));
 			}
 
-		}), model.fields().stream());
+		}), fields);
 	}
 
 	public abstract Object value(T obj);

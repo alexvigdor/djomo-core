@@ -17,7 +17,6 @@ package com.bigcloud.djomo.simple;
 
 import java.util.Base64;
 
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
@@ -48,11 +47,6 @@ public class ByteArrayModel extends BaseModel<byte[]> {
 	@Override
 	public void visit(byte[] obj, Visitor visitor) {
 		visitor.visitString(Base64.getEncoder().encodeToString(obj));
-	}
-
-	@Override
-	public Format getFormat() {
-		return Format.STRING;
 	}
 
 }

@@ -22,6 +22,7 @@ import java.util.stream.Stream;
 
 import com.bigcloud.djomo.api.Field;
 import com.bigcloud.djomo.api.ObjectModel;
+import com.bigcloud.djomo.api.Visitor;
 
 /**
  * Manage a cache of filtered field models; this is useful for dealing with
@@ -32,18 +33,35 @@ import com.bigcloud.djomo.api.ObjectModel;
  *
  */
 public class FilterFieldObjectModels {
-	final ConcurrentHashMap<ObjectModel<?>, ObjectModel<?>> models = new ConcurrentHashMap<>();
-	final Function<ObjectModel<?>, Stream<Field>> fieldsFilter;
+	@SuppressWarnings("rawtypes")
+	final ConcurrentHashMap<ObjectModel, ObjectModel> models = new ConcurrentHashMap<>();
+	final Function<Stream<Field>, Stream<Field>> fieldsFilter;
 
-	public FilterFieldObjectModels(Function<ObjectModel<?>, Stream<Field>> fieldsFilter) {
+	public FilterFieldObjectModels(Function<Stream<Field>, Stream<Field>> fieldsFilter) {
 		this.fieldsFilter = fieldsFilter;
 	}
 
+	@SuppressWarnings("unchecked")
 	public ObjectModel getFilteredObjectModel(ObjectModel model) {
-		List<Field> fields = model.fields();
-		if (fields == null) {
-			return model;
-		}
-		return models.computeIfAbsent(model, om -> new FilterFieldObjectModel(om, fieldsFilter.apply(model)));
+		return models.computeIfAbsent(model, om -> {
+			List<Field> fields = om.fields();
+			if (fields != null) {
+				return new FilterFieldObjectModel(om, fieldsFilter.apply(fields.stream()));
+			} else {
+				return new FilterObjectModel(om) {
+					@Override
+					public void visitFields(Object t, Visitor visitor) {
+						Stream<Field> fields = fieldsFilter.apply(om.fields(t));
+						fields.forEach(field -> field.visit(t, visitor));
+					}
+
+					@Override
+					public Field getField(CharSequence name) {
+						return fieldsFilter.apply(Stream.of(model.getField(name))).findFirst().orElse(null);
+					}
+				};
+			}
+		});
 	}
+
 }

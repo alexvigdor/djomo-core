@@ -33,7 +33,6 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import com.bigcloud.djomo.Resolver.Substitute;
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ListModel;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
@@ -52,6 +51,7 @@ import com.bigcloud.djomo.poly.DefaultResolverModelFactory;
 import com.bigcloud.djomo.poly.PolyModelFactory;
 import com.bigcloud.djomo.poly.ResolverModel;
 import com.bigcloud.djomo.poly.ResolverModelFactory;
+import com.bigcloud.djomo.simple.NumberModel;
 import com.bigcloud.djomo.simple.SimpleModelFactory;
 /**
  * <p>
@@ -72,9 +72,10 @@ public class Models {
 	private final ConcurrentHashMap<Type, Model<?>> models = new ConcurrentHashMap<>();
 	private final ModelFactory[] modelFactories;
 	public final AnyModel anyModel;
-	public final ObjectModel<Map> mapModel;
-	public final ListModel<List> listModel;
-	public final ListModel<Stream> streamModel;
+	public final ObjectModel<Map<?,?>> mapModel;
+	public final ListModel<List<?>> listModel;
+	public final ListModel<Stream<?>> streamModel;
+	public final NumberModel<Number> numberModel;
 
 	public Models(ModelFactory... factories) {
 		if(factories == null || factories.length == 0) {
@@ -90,13 +91,13 @@ public class Models {
 		modelFactories[modelFactories.length-2] = new PolyModelFactory();
 		modelFactories[modelFactories.length-1] = new ObjectModelFactory();
 		anyModel = get(Object.class);
-		streamModel = get(Stream.class);
+		streamModel = (ListModel) get(Stream.class);
 		Model tm = get(Map.class);
-		ObjectModel<Map> mapModel = null;
+		ObjectModel<Map<?,?>> mapModel = null;
 		if(tm instanceof ResolverModel) {
 			Resolver r = ((ResolverModel)tm).getResolver();
 			if(r instanceof Substitute) {
-				mapModel = (ObjectModel<Map>) ((Substitute) r).getSubstitute();
+				mapModel = (ObjectModel<Map<?,?>>) ((Substitute) r).getSubstitute();
 			}
 		}
 		if(mapModel == null) {
@@ -104,17 +105,18 @@ public class Models {
 		}
 		this.mapModel = mapModel;
 		Model tl = get(List.class);
-		ListModel<List> listModel = null;
+		ListModel<List<?>> listModel = null;
 		if(tl instanceof ResolverModel) {
 			Resolver r = ((ResolverModel)tl).getResolver();
 			if(r instanceof Substitute) {
-				listModel = (ListModel<List>) ((Substitute) r).getSubstitute();
+				listModel = (ListModel<List<?>>) ((Substitute) r).getSubstitute();
 			}
 		}
 		else if(tl instanceof ListModel){
 			listModel = (ListModel) tl;
 		}
 		this.listModel = listModel;
+		this.numberModel = get(Number.class);
 	}
 	
 	public static Builder builder() {
@@ -278,14 +280,9 @@ public class Models {
 		 * @param model
 		 * @return
 		 */
-		public <T> Builder model(Class<T> type, Format format, BiConsumer<T, Visitor> visitor,
+		public <T> Builder model(Class<T> type, BiConsumer<T, Visitor> visitor,
 				Function<Parser, T> parser) {
 			return model(type, (realType, context) -> new BaseModel<T>(realType, context) {
-
-				@Override
-				public Format getFormat() {
-					return format;
-				}
 
 				@Override
 				public T parse(Parser source) {

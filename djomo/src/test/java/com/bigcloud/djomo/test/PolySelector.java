@@ -20,7 +20,6 @@ import java.util.Map;
 
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.Resolver;
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
@@ -45,8 +44,4 @@ public class PolySelector extends Resolver<Poly> {
 		polyFoo = models.get(PolyFoo.class);
 	}
 
-	@Override
-	public Format getFormat() {
-		return Format.OBJECT;
-	}
 }

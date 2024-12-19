@@ -32,7 +32,7 @@ public class ExcludeVisitor extends BaseVisitorFilter {
 
 	public ExcludeVisitor(Class<?> type, String... fields) {
 		Set<String> excludes = Set.of(fields);
-		excludeModels = new FilterFieldObjectModels(model -> model.fields().stream().filter(f -> !excludes.contains(f.key().toString())));
+		excludeModels = new FilterFieldObjectModels(stream -> stream.filter(f -> !excludes.contains(f.key().toString())));
 		this.type = type;
 	}
 

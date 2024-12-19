@@ -21,9 +21,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.stream.Stream;
 
 import com.bigcloud.djomo.api.Field;
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.ObjectModel;
@@ -129,10 +129,10 @@ public class MapModel<T extends Map> extends BaseComplexModel<T> implements Obje
 	public List<Field> fields() {
 		return null;
 	}
-
+	
 	@Override
-	public Format getFormat() {
-		return Format.OBJECT;
+	public Stream<Field> fields(T obj){
+		return obj.keySet().stream().map(k -> new MapField(k, valueModel));
 	}
 
 	@Override

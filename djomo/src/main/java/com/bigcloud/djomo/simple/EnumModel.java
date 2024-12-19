@@ -17,7 +17,6 @@ package com.bigcloud.djomo.simple;
 
 import java.lang.reflect.Type;
 
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
@@ -48,11 +47,11 @@ public class EnumModel<T extends Enum<T>> extends BaseModel<T> {
 
 	@Override
 	public T parse(Parser parser) {
-		return (T) Enum.valueOf(getType(), parser.parseString().toString());
+		var parsed = parser.parseString();
+		if(parsed == null) {
+			return null;
+		}
+		return (T) Enum.valueOf(getType(), parsed.toString());
 	}
 
-	@Override
-	public Format getFormat() {
-		return Format.STRING;
-	}
 }

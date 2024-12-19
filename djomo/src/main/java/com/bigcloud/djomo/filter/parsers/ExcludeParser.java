@@ -17,7 +17,6 @@ package com.bigcloud.djomo.filter.parsers;
 
 import java.util.Set;
 
-import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.base.BaseParserFilter;
 import com.bigcloud.djomo.filter.FilterFieldObjectModels;
@@ -33,16 +32,16 @@ public class ExcludeParser extends BaseParserFilter {
 
 	public ExcludeParser(Class<?> type, String... fields) {
 		Set<String> excludes = Set.of(fields);
-		excludeModels = new FilterFieldObjectModels(model -> model.fields().stream().filter(f -> !excludes.contains(f.key().toString())));
+		excludeModels = new FilterFieldObjectModels(stream -> stream.filter(f -> !excludes.contains(f.key().toString())));
 		this.type = type;
 	}
 	
 	@Override
-	public Object parse(Model model) {
-		if (type.isAssignableFrom(model.getType()) && model instanceof ObjectModel om) {
-			model = excludeModels.getFilteredObjectModel(om);
+	public Object parseObject(ObjectModel model) {
+		if (type.isAssignableFrom(model.getType())) {
+			model = excludeModels.getFilteredObjectModel(model);
 		} 
-		return parser.parse(model);
+		return parser.parseObject(model);
 	}
 	
 }

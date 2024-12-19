@@ -79,7 +79,7 @@ public abstract class BaseVisitor implements Visitor {
 		} else if (o == null) {
 			current.visitNull();
 		} else {
-			visit(o, (Model) models.get(o.getClass()));
+			current.visit(o, (Model) models.get(o.getClass()));
 		}
 	}
 

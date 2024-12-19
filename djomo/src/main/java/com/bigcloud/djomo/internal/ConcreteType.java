@@ -17,19 +17,21 @@ package com.bigcloud.djomo.internal;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.Optional;
 
 public class ConcreteType {
 	public static <T> Class<T> get(Class<?> source, int typeIndex) {
+		var resolved = tryGet(source, typeIndex);
+		if(resolved.isPresent()) {
+			return (Class<T>) resolved.get();
+		}
 		Type genericSuper = source.getGenericSuperclass();
-		if(!(genericSuper instanceof ParameterizedType)) {
+		Type concreteType;
+		if(genericSuper instanceof ParameterizedType pt) {
+			concreteType = pt.getActualTypeArguments()[typeIndex];
+		}
+		else {
 			throw new IllegalArgumentException("ConcreteType can only be looked up from a ParameterizedType, not "+genericSuper.getTypeName());
-		}
-		var concreteType = ((ParameterizedType) genericSuper).getActualTypeArguments()[typeIndex];
-		if (concreteType instanceof Class) {
-			return (Class<T>) concreteType;
-		}
-		if (concreteType instanceof ParameterizedType) {
-			return (Class<T>) ((ParameterizedType) concreteType).getRawType();
 		}
 		String simpleName = source.getSimpleName();
 		if(simpleName.isBlank()) {
@@ -57,5 +59,32 @@ public class ConcreteType {
 		throw new IllegalArgumentException("No concrete type found for " + concreteType.getTypeName() + " on "
 				+ genericSuper.getTypeName()
 				+ "; you must define a subclass with concrete type arguments, e.g. `new " + exb + "`");
+	}
+
+	public static <T> Optional<Class<T>> tryGet(Class<?> source, int typeIndex) {
+		Type genericSuper = source.getGenericSuperclass();
+		if(genericSuper instanceof ParameterizedType pt) {
+			var concreteType = pt.getActualTypeArguments()[typeIndex];
+			if (concreteType instanceof Class c) {
+				return Optional.of(c);
+			}
+			if (concreteType instanceof ParameterizedType cpt) {
+				return Optional.of((Class) cpt.getRawType());
+			}
+		}
+		Type[] genInterfaces = source.getGenericInterfaces();
+		if(genInterfaces.length == 1) {
+			Type genericInter = genInterfaces[0];
+			if(genericInter instanceof ParameterizedType pt) {
+				var concreteType = pt.getActualTypeArguments()[typeIndex];
+				if (concreteType instanceof Class c) {
+					return Optional.of(c);
+				}
+				if (concreteType instanceof ParameterizedType cpt) {
+					return Optional.of((Class) cpt.getRawType());
+				}
+			}
+		}
+		return Optional.empty();
 	}
 }

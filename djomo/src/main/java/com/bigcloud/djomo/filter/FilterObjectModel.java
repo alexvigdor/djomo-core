@@ -2,48 +2,17 @@ package com.bigcloud.djomo.filter;
 
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.stream.Stream;
 
-import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.api.Field;
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ObjectModel;
-import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
 
-public class FilterObjectModel<O> implements ObjectModel<O> {
+public class FilterObjectModel<O> extends FilterModel<O> implements ObjectModel<O> {
 	protected final ObjectModel<O> objectModel;
 	public FilterObjectModel(ObjectModel<O> delegate) {
+		super(delegate);
 		this.objectModel = delegate;
-	}
-
-	@Override
-	public Class<O> getType() {
-		return objectModel.getType();
-	}
-
-	@Override
-	public Format getFormat() {
-		return objectModel.getFormat();
-	}
-
-	@Override
-	public O convert(Object o) {
-		return objectModel.convert(o);
-	}
-
-	@Override
-	public O parse(Parser parser) {
-		return objectModel.parse(parser);
-	}
-
-	@Override
-	public void visit(O obj, Visitor visitor) {
-		objectModel.visit(obj, visitor);
-	}
-
-	@Override
-	public Models models() {
-		return objectModel.models();
 	}
 
 	@Override
@@ -65,6 +34,11 @@ public class FilterObjectModel<O> implements ObjectModel<O> {
 	public List<Field> fields() {
 		return objectModel.fields();
 	}
+	
+	@Override
+	public Stream<Field> fields(O obj) {
+		return objectModel.fields(obj);
+	}
 
 	@Override
 	public Object maker(O obj) {
@@ -79,11 +53,6 @@ public class FilterObjectModel<O> implements ObjectModel<O> {
 	@Override
 	public O make(Object maker) {
 		return objectModel.make(maker);
-	}
-
-	@Override
-	public void tryVisit(O obj, Visitor visitor) {
-		objectModel.tryVisit(obj, visitor);
 	}
 
 }

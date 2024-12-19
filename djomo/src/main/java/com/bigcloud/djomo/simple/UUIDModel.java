@@ -19,7 +19,6 @@ import java.lang.reflect.Type;
 import java.nio.CharBuffer;
 import java.util.UUID;
 
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
@@ -152,9 +151,5 @@ public class UUIDModel extends BaseModel<UUID>  {
 		}
 		return UUID.fromString(o.toString());
 	}
-	
-	@Override
-	public Format getFormat() {
-		return Format.STRING;
-	}
+
 }

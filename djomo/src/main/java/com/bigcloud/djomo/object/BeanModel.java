@@ -62,7 +62,7 @@ public class BeanModel<T> extends ObjectMethodsModel<T> {
 		}
 		processMethods(lookup, context, fieldLookup);
 		return fields.entrySet().stream()
-				.map(e -> new AbstractMap.SimpleEntry<String, BeanField>(e.getKey(), e.getValue().build()))
+				.map(e -> new AbstractMap.SimpleEntry<String, Field>(e.getKey(), e.getValue().build()))
 				.collect(Collectors.toMap(Entry::getKey, Entry::getValue));
 	}
 

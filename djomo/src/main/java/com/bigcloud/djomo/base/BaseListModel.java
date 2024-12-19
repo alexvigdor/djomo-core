@@ -17,7 +17,6 @@ package com.bigcloud.djomo.base;
 
 import java.lang.reflect.Type;
 
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ListModel;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
@@ -40,11 +39,6 @@ public abstract class BaseListModel<T> extends BaseComplexModel<T> implements Li
 	@Override
 	public T parse(Parser parser) {
 		return (T) parser.parseList(this);
-	}
-
-	@Override
-	public Format getFormat() {
-		return Format.LIST;
 	}
 
 	@Override

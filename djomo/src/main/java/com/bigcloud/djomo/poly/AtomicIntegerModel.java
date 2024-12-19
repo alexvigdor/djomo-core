@@ -18,7 +18,6 @@ package com.bigcloud.djomo.poly;
 import java.lang.reflect.Type;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
@@ -49,11 +48,6 @@ public class AtomicIntegerModel extends BaseModel<AtomicInteger> {
 	@Override
 	public void visit(AtomicInteger obj, Visitor visitor) {
 		visitor.visitInt(obj.get());
-	}
-
-	@Override
-	public Format getFormat() {
-		return Format.NUMBER;
 	}
 
 }

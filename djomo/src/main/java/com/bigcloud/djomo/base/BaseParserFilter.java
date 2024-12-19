@@ -59,6 +59,11 @@ public class BaseParserFilter implements ParserFilter, Cloneable {
 	}
 
 	@Override
+	public Object parse() {
+		return parser.parse();
+	}
+	
+	@Override
 	public Object parse(Model model) {
 		return parser.parse(model);
 	}

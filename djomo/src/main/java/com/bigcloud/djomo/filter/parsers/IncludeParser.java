@@ -15,10 +15,8 @@
  *******************************************************************************/
 package com.bigcloud.djomo.filter.parsers;
 
-import java.util.Objects;
-import java.util.stream.Stream;
+import java.util.Set;
 
-import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.base.BaseParserFilter;
 import com.bigcloud.djomo.filter.FilterFieldObjectModels;
@@ -34,16 +32,17 @@ public class IncludeParser<T> extends BaseParserFilter {
 	final Class<T> type;
 
 	public IncludeParser(Class<T> type, String... fields) {
-		includeModels = new FilterFieldObjectModels(model -> Stream.of(fields).map(model::getField).filter(Objects::nonNull));
+		Set<String> included = Set.of(fields);
+		includeModels = new FilterFieldObjectModels(stream -> stream.filter(field -> included.contains(field.key().toString())));
 		this.type = type;
 	}
 
 	@Override
-	public Object parse(Model model) {
-		if (type.isAssignableFrom(model.getType()) && model instanceof ObjectModel om) {
-			return parser.parse(includeModels.getFilteredObjectModel(om));
+	public Object parseObject(ObjectModel model) {
+		if (type.isAssignableFrom(model.getType())) {
+			return parser.parseObject(includeModels.getFilteredObjectModel(model));
 		} else {
-			return parser.parse(model);
+			return parser.parseObject(model);
 		}
 	}
 }

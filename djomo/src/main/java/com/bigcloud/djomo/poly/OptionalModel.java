@@ -19,7 +19,6 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Optional;
 
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
@@ -46,16 +45,12 @@ public class OptionalModel<V> extends BaseModel<Optional<V>> {
 
 	@Override
 	public Optional<V> parse(Parser parser) {
-		return Optional.ofNullable(valueModel.parse(parser));
+		return Optional.ofNullable((V)parser.parse(valueModel));
 	}
 
 	@Override
 	public void visit(Optional<V> obj, Visitor visitor) {
 		valueModel.tryVisit(obj.orElse(null), visitor);
 	}
-	
-	@Override
-	public Format getFormat() {
-		return valueModel.getFormat();
-	}
+
 }

@@ -18,7 +18,6 @@ package com.bigcloud.djomo.json;
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.api.Field;
 import com.bigcloud.djomo.api.ListModel;
-import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.ParserFilterFactory;
@@ -27,7 +26,6 @@ import com.bigcloud.djomo.error.ModelException;
 import com.bigcloud.djomo.internal.CharSequenceParser;
 import com.bigcloud.djomo.internal.FloatingParser;
 import com.bigcloud.djomo.io.Buffer;
-import com.bigcloud.djomo.simple.StringModel;
 
 public class JsonParser extends BaseParser implements Parser {
 	final static char[] TRUE_CHARS = { 't', 'r', 'u', 'e' };
@@ -43,24 +41,21 @@ public class JsonParser extends BaseParser implements Parser {
 	}
 
 	@Override
-	public Object parse(Model definition) {
+	public Object parse() {
 		switch (input.seek()) {
 			case '{':
-				return parseObjectModel(definition);
+				return parser.parseObject(models.mapModel);
 			case '[':
-				return parseListModel(definition);
+				return parser.parseList(models.listModel);
 			case '"':
-				if (definition instanceof StringModel) {
-					return CharSequenceParser.parse(input, overflow).toString();
-				}
-				return parseStringModel(definition);
+				return parser.parseString().toString();
 			case 't':
 			case 'f':
-				return parseBooleanModel(definition);
+				return parser.parseBoolean();
 			case 'n':
-				return parseNullModel(definition);
+				return parser.parseNull();
 			default:
-				return parseNumberModel(definition);
+				return models.numberModel.parse(parser);
 		}
 	}
 
@@ -70,15 +65,22 @@ public class JsonParser extends BaseParser implements Parser {
 		final Buffer overflow = this.overflow;
 		final Parser parser= this.parser;
 		final Object maker = objectMaker(model);
-		input.expect('{');
+		var n = input.seek('{');
+		if(n == 'n') {
+			return parseNull();
+		}
+		if(n != '{') {
+			throw new ModelException("Unexpected character " + n + " in " + input.describe());
+		}
 		while (true) {
 			switch (input.seek('}')) {
 			case '"':
-				Field f = parser.parseObjectField(model, CharSequenceParser.parse(input, overflow));
+				var fn =CharSequenceParser.parse(input, overflow);
+				Field f = parser.parseObjectField(model, fn);
 				if (f != null) {
 					f.parse(maker, parser);
 				} else {
-					parser.parse(models.anyModel);
+					parser.parse();
 				}
 				break;
 			case '}':
@@ -102,7 +104,13 @@ public class JsonParser extends BaseParser implements Parser {
 		final Object maker = listMaker(definition);
 		final var input = this.input;
 		final var t = this.parser;
-		input.expect('[');
+		var n = input.seek('[');
+		if(n == 'n') {
+			return parseNull();
+		}
+		if(n != '[') {
+			throw new ModelException("Unexpected character " + n + " in " + input.describe());
+		}
 		while (true) {
 			switch (input.seek(']')) {
 			case ']':
@@ -149,7 +157,7 @@ public class JsonParser extends BaseParser implements Parser {
 				if (rp == ip) {
 					negative = true;
 				} else {
-					throw new ModelException("Number format error at " + input.describe());
+					throw new NumberFormatException("Number format error at " + input.describe());
 				}
 				break;
 			// whitespace chomping
@@ -164,7 +172,7 @@ public class JsonParser extends BaseParser implements Parser {
 				}
 			default:
 				if (rp == ip || rp == ip + 1 && negative) {
-					throw new ModelException("Number format error at " + input.describe());
+					throw new NumberFormatException("Number format error at " + input.describe());
 				}
 				input.readPosition = rp;
 				return negative ? 0 - value : value;
@@ -197,7 +205,7 @@ public class JsonParser extends BaseParser implements Parser {
 					if (rp == ip && offset == 0) {
 						negative = true;
 					} else {
-						throw new ModelException("Number format error at " + input.describe());
+						throw new NumberFormatException("Number format error at " + input.describe());
 					}
 					break;
 				// whitespace chomping
@@ -212,7 +220,7 @@ public class JsonParser extends BaseParser implements Parser {
 					}
 				default:
 					if (ip == rp && offset == 0 || rp == ip + offset + 1 && negative) {
-						throw new ModelException("Number format error at " + input.describe());
+						throw new NumberFormatException("Number format error at " + input.describe());
 					}
 					break PARSE_LOOP;
 				}
@@ -252,7 +260,7 @@ public class JsonParser extends BaseParser implements Parser {
 				if (rp == ip) {
 					negative = true;
 				} else {
-					throw new ModelException("Number format error at " + input.describe());
+					throw new NumberFormatException("Number format error at " + input.describe());
 				}
 				break;
 			// whitespace chomping
@@ -267,7 +275,7 @@ public class JsonParser extends BaseParser implements Parser {
 				}
 			default:
 				if (rp == ip || rp == ip + 1 && negative) {
-					throw new ModelException("Number format error at " + input.describe());
+					throw new NumberFormatException("Number format error at " + input.describe());
 				}
 				input.readPosition = rp;
 				return negative ? 0 - value : value;
@@ -300,7 +308,7 @@ public class JsonParser extends BaseParser implements Parser {
 					if (rp == ip && offset == 0) {
 						negative = true;
 					} else {
-						throw new ModelException("Number format error at " + input.describe());
+						throw new NumberFormatException("Number format error at " + input.describe());
 					}
 					break;
 				// whitespace chomping
@@ -315,7 +323,7 @@ public class JsonParser extends BaseParser implements Parser {
 					}
 				default:
 					if (ip == rp && offset == 0 || rp == ip + offset + 1 && negative) {
-						throw new ModelException("Number format error at " + input.describe());
+						throw new NumberFormatException("Number format error at " + input.describe());
 					}
 					break PARSE_LOOP;
 				}
@@ -349,30 +357,6 @@ public class JsonParser extends BaseParser implements Parser {
 		for (; rp < wp; rp++) {
 			//System.out.println("Parse loop 1 "+rp+" "+String.valueOf((char) buf[rp]));
 			switch (buf[rp]) {
-			case '0':
-			case '1':
-			case '2':
-			case '3':
-			case '4':
-			case '5':
-			case '6':
-			case '7':
-			case '8':
-			case '9':
-			case '+':
-			case '-':
-			case '.':
-			case 'N':
-			case 'I':
-			case 'E':
-			case 'e':
-			case 'a':
-			case 'n':
-			case 'f':
-			case 'i':
-			case 't':
-			case 'y':
-				break;
 			// whitespace chomping
 			case ' ':
 			case '\t':
@@ -383,9 +367,13 @@ public class JsonParser extends BaseParser implements Parser {
 					ip++;
 					break;
 				}
-			default:
+			case ',':
+			case ']':
+			case '}':
 				input.readPosition = rp;
 				return FloatingParser.parseNumber(buf, ip, rp-ip);
+			default:
+				break;
 			}
 		}
 		char[] overflowBuf = overflow.buffer;
@@ -401,30 +389,6 @@ public class JsonParser extends BaseParser implements Parser {
 			for (; rp < wp; rp++) {
 				//System.out.println("Parse loop 2 "+rp+" "+String.valueOf((char) buf[rp]));
 				switch (buf[rp]) {
-				case '0':
-				case '1':
-				case '2':
-				case '3':
-				case '4':
-				case '5':
-				case '6':
-				case '7':
-				case '8':
-				case '9':
-				case '+':
-				case '-':
-				case '.':
-				case 'N':
-				case 'I':
-				case 'E':
-				case 'e':
-				case 'a':
-				case 'n':
-				case 'f':
-				case 'i':
-				case 't':
-				case 'y':
-					break;
 				// whitespace chomping
 				case ' ':
 				case '\t':
@@ -435,8 +399,13 @@ public class JsonParser extends BaseParser implements Parser {
 						ip++;
 						break;
 					}
-				default:
+				case ',':
+				case ']':
+				case '}':
+					input.readPosition = rp;
 					break PARSE_LOOP;
+				default:
+					break;
 				}
 			}
 			if(rp > 0) {

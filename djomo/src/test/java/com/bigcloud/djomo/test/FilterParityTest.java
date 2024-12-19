@@ -18,7 +18,6 @@ package com.bigcloud.djomo.test;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.Locale;
-import java.util.Map;
 
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -31,7 +30,6 @@ import com.bigcloud.djomo.annotation.Parse;
 import com.bigcloud.djomo.annotation.Resolve;
 import com.bigcloud.djomo.annotation.Visit;
 import com.bigcloud.djomo.api.Field;
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.ObjectModel;
@@ -163,10 +161,6 @@ public class FilterParityTest {
 			plainThingModel = models.get(ThingImpl.class);
 		}
 
-		@Override
-		public Format getFormat() {
-			return Format.OBJECT;
-		}
 	}
 
 	public static class ColorLocaleVisitor extends BaseVisitorFilter {

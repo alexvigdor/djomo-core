@@ -22,7 +22,6 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
@@ -67,9 +66,5 @@ public class DateFormatModel extends BaseModel<Date> {
 	@Override
 	public void visit(Date obj, Visitor visitor) {
 		visitor.visitString(format.format(ZonedDateTime.ofInstant(obj.toInstant(), ZoneId.systemDefault())));
-	}
-	@Override
-	public Format getFormat() {
-		return Format.STRING;
 	}
 }

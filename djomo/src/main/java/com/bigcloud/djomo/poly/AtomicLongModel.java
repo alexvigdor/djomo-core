@@ -18,7 +18,6 @@ package com.bigcloud.djomo.poly;
 import java.lang.reflect.Type;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
@@ -51,8 +50,4 @@ public class AtomicLongModel extends BaseModel<AtomicLong> {
 		visitor.visitLong(obj.get());
 	}
 
-	@Override
-	public Format getFormat() {
-		return Format.NUMBER;
-	}
 }

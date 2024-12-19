@@ -21,7 +21,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
@@ -68,11 +67,5 @@ public class FutureModel<V> extends BaseModel<Future<V>> {
 		}
 		valueModel.tryVisit(value, visitor);
 	}
-
-	@Override
-	public Format getFormat() {
-		return valueModel.getFormat();
-	}
-	
 
 }

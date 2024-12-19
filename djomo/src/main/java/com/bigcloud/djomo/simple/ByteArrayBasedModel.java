@@ -19,7 +19,6 @@ import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Type;
 import java.util.Base64;
 
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
@@ -70,11 +69,6 @@ public class ByteArrayBasedModel<T> extends BaseModel<T> {
 			throw new ModelException(
 					"Error visiting instance of " + type.getName() + " as base64", e);
 		}
-	}
-
-	@Override
-	public Format getFormat() {
-		return Format.STRING;
 	}
 
 }

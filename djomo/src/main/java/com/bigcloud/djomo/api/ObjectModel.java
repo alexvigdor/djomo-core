@@ -17,6 +17,7 @@ package com.bigcloud.djomo.api;
 
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.stream.Stream;
 /**
  * An ObjectModel allows iterating the fields of an object, getting a Field by name to use with a Maker, 
  * or getting a List of Fields if it is predetermined.
@@ -34,6 +35,13 @@ public interface ObjectModel<T> extends Model<T> {
 	 * @return
 	 */
 	List<Field> fields();
+	/**
+	 * Return the fields of an instance of this object model; for a fixed field model this will be the same as fields(), 
+	 * but for a map will be a dynamic stream
+	 * @param instance
+	 * @return
+	 */
+	Stream<Field> fields(T instance);
 	Object maker(T obj);
 	Object maker();
 	T make(Object maker);

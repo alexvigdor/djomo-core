@@ -23,6 +23,7 @@ import com.bigcloud.djomo.Models;
  *
  */
 public interface Parser {
+	Object parse();
 	Object parse(Model model);
 	Object parseObject(ObjectModel model);
 	Field parseObjectField(ObjectModel model, CharSequence field);

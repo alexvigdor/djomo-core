@@ -22,9 +22,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.bigcloud.djomo.api.Field;
 import com.bigcloud.djomo.api.Model;
@@ -102,6 +104,16 @@ public class EnumMapModel<T extends EnumMap>
 			visitor.visitObjectField(k);
 			m.tryVisit(v, visitor);
 		});
+	}
+	
+	@Override
+	public List<Field> fields() {
+		return null;
+	}
+	
+	@Override
+	public Stream<Field> fields(T obj){
+		return obj.keySet().stream().map(k -> new MapField(k, valueModel));
 	}
 
 	@Override

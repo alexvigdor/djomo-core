@@ -16,7 +16,6 @@
 package com.bigcloud.djomo.test;
 
 import java.io.IOException;
-import java.io.StringReader;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -40,7 +39,6 @@ import org.testng.annotations.Test;
 
 import com.bigcloud.djomo.Json;
 import com.bigcloud.djomo.Models;
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.error.ModelException;
 import com.bigcloud.djomo.simple.DateFormatModelFactory;
 
@@ -66,12 +64,10 @@ public class TimeTest {
 		var medium = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM);
 		Json custom = new Json(Models.builder()
 				.model(ZonedDateTime.class,
-						Format.STRING,
 						(zdt, visitor) -> visitor.visitString(full.format(zdt)),
 						parser -> full.parse(parser.parseString(), ZonedDateTime::from)
 				)
 				.model(LocalDate.class,
-						Format.STRING,
 						(zdt, visitor) -> visitor.visitString(medium.format(zdt)),
 						parser -> medium.parse(parser.parseString(), LocalDate::from)
 				)

@@ -26,6 +26,7 @@ import org.testng.annotations.Test;
 
 import com.bigcloud.djomo.Json;
 import com.bigcloud.djomo.StaticType;
+import com.bigcloud.djomo.api.Filters;
 
 public class GenericTest {
 	Json json = new Json();
@@ -33,7 +34,10 @@ public class GenericTest {
 	@Test
 	public void testGeneric() throws IOException {
 		String data = "{\"a\":\"123\", \"b\":[ \"true\", \"false\" ], \"c\":{\"2021-10-15\":\"987\",\"2021-10-16\":\"654\"}}";
-		var foo = json.fromString(data, new StaticType<Foo<Integer, Boolean, LocalDate>>() {});
+		var foo = json.fromString(data, new StaticType<Foo<Integer, Boolean, LocalDate>>() {}, 
+					Filters.parseInt(p -> Integer.valueOf(p.parseString().toString())),
+					Filters.parseBoolean(p -> Boolean.valueOf(p.parseString().toString()))
+				);
 		Assert.assertEquals(json.toString(foo),
 				"{\"a\":123,\"b\":[true,false],\"c\":{\"2021-10-15\":987,\"2021-10-16\":654}}");
 		Assert.assertEquals(foo.c.keySet().stream().findFirst().get().getClass(), LocalDate.class);

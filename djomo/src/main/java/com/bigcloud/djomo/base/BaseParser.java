@@ -16,15 +16,12 @@
 package com.bigcloud.djomo.base;
 
 import com.bigcloud.djomo.Models;
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ListModel;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.ParserFilter;
 import com.bigcloud.djomo.api.ParserFilterFactory;
-import com.bigcloud.djomo.simple.BooleanModel;
-import com.bigcloud.djomo.simple.NumberModel;
 
 /**
  * Baseline parser support, source agnostic
@@ -48,54 +45,10 @@ public abstract class BaseParser implements Parser {
 		}
 		this.parser = end;
 	}
-
-	protected Object parseObjectModel(Model model) {
-		if (model instanceof ObjectModel || model.getFormat() == Format.OBJECT) {
-			return model.parse(parser);
-		}
-		return models.mapModel.parse(parser);
-	}
-
-	protected Object parseListModel(Model model) {
-		if (model instanceof ListModel || model.getFormat() == Format.LIST) {
-			return model.parse(parser);
-		}
-		return models.listModel.parse(parser);
-	}
-
-	protected Object parseStringModel(Model model) {
-		return switch (model.getFormat()) {
-		case STRING -> model.parse(parser);
-		case NUMBER, BOOLEAN -> model.convert(parser.parseString().toString());
-		default -> parser.parseString().toString();
-		};
-	}
-
-	protected Object parseNumberModel(Model model) {
-		if (model instanceof NumberModel || model.getFormat() == Format.NUMBER) {
-			return model.parse(parser);
-		}
-		double d = parser.parseDouble();
-		if (Math.rint(d) == d && Double.isFinite(d)) {
-			// Down convert to the simplest representation
-			int i = (int) d;
-			if (i == d) {
-				return i;
-			}
-			return (long) d;
-		}
-		return d;
-	}
-
-	protected <T> T parseBooleanModel(Model<T> model) {
-		if (model instanceof BooleanModel || model.getFormat() == Format.BOOLEAN) {
-			return model.parse(parser);
-		}
-		return (T) (Boolean) parser.parseBoolean();
-	}
-
-	protected <T> T parseNullModel(Model<T> model) {
-		return model.convert(parseNull());
+	
+	@Override
+	public Object parse(Model definition) {
+		return definition.parse(parser);
 	}
 
 	protected Object objectMaker(ObjectModel definition) {
@@ -108,15 +61,6 @@ public abstract class BaseParser implements Parser {
 
 	@Override
 	public void parseListItem() {
-	}
-
-	/**
-	 * Entry point to allow filters to intercept top-level object visit; subclasses
-	 * should extend visit as opposed to filter
-	 * 
-	 */
-	public final <T> T filter(Model<T> model) {
-		return (T) parser.parse(model);
 	}
 
 	@Override

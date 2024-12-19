@@ -17,6 +17,7 @@ package com.bigcloud.djomo.test;
 
 import java.io.IOException;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 
 import org.testng.Assert;
@@ -28,6 +29,7 @@ import com.bigcloud.djomo.StaticType;
 import com.bigcloud.djomo.filter.ObjectFieldListCodec;
 import com.bigcloud.djomo.filter.parsers.IncludeParser;
 import com.bigcloud.djomo.filter.visitors.IncludeVisitor;
+import com.bigcloud.djomo.filter.visitors.ObjectFieldListVisitor;
 
 public class CodecTest {
 	
@@ -61,6 +63,14 @@ public class CodecTest {
 		Assert.assertEquals(rt.phoneNumbers.get(Device.home), null);
 	}
 	
+	@Test
+	public void testObjectFieldConvert() {
+		ObjectFieldListVisitor visitor = new ObjectFieldListVisitor();
+		Json json = new Json();
+		Models models = new Models();
+		List converted = models.listModel.convert(sampleContact());
+	}
+
 	private Contact sampleContact() {
 		EnumMap<Device, PhoneNumber> numbers = new EnumMap<>(Device.class);
 		numbers.put(Device.mobile, new PhoneNumber(1,646,9876543,0));

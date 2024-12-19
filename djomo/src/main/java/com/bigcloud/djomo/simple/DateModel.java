@@ -18,7 +18,6 @@ package com.bigcloud.djomo.simple;
 import java.lang.reflect.Type;
 import java.util.Date;
 
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
@@ -62,9 +61,5 @@ public class DateModel extends BaseModel<Date> {
 	@Override
 	public void visit(Date obj, Visitor visitor) {
 		visitor.visitLong(obj.getTime());
-	}
-	@Override
-	public Format getFormat() {
-		return Format.NUMBER;
 	}
 }

@@ -88,4 +88,5 @@ public class MergeJsonParser extends JsonParser {
 		super.parseNull();
 		return source;
 	}
+
 }

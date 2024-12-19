@@ -18,7 +18,6 @@ package com.bigcloud.djomo.simple;
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Type;
 
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
@@ -73,9 +72,5 @@ public class StringBasedModel<T> extends BaseModel<T> {
 			throw new ModelException("Error converting " + o + " to " + type.getTypeName(), e);
 		}
 	}
-	
-	@Override
-	public Format getFormat() {
-		return Format.STRING;
-	}
+
 }

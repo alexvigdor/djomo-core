@@ -20,7 +20,6 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
 import com.bigcloud.djomo.Resolver;
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
@@ -60,7 +59,7 @@ public class ResolverModel<T> extends BaseModel<T> {
 
 	@Override
 	public T convert(Object o) {
-		return new InstanceParser(context.models(), o).filter(this);
+		return resolver.resolve(new InstanceParser(context.models(), o));
 	}
 
 	@Override
@@ -77,8 +76,4 @@ public class ResolverModel<T> extends BaseModel<T> {
 		return resolver;
 	}
 
-	@Override
-	public Format getFormat() {
-		return resolver.getFormat();
-	}
 }

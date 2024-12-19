@@ -54,7 +54,7 @@ public abstract class BaseModel<T> implements Model<T> {
 			return (T) o;
 		}
 		InstanceParser mp = new InstanceParser(models, o);
-		return mp.filter(this);
+		return (T) mp.parse(this);
 	}
 
 	@Override

@@ -30,13 +30,12 @@ import com.bigcloud.djomo.Resolver;
 import com.bigcloud.djomo.StaticType;
 import com.bigcloud.djomo.annotation.Parse;
 import com.bigcloud.djomo.annotation.Visit;
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
-import com.bigcloud.djomo.api.parsers.ModelParser;
+import com.bigcloud.djomo.api.parsers.ObjectParser;
 import com.bigcloud.djomo.api.visitors.ObjectVisitor;
 import com.bigcloud.djomo.filter.visitors.OmitNullFieldVisitor;
 
@@ -106,24 +105,19 @@ public class TypeTest {
 		
 	}
 	
-	public static class PersonParser implements ModelParser {
+	public static class PersonParser implements ObjectParser<Person> {
 
 
 		@Override
-		public Object parse(Model model, Parser parser) {
-			if(model.getType() == Person.class) {
-				String in = parser.parse(parser.models().anyModel).toString();
-				String[] parts = in.split("\\s+", 2);
-				Person person = new Person();
-				person.firstName = parts[0];
-				if(parts.length>1) {
-					person.lastName = parts[1];
-				}
-				return person;
+		public Person parseObject(ObjectModel model, Parser parser) {
+			String in = parser.parse().toString();
+			String[] parts = in.split("\\s+", 2);
+			Person person = new Person();
+			person.firstName = parts[0];
+			if(parts.length>1) {
+				person.lastName = parts[1];
 			}
-			else {
-				return parser.parse(model);
-			}
+			return person;
 		}
 
 		
@@ -139,11 +133,6 @@ public class TypeTest {
 				return null;
 			}
 
-			@Override
-			public Format getFormat() {
-				// TODO Auto-generated method stub
-				return null;
-			}
 		};
 	}
 
@@ -156,11 +145,6 @@ public class TypeTest {
 				return null;
 			}
 
-			@Override
-			public Format getFormat() {
-				// TODO Auto-generated method stub
-				return null;
-			}
 		};
 	}
 
@@ -176,12 +160,6 @@ public class TypeTest {
 			return null;
 		}
 
-		@Override
-		public Format getFormat() {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
 	}
 
 	@Test(expectedExceptions = IllegalArgumentException.class)
@@ -190,11 +168,6 @@ public class TypeTest {
 
 			@Override
 			public T resolve(Parser parser) {
-				return null;
-			}
-
-			@Override
-			public Format getFormat() {
 				return null;
 			}
 
@@ -257,9 +230,5 @@ public class TypeTest {
 			tableModel = models.get(Table.class);
 		}
 
-		@Override
-		public Format getFormat() {
-			return Format.OBJECT;
-		}
 	}
 }

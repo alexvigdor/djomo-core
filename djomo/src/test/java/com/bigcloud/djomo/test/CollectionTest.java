@@ -59,11 +59,12 @@ public class CollectionTest {
 		Assert.assertEquals(parsed.get("a").getClass(), String.class);
 		Assert.assertEquals(parsed.get("b").getClass(), TreeMap.class);
 		Assert.assertEquals(((Map)parsed.get("b")).get("c").getClass(), String.class);
-		parsed = json.fromString(data, new StaticType<ConcurrentHashMap<String, Double>>() {});
+		parsed = json.fromString(data, new StaticType<ConcurrentHashMap<String, Object>>() {});
 		Assert.assertEquals(parsed.getClass(), ConcurrentHashMap.class);
-		Assert.assertEquals(parsed.get("a").getClass(), Double.class);
+		Assert.assertEquals(parsed.get("a").getClass(), String.class);
 		Assert.assertEquals(parsed.get("b").getClass(), TreeMap.class);
 		Assert.assertEquals(((Map)parsed.get("b")).get("c").getClass(), String.class);
+		Assert.assertEquals(((Map)parsed.get("b")).get("d").getClass(), Integer.class);
 	}
 	
 	@Test

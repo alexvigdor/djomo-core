@@ -47,7 +47,7 @@ public class FieldParser<T> extends BaseParserFilter {
 	}
 
 	private FilterFieldObjectModels init(String field, ParserFilterFactory filterParser) {
-		return new FilterFieldObjectModels(model -> model.fields().stream().map(f -> {
+		return new FilterFieldObjectModels(stream -> stream.map(f -> {
 			if (f.key().toString().equals(field)) {
 				return new FilterField(f) {
 					@Override

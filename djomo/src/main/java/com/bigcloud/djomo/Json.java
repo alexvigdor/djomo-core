@@ -125,19 +125,19 @@ public class Json {
 		var rb = new Buffer(readBuffer.get(), reader);
 		var pb = new Buffer(parseBuffer.get());
 		if (destination == null) {
-			return (T) new JsonParser(models, rb, pb, filters).filter(models.anyModel);
+			return (T) new JsonParser(models, rb, pb, filters).parse();
 		}
 		var def = models.get(destination.getClass());
-		return (T) new MergeJsonParser(models, rb, pb, destination, filters(filters)).filter(def);
+		return (T) new MergeJsonParser(models, rb, pb, destination, filters(filters)).parse(def);
 	}
 
 	private <T> T read(Reader reader, Model<T> definition, ParserFilterFactory... filters) {
 		var rb = new Buffer(readBuffer.get(), reader);
 		var pb = new Buffer(parseBuffer.get());
 		if (definition == null) {
-			return (T) new JsonParser(models, rb, pb, filters).filter(models.anyModel);
+			return (T) new JsonParser(models, rb, pb, filters).parse();
 		}
-		return new JsonParser(models, rb, pb, filters(filters)).filter(definition);
+		return (T) new JsonParser(models, rb, pb, filters(filters)).parse(definition);
 	}
 
 	public Object read(InputStream in, ParserFilterFactory... filters) throws IOException {

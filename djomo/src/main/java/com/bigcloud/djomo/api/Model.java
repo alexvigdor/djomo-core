@@ -34,11 +34,6 @@ public interface Model<T> {
 	 */
 	Class<T> getType();
 	/**
-	 * 
-	 * @return the format this model parses from / visits to
-	 */
-	Format getFormat();
-	/**
 	 * Attempt to convert another object into an instance of the type represented by this Model
 	 * @param o another object, such as a raw parsed string, list or map, to convert to this type
 	 * @return an instance of this type based on the object passed in

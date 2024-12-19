@@ -16,7 +16,6 @@
 package com.bigcloud.djomo.filter.visitors;
 
 import java.util.List;
-import java.util.function.Consumer;
 
 import com.bigcloud.djomo.api.Field;
 import com.bigcloud.djomo.api.ObjectModel;
@@ -36,22 +35,12 @@ public class ObjectFieldListVisitor extends BaseVisitorFilter {
 		List<Field> fields = (List<Field>) model.fields();
 		if (fields != null) {
 			visitList(obj, new FilterListModel<T>(null) {
-				public void forEachItem(T obj, Consumer consumer) {
-					for (Field f : fields) {
-						consumer.accept(f.get(obj));
-					}
-				}
 				@Override
 				public void visitItems(T t, Visitor visitor) {
 					for (Field f : fields) {
 						var v = f.get(obj);
 						visitor.visitListItem();
-						if(v == null) {
-							visitor.visitNull();
-						}
-						else {
-							f.model().visit(v, visitor);
-						}
+						f.model().tryVisit(v, visitor);
 					}
 				}
 			});

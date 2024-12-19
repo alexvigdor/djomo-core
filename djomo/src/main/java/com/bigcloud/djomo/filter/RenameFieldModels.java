@@ -23,13 +23,14 @@ public class RenameFieldModels {
 	FilterFieldObjectModels filterFieldObjectModels;
 
 	public RenameFieldModels(Map<String, String> mappings) {
-		this.filterFieldObjectModels = new FilterFieldObjectModels(model -> model.fields().stream().map(field -> {
-			String name = mappings.get(field.key().toString());
-			if (name != null) {
-				return field.rekey(name);
-			}
-			return field;
-		}));
+		this.filterFieldObjectModels = new FilterFieldObjectModels(stream -> stream
+				.map(field -> {
+					String name = mappings.get(field.key().toString());
+					if (name != null) {
+						return field.rekey(name);
+					}
+					return field;
+				}));
 	}
 
 	public ObjectModel getFilteredFieldModel(ObjectModel model) {

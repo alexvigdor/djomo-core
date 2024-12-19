@@ -41,21 +41,34 @@ public class InstanceParser extends BaseParser implements Parser {
 	}
 
 	@Override
-	public Object parse(Model model) {
+	public Object parse() {
 		if (source == null) {
 			return null;
 		}
 		var osm = sourceModel;
 		try {
 			var m = sourceModel = models.get(source.getClass());
-			return switch (m.getFormat()) {
-			case OBJECT -> parseObjectModel(model);
-			case LIST -> parseListModel(model);
-			case STRING -> parseStringModel(model);
-			case NUMBER -> parseNumberModel(model);
-			case BOOLEAN -> parseBooleanModel(model);
-			default -> null;
-			};
+			if(m instanceof ObjectModel) {
+				return parser.parseObject(models.mapModel);
+			}
+			if(m instanceof ListModel) {
+				return parser.parseList(models.listModel);
+			}
+			return parser.parse(m);
+		} finally {
+			sourceModel = osm;
+		}
+	}
+	
+	@Override
+	public Object parse(Model model) {
+		if (source == null) {
+			return null;
+		}
+		var osm = sourceModel;
+		try {
+			sourceModel = models.get(source.getClass());
+			return model.parse(parser);
 		} finally {
 			sourceModel = osm;
 		}
@@ -63,24 +76,33 @@ public class InstanceParser extends BaseParser implements Parser {
 
 	@Override
 	public Object parseObject(ObjectModel model) {
-		final Object maker = objectMaker(model);
-		if (sourceModel instanceof ObjectModel som) {
-			som.forEachField(source, (key, value) -> {
-				var os = source;
-				try {
-					source = value;
-					var field = parser.parseObjectField(model, key.toString());
-					if (field != null) {
-						field.parse(maker, parser);
-					} else {
-						parser.parse(models.anyModel);
-					}
-				} finally {
-					source = os;
-				}
-			});
+		if (source == null) {
+			return null;
 		}
-		return model.make(maker);
+		var osm = sourceModel;
+		try {
+			var m = sourceModel = models.get(source.getClass());
+			final Object maker = objectMaker(model);
+			if (m instanceof ObjectModel som) {
+				som.forEachField(source, (key, value) -> {
+					var os = source;
+					try {
+						source = value;
+						var field = parser.parseObjectField(model, key.toString());
+						if (field != null) {
+							field.parse(maker, parser);
+						} else {
+							parser.parse();
+						}
+					} finally {
+						source = os;
+					}
+				});
+			}
+			return model.make(maker);
+		} finally {
+			sourceModel = osm;
+		}
 	}
 
 	@Override
@@ -90,19 +112,28 @@ public class InstanceParser extends BaseParser implements Parser {
 
 	@Override
 	public Object parseList(ListModel model) {
-		Object maker = listMaker(model);
-		if (sourceModel instanceof ListModel) {
-			var os = source;
-			try {
-				((ListModel) sourceModel).forEachItem(source, item -> {
-					source = item;
-					model.parseItem(maker, parser);
-				});
-			} finally {
-				source = os;
-			}
+		if (source == null) {
+			return null;
 		}
-		return model.make(maker);
+		var osm = sourceModel;
+		try {
+			var m = sourceModel = models.get(source.getClass());
+			Object maker = listMaker(model);
+			if (m instanceof ListModel) {
+				var os = source;
+				try {
+					((ListModel) sourceModel).forEachItem(source, item -> {
+						source = item;
+						model.parseItem(maker, parser);
+					});
+				} finally {
+					source = os;
+				}
+			}
+			return model.make(maker);
+		} finally {
+			sourceModel = osm;
+		}
 	}
 
 	@Override

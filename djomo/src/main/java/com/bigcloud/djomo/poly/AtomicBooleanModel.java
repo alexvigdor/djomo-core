@@ -18,7 +18,6 @@ package com.bigcloud.djomo.poly;
 import java.lang.reflect.Type;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
@@ -49,11 +48,6 @@ public class AtomicBooleanModel extends BaseModel<AtomicBoolean> {
 	@Override
 	public void visit(AtomicBoolean obj, Visitor visitor) {
 		visitor.visitBoolean(obj.get());
-	}
-
-	@Override
-	public Format getFormat() {
-		return Format.BOOLEAN;
 	}
 
 }

@@ -360,7 +360,7 @@ public class FilterTest {
 		List<UUID> children;
 	}
 
-	public static class GuidExpander implements ModelVisitor {
+	public static class GuidExpander implements ModelVisitor<UUID> {
 		final GuidDao dao;
 
 		public GuidExpander(GuidDao dao) {
@@ -368,12 +368,8 @@ public class FilterTest {
 		}
 
 		@Override
-		public <T> void visitModel(T object, Model<T> model, Visitor visitor) {
-			if (object instanceof UUID uuid) {
-				visitor.visit(dao.getData(uuid));
-			} else {
-				visitor.visit(object, model);
-			}
+		public void visitModel(UUID uuid, Model<UUID> model, Visitor visitor) {
+			visitor.visit(dao.getData(uuid));
 		}
 
 	}

@@ -15,14 +15,19 @@
  *******************************************************************************/
 package com.bigcloud.djomo.filter.visitors;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.bigcloud.djomo.api.Field;
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.base.BaseVisitorFilter;
 import com.bigcloud.djomo.filter.FilterFieldObjectModels;
 /**
- * Define an ordered subset of fields from the given model that will be visited.
+ * Define a subset of fields from the given model that will be visited.
  * 
  * @author Alex Vigdor
  *
@@ -31,10 +36,17 @@ import com.bigcloud.djomo.filter.FilterFieldObjectModels;
 public class IncludeVisitor<T> extends BaseVisitorFilter {
 	final FilterFieldObjectModels includeModels;
 	final Class<T> type;
+	final List<String> includes;
 
 	public IncludeVisitor(Class<T> type, String... fields) {
-		includeModels = new FilterFieldObjectModels(model -> Stream.of(fields).map(model::getField).filter(Objects::nonNull));
+		includes = List.of(fields);
+		includeModels = new FilterFieldObjectModels(this::processIncludes);
 		this.type = type;
+	}
+	
+	private Stream<Field> processIncludes(Stream<Field> fields){
+		Map<String, Field> fieldsMap = fields.collect(Collectors.toMap(f -> f.key().toString(), Function.identity()));
+		return includes.stream().map(fieldsMap::get).filter(Objects::nonNull);
 	}
 
 	@Override

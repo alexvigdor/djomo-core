@@ -20,6 +20,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.IntStream;
 
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -37,12 +38,7 @@ public class StreamTest {
 	public void testStream() throws IOException {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		String value="0XaQǨ#@ʩ$-ω[ҹ+ש!᪘≉=⪷⽙~㹚哸'𐃢🇭🇳";
-		ListModel lm = (ListModel)Models.get(new StaticType<ArrayList<String>>() {});
-		Object maker =  lm.maker();
-		for(int i=0; i<1000;i++) {
-			lm.parseItem(maker, new InstanceParser(Models, i));
-		}
-		var orig = lm.make(maker);
+		var orig = IntStream.range(0, 1000).mapToObj(String::valueOf).toList();
 		Json.write(orig, baos);
 		//System.out.println(new String(baos.toByteArray(), "UTF-8"));
 		var rt = Json.read(new ByteArrayInputStream(baos.toByteArray()), new StaticType<List<String>>() {

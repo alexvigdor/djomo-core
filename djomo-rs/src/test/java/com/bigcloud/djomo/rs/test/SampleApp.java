@@ -30,6 +30,7 @@ import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.api.parsers.IntParser;
 import com.bigcloud.djomo.api.parsers.ModelParser;
 import com.bigcloud.djomo.api.visitors.ObjectVisitor;
 import com.bigcloud.djomo.base.BaseVisitorFilter;
@@ -73,7 +74,7 @@ public class SampleApp {
 	@Path("complex")
 	@Consumes("application/json")
 	@Produces("application/json")
-	public Thing complex(Thing<Map<Integer,List<Integer>>> body) {
+	public Thing complex(@Parse(StringIntParser.class) Thing<Map<Integer,List<Integer>>> body) {
 		return body;
 	}
 
@@ -238,5 +239,14 @@ public class SampleApp {
 					new FieldVisitor<Thing>("name", Filters.visitString((s, visitor) -> 
 						visitor.visit(s.chars().boxed().map(Character::toString).collect(Collectors.toList())))) {});
 		}
+	}
+	
+	public static class StringIntParser implements IntParser{
+
+		@Override
+		public int parseInt(Parser parser) {
+			return Integer.valueOf(parser.parseString().toString());
+		}
+		
 	}
 }

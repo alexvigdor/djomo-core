@@ -17,7 +17,6 @@ package com.bigcloud.djomo.simple;
 
 import java.nio.CharBuffer;
 
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
@@ -54,11 +53,6 @@ public class CharArrayModel extends BaseModel<char[]> {
 	@Override
 	public void visit(char[] obj, Visitor visitor) {
 		visitor.visitString(CharBuffer.wrap(obj));
-	}
-
-	@Override
-	public Format getFormat() {
-		return Format.STRING;
 	}
 
 }

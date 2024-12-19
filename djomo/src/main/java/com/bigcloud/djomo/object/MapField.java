@@ -51,12 +51,12 @@ public class MapField implements Field {
 
 	@Override
 	public Object get(Object o) {
-		return ((Map) o).get(name);
+		return ((Map) o).get(key);
 	}
 
 	@Override
 	public void set(Object destination, Object value) {
-		((Map) destination).put(name, value);
+		((Map) destination).put(key, value);
 	}
 
 	@Override
@@ -68,7 +68,7 @@ public class MapField implements Field {
 	@Override
 	public void parse(Object dest, Parser parser) {
 		var value = parser.parse(model);
-		((Map) dest).put(name, value);
+		((Map) dest).put(key, value);
 	}
 
 	@Override

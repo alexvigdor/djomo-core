@@ -17,7 +17,6 @@ package com.bigcloud.djomo.simple;
 
 import java.lang.reflect.Type;
 
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
@@ -80,11 +79,6 @@ public class NumberModel<N extends Number> extends BaseModel<N> {
 			return (N) (Long) (long) d;
 		}
 		return (N) (Double) d;
-	}
-	
-	@Override
-	public Format getFormat() {
-		return Format.NUMBER;
 	}
 
 }

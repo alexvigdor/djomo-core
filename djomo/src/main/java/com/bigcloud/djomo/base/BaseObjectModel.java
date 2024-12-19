@@ -27,12 +27,12 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.bigcloud.djomo.ModelType;
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.annotation.Order;
 import com.bigcloud.djomo.api.Field;
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.ObjectModel;
@@ -157,6 +157,11 @@ public abstract class BaseObjectModel<T> extends BaseComplexModel<T> implements 
 	public List<Field> fields() {
 		return fieldList;
 	}
+	
+	@Override
+	public Stream<Field> fields(T t) {
+		return fieldList.stream();
+	}
 
 	protected <CLASS_TYPE> void accessor(MethodHandles.Lookup lookup, ModelContext context, BeanField.Builder fieldDef,
 			Method method, Map<String, Type> typeArgs) throws IllegalAccessException {
@@ -210,8 +215,4 @@ public abstract class BaseObjectModel<T> extends BaseComplexModel<T> implements 
 		return ft;
 	}
 
-	@Override
-	public Format getFormat() {
-		return Format.OBJECT;
-	}
 }

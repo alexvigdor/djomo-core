@@ -21,20 +21,23 @@ import com.bigcloud.djomo.api.ParserFilter;
 import com.bigcloud.djomo.api.ParserFilterFactory;
 import com.bigcloud.djomo.api.ParserTypedFilterFactory;
 import com.bigcloud.djomo.base.BaseParserFilter;
+import com.bigcloud.djomo.internal.ConcreteType;
 
 @FunctionalInterface
-public interface ObjectParser extends ParserFilterFactory, ParserTypedFilterFactory {
-	Object parseObject(ObjectModel model, Parser parser);
+public interface ObjectParser<M> extends ParserFilterFactory, ParserTypedFilterFactory {
+	M parseObject(ObjectModel<M> model, Parser parser);
 
 	@Override
 	default ParserFilter newParserFilter() {
-		return new BaseParserFilter() {
-			@Override
-			public Object parseObject(ObjectModel model) {
-				return ObjectParser.this.parseObject(model, parser);
-			}
+		return ConcreteType.tryGet(this.getClass(), 0)
+				.map(this::newParserFilter)
+				.orElseGet(() -> new BaseParserFilter() {
+					@Override
+					public Object parseObject(ObjectModel model) {
+						return ObjectParser.this.parseObject(model, parser);
+					}
 
-		};
+				});
 	}
 
 	@Override

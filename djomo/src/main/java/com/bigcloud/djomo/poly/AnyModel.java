@@ -17,7 +17,6 @@ package com.bigcloud.djomo.poly;
 
 import java.lang.reflect.Type;
 
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
@@ -41,12 +40,7 @@ public class AnyModel extends BaseModel<Object>{
 
 	@Override
 	public Object parse(Parser parser) {
-		return parser.parse(this);
-	}
-
-	@Override
-	public Format getFormat() {
-		return Format.ANY;
+		return parser.parse();
 	}
 
 }

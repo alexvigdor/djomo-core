@@ -82,7 +82,7 @@ public class RecordModel<T>
 					MethodHandles.insertArguments(MethodHandles.arrayElementSetter(Object[].class),1,i), rc.getGenericType(), typeArgs);
 		}
 		return fields.entrySet().stream()
-				.map(e -> new AbstractMap.SimpleEntry<String, BeanField>(e.getKey(), e.getValue().build()))
+				.map(e -> new AbstractMap.SimpleEntry<String, Field>(e.getKey(), e.getValue().build()))
 				.collect(Collectors.toMap(Entry::getKey, Entry::getValue));
 	}
 

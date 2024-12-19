@@ -15,7 +15,6 @@
  *******************************************************************************/
 package com.bigcloud.djomo.simple;
 
-import com.bigcloud.djomo.api.Format;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
@@ -42,10 +41,10 @@ public class StringModel extends BaseModel<String> {
 
 	@Override
 	public String parse(Parser parser) {
-		return parser.parseString().toString();
-	}
-	@Override
-	public Format getFormat() {
-		return Format.STRING;
+		var buf = parser.parseString();
+		if(buf == null) {
+			return null;
+		}
+		return buf.toString();
 	}
 }
