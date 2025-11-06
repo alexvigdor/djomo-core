@@ -91,7 +91,7 @@ public class BuilderModel<T> extends ObjectMethodsModel<T> {
 					builderClass = bc;
 				}
 			} catch (NoSuchMethodException | SecurityException e1) {
-				return;
+				builderClass = null;
 			}
 		}
 	}

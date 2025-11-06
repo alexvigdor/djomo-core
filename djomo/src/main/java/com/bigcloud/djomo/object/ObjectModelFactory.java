@@ -29,7 +29,7 @@ import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.base.BaseModelFactory;
 
 public class ObjectModelFactory extends BaseModelFactory {
-	MethodHandles.Lookup lookup = MethodHandles.lookup();
+	MethodHandles.Lookup lookup = MethodHandles.publicLookup();
 
 	@Override
 	public Model<?> create(Type type, ModelContext context) {

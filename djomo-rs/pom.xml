@@ -39,19 +39,19 @@
 		<dependency>
 			<groupId>jakarta.ws.rs</groupId>
 			<artifactId>jakarta.ws.rs-api</artifactId>
-			<version>3.0.0</version>
+			<version>4.0.0</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.glassfish.jersey.test-framework.providers</groupId>
 			<artifactId>jersey-test-framework-provider-jdk-http</artifactId>
-			<version>3.0.4</version>
+			<version>4.0.0</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 		    <groupId>org.glassfish.jersey.inject</groupId>
 		    <artifactId>jersey-hk2</artifactId>
-		    <version>3.0.4</version>
+		    <version>4.0.0</version>
 		    <scope>test</scope>
 		</dependency>
 	</dependencies>

@@ -127,7 +127,7 @@ public class WriterTest {
 	
 	@Value
 	@Builder
-	static class Basic{
+	public static class Basic{
 		String title;
 		String description;
 		String language;
@@ -166,7 +166,8 @@ public class WriterTest {
 		assertEquals(json,"[{\"b\":{\"a\":\"foo\"}}]");
 	}
 	
-	@Test void testEscapeChars() throws IOException {
+	@Test 
+	public void testEscapeChars() throws IOException {
 		List<String> testData = List.of(
 				"\"\r\n\t\f\b\\\\/",
 				"\u2028\u2029\u0010\u0001\u0003\u001a");

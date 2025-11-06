@@ -258,7 +258,7 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 			}
 			pos = p += stringLen;
 			do {
-				buf[--p] = (char) (48 + ((normal % 10)));
+				buf[--p] = (char) (48 + (normal % 10));
 				normal /= 10;
 			} while (normal != 0);
 		}
@@ -271,7 +271,7 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 		char[] buf = new char[20];
 		int pos = 20;
 		do {
-			buf[--pos] = (char) (48 + ((value % 10) * mult));
+			buf[--pos] = (char) (48 + (value % 10 * mult));
 			value /= 10;
 		} while (value != 0);
 		if (mult == -1) {

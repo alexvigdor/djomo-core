@@ -144,7 +144,7 @@ public class PolyTest {
 	@Data
 	@AllArgsConstructor
 	@NoArgsConstructor
-	static class Coordinates{
+	public static class Coordinates{
 		int x;
 		int y;
 	}
@@ -152,7 +152,7 @@ public class PolyTest {
 	@Data
 	@AllArgsConstructor
 	@NoArgsConstructor
-	static class Names{
+	public static class Names{
 		String firstName;
 		String lastName;
 	}

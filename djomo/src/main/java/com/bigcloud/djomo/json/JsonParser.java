@@ -151,7 +151,7 @@ public class JsonParser extends BaseParser implements Parser {
 			case '7':
 			case '8':
 			case '9':
-				value = value * 10 + (ch - 48);
+				value = value * 10 + ch - 48;
 				break;
 			case '-':
 				if (rp == ip) {
@@ -199,7 +199,7 @@ public class JsonParser extends BaseParser implements Parser {
 				case '7':
 				case '8':
 				case '9':
-					value = value * 10 + (ch - 48);
+					value = value * 10 + ch - 48;
 					break;
 				case '-':
 					if (rp == ip && offset == 0) {
@@ -254,7 +254,7 @@ public class JsonParser extends BaseParser implements Parser {
 			case '7':
 			case '8':
 			case '9':
-				value = value * 10 + (ch - 48);
+				value = value * 10 + ch - 48;
 				break;
 			case '-':
 				if (rp == ip) {
@@ -302,7 +302,7 @@ public class JsonParser extends BaseParser implements Parser {
 				case '7':
 				case '8':
 				case '9':
-					value = value * 10 + (ch - 48);
+					value = value * 10 + ch - 48;
 					break;
 				case '-':
 					if (rp == ip && offset == 0) {

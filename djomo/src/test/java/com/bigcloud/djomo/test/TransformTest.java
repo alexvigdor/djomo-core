@@ -277,7 +277,7 @@ public class TransformTest {
 
 	@Value
 	@Builder
-	private static final class SomeType {
+	public static final class SomeType {
 		List<String> foos;
 		Map<String, String> loos;
 		String bars;
@@ -286,25 +286,25 @@ public class TransformTest {
 		Map<String, String> leeks;
 	}
 
-	interface Head{
+	public interface Head{
 		String getHead();
 	}
 
 	@Value
 	@Builder
-	private static class Thing1 implements Head {
+	public static class Thing1 implements Head {
 		String head;
 		String body;
 	}
 	@Value
 	@Builder
-	private static class Thing2 implements Head {
+	public static class Thing2 implements Head {
 		String head;
 		String body;
 	}
 	@Value
 	@Builder
-	private static class Things{
+	public static class Things{
 		Thing1 thing1;
 		Thing2 thing2;
 	}

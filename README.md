@@ -192,11 +192,6 @@ public static class CarPartResolver extends Resolver<CarPart> {
 		};
 		return model.convert(data);
 	}
-
-	@Override
-	public Format getFormat() {
-		return Format.OBJECT;
-	}
 }
 
 Json json = new Json(Models.builder().resolver(new CarPartResolver()).build());
@@ -508,22 +503,22 @@ public class Contact {
 @Visit(ContactVisitor.class)
 public interface ContactFilters {}
 
-public class ContactVisitor extends TypeVisitor<Contact> {
+public class ContactVisitor implements ObjectVisitor<Contact> {
 
 	@Override
-	protected void visitType(Contact contact, ObjectModel<Contact> model) {
+	public void visitObject(Contact contact, ObjectModel<Contact> model, Visitor visitor) {
 		String fullName = contact.getFirstName();
 		if (contact.getLastName() != null) {
 			fullName = fullName + " " + contact.getLastName();
 		}
-		visitString(fullName);
+		visitor.visitString(fullName);
 	}
 }
 
-public class ContactParser extends TypeParser<Contact> {
+public class ContactParser implements ObjectParser<Contact> {
 
 	@Override
-	public Contact parseType(Model<Contact> model) {
+	public Contact parseObject(ObjectModel<Contact> model, Parser parser) {
 		String fullName = parser.parseString().toString();
 		String[] nameParts = fullName.split("\\s+", 2);
 		Contact.ContactBuilder builder = Contact.builder();

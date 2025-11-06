@@ -18,4 +18,6 @@ module com.bigcloud.djomo.test {
 	requires static lombok;
 	requires com.bigcloud.djomo;
 	exports com.bigcloud.djomo.test;
+	
+	provides com.bigcloud.djomo.api.ModelFactory with com.bigcloud.djomo.test.IsoDateFormatter;
 }

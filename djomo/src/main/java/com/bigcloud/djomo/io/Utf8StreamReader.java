@@ -76,7 +76,7 @@ public class Utf8StreamReader extends Reader {
 				}
 				if (rem == 0) {
 					if ((code & 0xfffd8000) != 0) {
-						cbuf[cp++] = (char) ((0xD800 - (0x10000 >> 10)) + (code >> 10));
+						cbuf[cp++] = (char) (0xD800 - (0x10000 >> 10) + (code >> 10));
 						++wrote;
 						if (wrote == len) {
 							trail = 0xDC00 + (code & 0x3FF);
