@@ -15,20 +15,15 @@
  *******************************************************************************/
 package com.bigcloud.djomo.rs.test;
 
-import java.util.List;
-
-import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.Parser;
-import com.bigcloud.djomo.api.parsers.ModelParser;
 import com.bigcloud.djomo.api.parsers.ObjectParser;
 
-public class ThingUnflattener implements ObjectParser<Thing> {
+public class ThingUnflattener implements ObjectParser<Thing<?>> {
 
 	@Override
-	public Thing parseObject(ObjectModel<Thing> model, Parser parser) {
-		Object obj = parser.parse(parser.models().listModel);
-		List list = (List) obj;
+	public Thing<?> parseObject(ObjectModel<Thing<?>> model, Parser parser) {
+		var list = parser.models().listModel.parse(parser);
 		return new Thing(list.get(0).toString(), list.subList(1, list.size()));
 	}
 }

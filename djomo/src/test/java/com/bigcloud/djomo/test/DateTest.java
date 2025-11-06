@@ -18,6 +18,7 @@ package com.bigcloud.djomo.test;
 import static org.testng.Assert.assertEquals;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -34,10 +35,12 @@ import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.StaticType;
 import com.bigcloud.djomo.api.Filters;
 import com.bigcloud.djomo.api.Model;
+import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.api.parsers.ModelParser;
 import com.bigcloud.djomo.api.visitors.ModelVisitor;
+import com.bigcloud.djomo.base.BaseModel;
 import com.bigcloud.djomo.error.ModelException;
 import com.bigcloud.djomo.filter.parsers.FieldParser;
 import com.bigcloud.djomo.filter.visitors.FieldVisitor;
@@ -181,14 +184,30 @@ public class DateTest {
 		Assert.assertEquals(d1, "\"1970-01-02T10:17:36.789Z\"");
 	}
 
+	public static class DateModel extends BaseModel<Date> {
+
+		public DateModel(Type type, ModelContext context) {
+			super(type, context);
+		}
+
+		@Override
+		public Date parse(Parser parser) {
+			return Date.from(Instant.parse(parser.parseString()));
+		}
+
+		@Override
+		public void visit(Date date, Visitor visitor) {
+			visitor.visitString(date.toInstant().toString());
+		}
+		
+	}
+	
 	@Test
 	public void testCustomDateModel() throws IOException {
 		List<Date> dates = List.of(new Date(123456789), new Date(1233456798));
 		Json json = Json.builder()
 				.models(Models.builder()
-						.model(Date.class,
-								(date, visitor) -> visitor.visitString(date.toInstant().toString()),
-								parser -> Date.from(Instant.parse(parser.parseString())))
+						.factory(Date.class, DateModel::new)
 						.build())
 				.build();
 		String str = json.toString(dates);

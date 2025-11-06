@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright 2022 Alex Vigdor
+ * Copyright 2025 Alex Vigdor
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,18 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package com.bigcloud.djomo.rs.test;
+module com.bigcloud.djomo.rs.test {
+	requires com.bigcloud.djomo.rs;
+	requires jakarta.ws.rs;
+	requires com.bigcloud.djomo;
+	requires org.testng;
+	requires org.glassfish.jersey.core.client;
+	requires org.glassfish.jersey.core.server;
+	requires org.glassfish.jersey.tests.framework.core;
 
-import java.util.stream.Stream;
-
-import com.bigcloud.djomo.api.ObjectModel;
-import com.bigcloud.djomo.api.Visitor;
-import com.bigcloud.djomo.api.visitors.ObjectVisitor;
-
-public class ThingFlattener implements ObjectVisitor<Thing<?>> {
-
-	@Override
-	public void visitObject(Thing<?> obj, ObjectModel<Thing<?>> model, Visitor visitor) {
-		visitor.visit( Stream.concat(Stream.of(obj.name()), obj.elements().stream()));
-	}
+	exports com.bigcloud.djomo.rs.test;
 }

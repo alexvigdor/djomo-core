@@ -201,6 +201,94 @@ assertEquals(parts.get(0).getClass(), Wheel.class);
 assertEquals(parts.get(1).getClass(), Windshield.class);
 ```
 
+#### Models: customizing how objects are represented in JSON
+
+There are two approaches to customizing JSON representations of objects in Djomo; in this section we will look at implementing the Model interface, which defines the default parsing and visiting rules for a type in a Json instance. 
+Default models are provided for many core java objects, as well as objects following standard JavaBean or static Builder syntax.  You can load custom models using the ModelFactory interface; custom models will apply to all instances of
+that object type in a full object graph during parsing or visiting.  It is also possible to apply custom models conditionally, for example only at certain JSON paths or in certain object fields, using Filters, which are covered in the next section; filters intercept the call stack so can perform dynamic manipulations of the json representation, but have a bit of additional processing overhead compared to using custom Models that are registered globally.  
+
+Here's a simple model we will also look at later with filters:
+
+```
+@Value
+@Builder
+public static class Contact {
+	String firstName;
+	String lastName;
+}
+```
+
+The default model in Djomo will generate JSON for this in an object format:
+
+```
+{"firstName":"John","lastName":"Von Doe"}
+```
+
+But let's say we want a more compact single-string representation; we can implement a custom model to perform the transformation.
+
+```
+class ContactModel extends BaseModel<Contact> {
+
+	public ContactModel(Type type, ModelContext context) {
+		super(type, context);
+	}
+
+	@Override
+	public Contact parse(Parser parser) {
+		String fullName = parser.parseString().toString();
+		String[] nameParts = fullName.split("\\s+", 2);
+		Contact.ContactBuilder builder = Contact.builder();
+		builder.firstName(nameParts[0]);
+		if (nameParts.length > 1) {
+			builder.lastName(nameParts[1]);
+		}
+		return builder.build();
+	}
+
+	@Override
+	public void visit(Contact contact, Visitor visitor) {
+		String fullName = contact.getFirstName();
+		if (contact.getLastName() != null) {
+			fullName = fullName + " " + contact.getLastName();
+		}
+		visitor.visitString(fullName);
+	}
+	
+};
+```
+
+We can register this model and see it in effect:
+
+```
+Json json = new Json(Models.builder()
+		.factory(Contact.class, ContactModel::new)
+		.build());
+Contact contact = new Contact("John", "Von Doe");
+String str = json.toString(contact);
+System.out.println(str);
+	// "John Von Doe"
+Contact roundTrip = json.fromString(str, Contact.class);
+assertEquals(roundTrip, contact);
+```
+
+A common need is to customize date representations in JSON, there is a built-in date formatting model factory that can be mapped to either java.util.Date or java.time.* classes.
+
+```
+var dateTimeFormat = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL);
+Json json = new Json(Models.builder()
+		.factory(new DateFormatModelFactory(dateTimeFormat, ZonedDateTime.class))
+		.factory(new DateFormatModelFactory(dateTimeFormat, Date.class))
+		.build());
+ZonedDateTime zdt = ZonedDateTime.parse("2000-01-01T00:00Z");
+String str = json.toString(zdt);
+System.out.println(str);
+// "Saturday, January 1, 2000, 12:00:00 AM Z"
+Date date = json.fromString(str, Date.class);
+assertEquals(date.toInstant(), zdt.toInstant());
+```
+
+
+
 #### Filters: customizing the parser and visitor
 
 Now let's have a look at the more general purpose extension mechanism, filters.  Filters allow you to modify the behavior of Visitors and Parsers.  Let's use a FilterVisitor to log our progress as we serialize an object to json.  The BaseVisitorFilter base class implements Visitor with a default pass through for all methods, so you can just extend the method(s) of interest.
@@ -639,24 +727,28 @@ In this example we have an endpoint whose input and output is a flattened repres
 ```
 public record Thing<T>(String name, List<T> elements) {}
 
-import java.util.stream.Stream;
-import com.bigcloud.djomo.filter.TypeVisitorTransform;
+import com.bigcloud.djomo.api.ObjectModel;
+import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.api.visitors.ObjectVisitor;
 
-public class ThingFlattener extends TypeVisitorTransform<Thing> {
+public class ThingFlattener implements ObjectVisitor<Thing<?>> {
 
 	@Override
-	public Stream transform(Thing in) {
-		return Stream.concat(Stream.of(in.name()), in.elements().stream());
+	public void visitObject(Thing<?> obj, ObjectModel<Thing<?>> model, Visitor visitor) {
+		visitor.visit( Stream.concat(Stream.of(obj.name()), obj.elements().stream()));
 	}
 }
 
-import java.util.List;
-import com.bigcloud.djomo.filter.TypeParserTransform;
 
-public class ThingUnflattener extends TypeParserTransform<List, Thing> {
+import com.bigcloud.djomo.api.ObjectModel;
+import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.parsers.ObjectParser;
+
+public class ThingUnflattener implements ObjectParser<Thing<?>> {
 
 	@Override
-	public Thing transform(List list) {
+	public Thing<?> parseObject(ObjectModel<Thing<?>> model, Parser parser) {
+		var list = parser.models().listModel.parse(parser);
 		return new Thing(list.get(0).toString(), list.subList(1, list.size()));
 	}
 }

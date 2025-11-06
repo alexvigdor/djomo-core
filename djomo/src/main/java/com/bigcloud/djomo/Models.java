@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -252,20 +251,20 @@ public class Models {
 		}
 
 		/**
-		 * Register an explicit model producer function based on type
+		 * Register an explicit model factory for a type
 		 * 
 		 * @param type
-		 * @param model
+		 * @param factory
 		 * @return
 		 */
-		public <T> Builder model(Class<T> type, BiFunction<Class<T>, ModelContext, Model<T>> modelProducer) {
+		public <T> Builder factory(Class<T> type, ModelFactory factory) {
 			return factory(new BaseModelFactory() {
 
 				@Override
 				public Model<?> create(Type lookupType, ModelContext context) {
 					Class rawType = getRawType(lookupType);
 					if (type.isAssignableFrom(rawType)) {
-						return modelProducer.apply(rawType, context);
+						return factory.create(lookupType, context);
 					}
 					return null;
 				}
@@ -273,16 +272,17 @@ public class Models {
 		}
 
 		/**
-		 * Register an explicit model based on type, format, visitor and parser
+		 * Register an explicit model based on type, visitor and parser
 		 * functions
 		 * 
 		 * @param type
-		 * @param model
+		 * @param visitor
+		 * @param parser
 		 * @return
 		 */
 		public <T> Builder model(Class<T> type, BiConsumer<T, Visitor> visitor,
 				Function<Parser, T> parser) {
-			return model(type, (realType, context) -> new BaseModel<T>(realType, context) {
+			return factory(type, (realType, context) -> new BaseModel<T>(realType, context) {
 
 				@Override
 				public T parse(Parser source) {
