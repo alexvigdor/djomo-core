@@ -21,7 +21,7 @@
 	<groupId>com.bigcloud.djomo</groupId>
 	<artifactId>djomo-core</artifactId>
 	<packaging>pom</packaging>
-	<version>0.9.3-SNAPSHOT</version>
+	<version>0.9.3</version>
 
 	<name>djomo-core :: dynamic json models for Java and JAX-RS</name>
 	<description>Parent project for djomo and djomo-rs libraries</description>
@@ -45,7 +45,7 @@
 		<connection>scm:git:git://github.com/alexvigdor/djomo-core.git</connection>
 		<developerConnection>scm:git:ssh://git@github.com/alexvigdor/djomo-core.git</developerConnection>
 		<url>https://github.com/alexvigdor/djomo-core</url>
-	  <tag>HEAD</tag>
+	  <tag>djomo-core-0.9.3</tag>
   </scm>
 
 	<distributionManagement>
