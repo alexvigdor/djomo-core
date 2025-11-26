@@ -84,7 +84,7 @@ public class TypeTest {
 		assertEquals(out, "\"John Von Doe\"");
 		roundTrip = json.fromString(out, Person.class);
 		assertEquals(roundTrip.firstName, person.firstName);
-		Map pmap = models.mapModel.convert(person);//.fromString("{\"firstName\":\"John\",\"lastName\":\"Von Doe\"}", Map.class);
+		Map pmap = (Map) models.get(new StaticType<Map<String, String>>() {}).convert(person);//.fromString("{\"firstName\":\"John\",\"lastName\":\"Von Doe\"}", Map.class);
 		out = json.toString(pmap);
 		assertEquals(out, "{\"firstName\":\"John\",\"lastName\":\"Von Doe\"}");
 		Map mrt = json.fromString(out, Map.class);

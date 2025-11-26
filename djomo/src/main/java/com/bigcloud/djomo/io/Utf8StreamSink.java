@@ -56,9 +56,9 @@ public class Utf8StreamSink implements CharSink {
 				}
 				int c = 0;
 				int i;
-				for (i=0; i < max; i++) {
+				for (i = 0; i < max; i++) {
 					c = buf[cp++];
-					if(c > 127) {
+					if (c > 127) {
 						break;
 					}
 					ubuf[up++] = (byte) c;
@@ -74,7 +74,7 @@ public class Utf8StreamSink implements CharSink {
 					o.write(ubuf, 0, up);
 					up = 0;
 				}
-				if (i==max) {
+				if (i == max) {
 					continue;
 				}
 				// at this point we hit a multi-byte char
@@ -86,14 +86,13 @@ public class Utf8StreamSink implements CharSink {
 					ubuf[up++] = (byte) (0x80 | ((c >> 6) & 0x3f));
 					ubuf[up++] = (byte) (0x80 | (c & 0x3f));
 				} else {
-					if (cp == len) {
+					if (cp == len && hi == -1) {
 						hi = c;
 					} else {
-						if(hi != -1) {
+						if (hi != -1) {
 							c = (hi << 10) + c + 0x10000 - (0xD800 << 10) - 0xDC00;
 							hi = -1;
-						}
-						else {
+						} else {
 							c = (c << 10) + buf[cp++] + 0x10000 - (0xD800 << 10) - 0xDC00;
 						}
 						ubuf[up++] = (byte) (0xf0 | (c >> 18));

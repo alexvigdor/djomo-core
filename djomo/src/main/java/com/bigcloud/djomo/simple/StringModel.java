@@ -33,6 +33,16 @@ public class StringModel extends BaseModel<String> {
 		}
 		return o.toString();
 	}
+	
+	@Override
+	public void tryVisit(String str, Visitor visitor) {
+		if(str == null) {
+			visitor.visitNull();
+		}
+		else {
+			visitor.visitString(str);
+		}
+	}
 
 	@Override
 	public void visit(String obj, Visitor visitor) {

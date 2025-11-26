@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright 2022 Alex Vigdor
+ * Copyright 2025 Alex Vigdor
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,57 +16,50 @@
 package com.bigcloud.djomo.simple;
 
 import java.lang.reflect.Type;
+import java.math.BigDecimal;
 
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.base.BaseModel;
+import com.bigcloud.djomo.error.ModelException;
+import com.bigcloud.djomo.internal.CharArraySequence;
+import com.bigcloud.djomo.json.SafeString;
 
-public class NumberModel<N extends Number> extends BaseModel<N> {
+public class BigDecimalModel extends BaseModel<BigDecimal> {
 
-	public NumberModel(Type type, ModelContext context) {
+	public BigDecimalModel(Type type, ModelContext context) {
 		super(type, context);
 	}
 
 	@Override
-	public N convert(Object o) {
+	public BigDecimal parse(Parser parser) {
+		var chars = parser.parseString();
+		if (chars instanceof CharArraySequence cas) {
+			return new BigDecimal(cas.buffer.buffer, cas.start, cas.len);
+		}
+		return new BigDecimal(chars.toString());
+	}
+
+	@Override
+	public void visit(BigDecimal obj, Visitor visitor) {
+		visitor.visitString(new SafeString(obj.toString()));
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public BigDecimal convert(Object o) {
 		if (o == null) {
 			return null;
 		}
-		if (o.getClass() == getType()) {
-			return (N) o;
+		if (o instanceof BigDecimal b) {
+			return b;
 		}
-		if (o instanceof Number) {
-			return convertNumber((Number) o);
+		try {
+			String p = getParseable(o);
+			return new BigDecimal(p);
+		} catch (Throwable e) {
+			throw new ModelException("Error converting " + o + " to " + type.getTypeName(), e);
 		}
-		return parse(getParseable(o));
 	}
-
-	public N parse(String str) {
-		return (N) Double.valueOf(str);
-	}
-
-	protected N convertNumber(Number value) {
-		return (N) value;
-	}
-
-	@Override
-	public void visit(N obj, Visitor visitor) {
-		visitor.visitDouble(obj.doubleValue());
-	}
-
-	@Override
-	public N parse(Parser parser) {
-		double d = parser.parseDouble();
-		if(Math.rint(d) == d && Double.isFinite(d)) {
-			// Down convert to the simplest representation
-			int i = (int) d;
-			if(i == d) {
-				return (N) (Integer) i;
-			}
-			return (N) (Long) (long) d;
-		}
-		return (N) (Double) d;
-	}
-
 }

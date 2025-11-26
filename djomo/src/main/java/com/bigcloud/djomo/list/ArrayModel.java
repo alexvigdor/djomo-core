@@ -17,9 +17,7 @@ package com.bigcloud.djomo.list;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Type;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -37,17 +35,17 @@ public class ArrayModel<T> extends BaseListModel<T> {
 
 	@Override
 	public Object maker(T obj) {
-		ArrayList start = new ArrayList();
+		ImmutableList start = new ImmutableList();
 		int len = Array.getLength(obj);
 		for(int i=0; i<len;i++) {
-			start.add(Array.get(obj,  i));
+			start.addItem(Array.get(obj,  i));
 		}
 		return start;
 	}
 
 	@Override
 	public Object maker() {
-		return new ArrayList();
+		return new ImmutableList();
 	}
 
 	@Override
@@ -60,15 +58,6 @@ public class ArrayModel<T> extends BaseListModel<T> {
 
 	@Override
 	public Stream stream(T t) {
-		if(type == double[].class) {
-			return Arrays.stream((double[]) t).boxed();
-		}
-		if(type == long[].class) {
-			return Arrays.stream((long[]) t).boxed();
-		}
-		if(type == int[].class) {
-			return Arrays.stream((int[]) t).boxed();
-		}
 		return Arrays.stream((Object[])t);
 	}
 
@@ -85,18 +74,19 @@ public class ArrayModel<T> extends BaseListModel<T> {
 
 	@Override
 	public T make(Object maker) {
-		List list = (List) maker;
-		int len = list.size();
+		ImmutableList list = (ImmutableList) maker;
+		int len = list.pointer;
 		Object array = Array.newInstance(componentType, len);
+		var items = list.items;
 		for (int i = 0; i < len; i++) {
-			Array.set(array, i, list.get(i));
-		}
+			Array.set(array, i, items[i]);
+        }
 		return (T) array;
 	}
 
 	@Override
 	protected void addItem(Object maker, Object item) {
-		((List)maker).add(item);
+		((ImmutableList)maker).addItem(item);
 	}
 
 }

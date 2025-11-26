@@ -25,7 +25,6 @@ import com.bigcloud.djomo.internal.FloatPrinter;
 import com.bigcloud.djomo.io.CharSink;
 
 public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseable {
-	private static final char[] NULL = { 'n', 'u', 'l', 'l' };
 	protected static final int BUF_LEN = 4096;
 	private static final ThreadLocal<char[]> localBuffer = new ThreadLocal<>() {
 		public char[] initialValue() {
@@ -68,31 +67,54 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 
 	@Override
 	public void visitNull() {
-		raw(NULL, 0, 4);
+		var p = pos;
+		int room = BUF_LEN - p;
+		if (room < 4) {
+			sink.next(p);
+			p = 0;
+		}
+		var buf = buffer;
+		buf[p++] = 'n';
+		buf[p++] = 'u';
+		buf[p++] = 'l';
+		buf[p++] = 'l';
+		pos = p;
 	}
 
 	@Override
 	public void visitString(CharSequence str) {
-		var sbuf = strBuffer;
-		var buf = buffer;
-		var spec = special;
+		int len = str.length();
 		var lpos = pos;
+		var buf = buffer;
+		if(str instanceof SafeCharSequence scs) {
+			if (BUF_LEN - lpos < len + 2) {
+				sink.next(lpos);
+				lpos = 0;
+			}
+			buf[lpos++] = '"';
+			lpos = scs.getChars(buf, lpos);
+			buf[lpos]= '"';
+			pos = lpos + 1;
+			return;
+		}
 		if (lpos == BUF_LEN) {
 			sink.next(BUF_LEN);
 			lpos = 0;
 		}
 		buf[lpos++] = '"';
-		int len = str.length();
 		int start = 0;
 		int room = BUF_LEN - lpos;
 		if (len < room) {
 			room = len;
 		}
+		var sbuf = strBuffer;
+		var spec = special;
 		int c = 0, p, l, i;
 		while (true) {
 			if (str instanceof String s) {
 				s.getChars(start, start + room, buf, lpos);
-			} else {
+			}
+			else {
 				for (int x = 0; x < room; x++) {
 					buf[lpos + x] = str.charAt(x + start);
 				}
@@ -193,21 +215,6 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 		pos = lpos + 1;
 	}
 
-	public void raw(char[] chars, int offset, int len) {
-		var p = pos;
-		int room = BUF_LEN - p;
-		while (room < len) {
-			System.arraycopy(chars, offset, buffer, p, room);
-			sink.next(BUF_LEN);
-			offset += room;
-			p = 0;
-			len -= room;
-			room = BUF_LEN;
-		}
-		System.arraycopy(chars, offset, buffer, p, len);
-		pos = p + len;
-	}
-
 	@Override
 	public void close() {
 		sink.last(pos);
@@ -262,22 +269,47 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 				normal /= 10;
 			} while (normal != 0);
 		}
-
 	}
 
 	@Override
 	public void visitLong(long value) {
-		int mult = value < 0 ? -1 : 1;
-		char[] buf = new char[20];
-		int pos = 20;
-		do {
-			buf[--pos] = (char) (48 + (value % 10 * mult));
-			value /= 10;
-		} while (value != 0);
-		if (mult == -1) {
-			buf[--pos] = '-';
+		if(value <= Integer.MAX_VALUE && value >= Integer.MIN_VALUE) {
+			visitInt((int) value);
+			return;
 		}
-		raw(buf, pos, 20 - pos);
+		var p = pos;
+		int room = BUF_LEN - p;
+		if (room < 20) {
+			sink.next(p);
+			p = 0;
+		}
+		char[] buf = buffer;
+		if(value == Long.MIN_VALUE) {
+			String.valueOf(Long.MIN_VALUE).getChars(0, 20, buf, p);
+			pos = p + 20;
+			return;
+		}
+		boolean negative = false;
+		long normal = value;
+		if (value < 0) {
+			negative = true;
+			normal = -normal;
+		}
+		// we are above 2147483647 or below -2147483648
+		int stringLen = normal < 100000000000000l
+				? normal < 100000000000l ? normal < 10000000000l ? 10 : 11 : normal < 1000000000000l ? 12 : normal < 10000000000000l ? 13 : 14
+				: normal < 10000000000000000l ? normal < 1000000000000000l ? 15 : 16
+						: normal < 100000000000000000l ? 17 : normal < 1000000000000000000l ? 18 : 19;
+
+		if (negative) {
+			buf[p] = '-';
+			++stringLen;
+		}
+		pos = p += stringLen;
+		do {
+			buf[--p] = (char) (48 + (normal % 10));
+			normal /= 10;
+		} while (normal != 0);
 	}
 
 	@Override

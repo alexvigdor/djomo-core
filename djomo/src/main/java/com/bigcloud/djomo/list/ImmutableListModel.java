@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.base.BaseListModel;
@@ -59,11 +58,7 @@ public class ImmutableListModel extends BaseListModel<List> {
 
 	@Override
 	public void visitItems(List t, Visitor visitor) {
-		final Model m = itemModel;
-		t.forEach(i -> {
-			visitor.visitListItem();
-			m.tryVisit(i, visitor);
-		});
+		t.forEach(new ItemVisitor(visitor));
 	}
 
 	@Override
@@ -74,5 +69,21 @@ public class ImmutableListModel extends BaseListModel<List> {
 	@Override
 	protected void addItem(Object maker, Object item) {
 		((ImmutableList)maker).addItem(item);
+	}
+
+	private class ItemVisitor implements Consumer {
+		final Visitor visitor;
+		
+		private ItemVisitor(Visitor visitor) {
+			this.visitor = visitor;
+		}
+
+		@Override
+		public void accept(Object t) {
+			var v = visitor;
+			v.visitListItem();
+			itemModel.tryVisit(t, v);
+		}
+		
 	}
 }

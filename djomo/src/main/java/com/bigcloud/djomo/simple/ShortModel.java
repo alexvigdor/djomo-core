@@ -38,21 +38,6 @@ public class ShortModel extends NumberModel<Short> {
 	}
 
 	@Override
-	protected Short convertDouble(double value) {
-		return (short) value;
-	}
-
-	@Override
-	protected Short convertInt(int value) {
-		return (short) value;
-	}
-
-	@Override
-	protected Short convertLong(long value) {
-		return (short) value;
-	}
-
-	@Override
 	public void visit(Short obj, Visitor visitor) {
 		visitor.visitInt(obj.intValue());
 	}

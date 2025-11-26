@@ -27,6 +27,7 @@ import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.base.BaseModel;
 import com.bigcloud.djomo.error.ModelException;
+import com.bigcloud.djomo.json.SafeStringBuilder;
 
 /**
  * Used to provide customized string formatting for java.time objects
@@ -34,7 +35,7 @@ import com.bigcloud.djomo.error.ModelException;
  * @author Alex Vigdor
  *
  */
-public class DateTimeFormatterModel extends BaseModel<TemporalAccessor> {
+public class DateTimeFormatterModel<T extends TemporalAccessor> extends BaseModel<T> {
 	final DateTimeFormatter format;
 	final MethodHandle fromHandle;
 
@@ -50,10 +51,10 @@ public class DateTimeFormatterModel extends BaseModel<TemporalAccessor> {
 	}
 
 	@Override
-	public TemporalAccessor convert(Object o) {
+	public T convert(Object o) {
 		if (o instanceof TemporalAccessor t) {
 			try {
-				return (TemporalAccessor) fromHandle.invoke(t);
+				return (T) fromHandle.invoke(t);
 			} catch (Throwable e) {
 				throw new ModelException("Unable to convert TemporalAccessor " + t + " of type "
 						+ t.getClass().getName() + " to " + type.getTypeName(), e);
@@ -71,13 +72,15 @@ public class DateTimeFormatterModel extends BaseModel<TemporalAccessor> {
 	}
 
 	@Override
-	public TemporalAccessor parse(Parser parser) {
+	public T parse(Parser parser) {
 		return format.parse(parser.parseString(), this::convert);
 	}
 
 	@Override
-	public void visit(TemporalAccessor obj, Visitor visitor) {
-		visitor.visitString(format.format(obj));
+	public void visit(T obj, Visitor visitor) {
+		var builder = new StringBuilder(32);
+		format.formatTo(obj, builder);
+		visitor.visitString(new SafeStringBuilder(builder));
 	}
 
 }

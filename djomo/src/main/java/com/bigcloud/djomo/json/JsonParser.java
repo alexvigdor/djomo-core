@@ -28,9 +28,6 @@ import com.bigcloud.djomo.internal.FloatingParser;
 import com.bigcloud.djomo.io.Buffer;
 
 public class JsonParser extends BaseParser implements Parser {
-	final static char[] TRUE_CHARS = { 't', 'r', 'u', 'e' };
-	final static char[] FALSE_CHARS = { 'f', 'a', 'l', 's', 'e' };
-	final static char[] NULL_CHARS = { 'n', 'u', 'l', 'l' };
 	final Buffer input;
 	final Buffer overflow;
 
@@ -219,7 +216,7 @@ public class JsonParser extends BaseParser implements Parser {
 						break;
 					}
 				default:
-					if (ip == rp && offset == 0 || rp == ip + offset + 1 && negative) {
+					if (offset == 0 && (ip == rp || rp == ip + 1 && negative)) {
 						throw new NumberFormatException("Number format error at " + input.describe());
 					}
 					break PARSE_LOOP;
@@ -322,7 +319,7 @@ public class JsonParser extends BaseParser implements Parser {
 						break;
 					}
 				default:
-					if (ip == rp && offset == 0 || rp == ip + offset + 1 && negative) {
+					if (offset == 0 && (ip == rp || rp == ip + 1 && negative)) {
 						throw new NumberFormatException("Number format error at " + input.describe());
 					}
 					break PARSE_LOOP;
@@ -422,10 +419,10 @@ public class JsonParser extends BaseParser implements Parser {
 		var input = this.input;
 		switch (input.seek()) {
 			case 't':
-				input.expect(TRUE_CHARS);
+				input.expect(new char[] {'t', 'r', 'u', 'e'});
 				return true;
 			case 'f':
-				input.expect(FALSE_CHARS);
+				input.expect(new char[] {'f', 'a', 'l', 's', 'e'});
 				return false;
 			default:
 				throw new ModelException("Unexpected input for boolean " + input.describe());
@@ -437,13 +434,90 @@ public class JsonParser extends BaseParser implements Parser {
 		var input = this.input;
 		switch (input.seek()) {
 			case 'n':
-				input.expect(NULL_CHARS);
+				input.expect(new char[] {'n', 'u', 'l', 'l'});
 				return null;
 			case '"':
 				return CharSequenceParser.parse(input, overflow);
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+			case '8':
+			case '9':
+			case '-':
+				return parseNumericString();
 			default:
 				throw new ModelException("Expected starting quote "+input.describe());
 		}
+	}
+	
+	private CharSequence parseNumericString() {
+		var input = this.input;
+		final var buf = input.buffer;
+		int rp = input.readPosition;
+		int wp = input.writePosition;
+		// CPD-OFF
+		int ip = rp;
+		// first loop / happy path
+		for (; rp < wp; rp++) {
+			//System.out.println("Parse loop 1 "+rp+" "+String.valueOf((char) buf[rp]));
+			switch (buf[rp]) {
+			case ' ':
+			case '\t':
+			case '\n':
+			case '\r':
+			case '\f':
+			case ',':
+			case ']':
+			case '}':
+				input.readPosition = rp;
+				var seq = input.charArraySequence;
+				seq.start = ip;
+				seq.len = rp - ip;
+				return seq;
+			default:
+				break;
+			}
+		}
+		char[] overflowBuf = overflow.buffer;
+		System.arraycopy(buf, ip, overflowBuf, 0, rp - ip);
+		// buffer reload needed
+		ip = rp - ip;
+		rp = 0;
+		if (input.refill()) {
+			wp = input.writePosition;
+			// second loop; any valid number would only span a single buffer boundary
+			PARSE_LOOP:
+			for (; rp < wp; rp++) {
+				//System.out.println("Parse loop 2 "+rp+" "+String.valueOf((char) buf[rp]));
+				switch (buf[rp]) {
+				case ' ':
+				case '\t':
+				case '\n':
+				case '\r':
+				case '\f':
+				case ',':
+				case ']':
+				case '}':
+					input.readPosition = rp;
+					break PARSE_LOOP;
+				default:
+					break;
+				}
+			}
+			if(rp > 0) {
+				input.readPosition = rp;
+				System.arraycopy(buf, 0, overflowBuf, ip, rp);
+			}
+		}
+		var seq = overflow.charArraySequence;
+		seq.start = 0;
+		seq.len = rp + ip;
+		return seq;
 	}
 
 }

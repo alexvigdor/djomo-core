@@ -17,6 +17,7 @@ package com.bigcloud.djomo.list;
 
 import java.util.AbstractList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.function.Consumer;
 
 public class ImmutableList extends AbstractList {
@@ -43,6 +44,11 @@ public class ImmutableList extends AbstractList {
 			consumer.accept(os[i]);
 		}
 	}
+	
+	@Override
+	public Iterator iterator(){
+		return new ImmutableIterator();
+	}
 
 	protected void addItem(Object item) {
 		int p = pointer;
@@ -52,6 +58,21 @@ public class ImmutableList extends AbstractList {
 		}
 		_items[p] = item;
 		pointer = p + 1;
+	}
+	
+	protected class ImmutableIterator implements Iterator{
+		int read = 0;
+
+		@Override
+		public boolean hasNext() {
+			return read < pointer;
+		}
+
+		@Override
+		public Object next() {
+			return items[read++];
+		}
+		
 	}
 
 }

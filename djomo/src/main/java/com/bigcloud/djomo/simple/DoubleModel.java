@@ -53,21 +53,6 @@ public class DoubleModel extends NumberModel<Double> {
 	}
 
 	@Override
-	protected Double convertDouble(double value) {
-		return value;
-	}
-
-	@Override
-	protected Double convertInt(int value) {
-		return (double) value;
-	}
-
-	@Override
-	protected Double convertLong(long value) {
-		return (double) value;
-	}
-
-	@Override
 	public void visit(Double obj, Visitor visitor) {
 		visitor.visitDouble(obj);
 	}

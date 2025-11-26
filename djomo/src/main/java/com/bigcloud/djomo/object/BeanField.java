@@ -29,6 +29,7 @@ import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.error.GetFieldException;
 import com.bigcloud.djomo.error.SetFieldException;
 import com.bigcloud.djomo.filter.FilterField;
+import com.bigcloud.djomo.json.SafeString;
 import com.bigcloud.djomo.poly.ResolverModel;
 
 /**
@@ -50,7 +51,12 @@ public class BeanField implements Field, Cloneable {
 				? MethodHandles.empty(MethodType.methodType(void.class, Object.class, model.getType()))
 				: mutator;
 		this.name = name;
-		this.key = name;
+		if(name.length() < 1000) {
+			this.key = new SafeString(name);
+		}
+		else {
+			this.key = name;
+		}
 		this.model = model;
 	}
 
@@ -118,6 +124,9 @@ public class BeanField implements Field, Cloneable {
 	public Field rekey(Object newKey) {
 		BeanField cloned = clone();
 		cloned.key = newKey;
+		if(newKey instanceof String cs && cs.length() < 1000) {
+			newKey = new SafeString(cs);
+		}
 		return cloned;
 	}
 

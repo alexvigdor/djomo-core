@@ -20,21 +20,56 @@ import java.lang.reflect.Type;
 
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.base.BaseModel;
+import com.bigcloud.djomo.error.ModelException;
 
-public class StringBasedModel<T> extends CharSequenceBasedModel<T> {
+public class CharSequenceBasedModel<T> extends BaseModel<T> {
+	final MethodHandle constructor;
+	final MethodHandle toString;
 
-	public StringBasedModel(Type type, ModelContext context, MethodHandle constructor, MethodHandle toString) {
-		super(type, context, constructor, toString);
+	public CharSequenceBasedModel(Type type, ModelContext context, MethodHandle constructor, MethodHandle toString) {
+		super(type, context);
+		this.constructor = constructor;
+		this.toString = toString;
+	}
+
+	@Override
+	public void visit(T obj, Visitor visitor) {
+		try {
+			visitor.visitString((CharSequence) toString.invoke(obj));
+		} catch (RuntimeException e) {
+			throw e;
+		} catch (Throwable e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	@Override
 	public T parse(Parser parser) {
 		try {
-			return (T) constructor.invoke(parser.parseString().toString());
+			return (T) constructor.invoke(parser.parseString());
 		} catch (RuntimeException e) {
 			throw e;
 		} catch (Throwable e) {
 			throw new RuntimeException(e);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public T convert(Object o) {
+		if (o == null) {
+			return null;
+		}
+		if (o.getClass() == type) {
+			return (T) o;
+		}
+		try {
+			String p = getParseable(o);
+			return (T) constructor.invoke(p);
+		} catch (Throwable e) {
+			throw new ModelException("Error converting " + o + " to " + type.getTypeName(), e);
 		}
 	}
 

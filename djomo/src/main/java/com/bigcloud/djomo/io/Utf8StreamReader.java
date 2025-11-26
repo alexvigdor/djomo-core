@@ -50,25 +50,27 @@ public class Utf8StreamReader extends Reader {
 		var ubuf = utf8Buffer;
 		int p = pointer;
 		int lim = limit;
+
+		int wrote = 0;
+		if (trail != -1) {
+			cbuf[off++] = (char) trail;
+			trail = -1;
+			wrote++;
+		}
 		if (p == lim) {
-			if(stream == null) {
-				return -1;
+			if (stream == null) {
+				return wrote > 0 ? wrote : -1;
 			}
 			lim = stream.read(ubuf);
-			if(lim == -1) {
-				return -1;
+			if (lim == -1) {
+				return wrote > 0 ? wrote : -1;
 			}
 			p = 0;
 		}
-		int cp = off;
 		byte c = 0;
-		int wrote = 0;
 		int code = leftoverCode;
 		int rem = remaining;
-		if (trail != -1) {
-			cbuf[cp++] = (char) trail;
-			trail = -1;
-		}
+
 		while (true) {
 			if (rem > 0) {
 				for (; rem > 0 && p < lim; rem--) {
@@ -76,16 +78,16 @@ public class Utf8StreamReader extends Reader {
 				}
 				if (rem == 0) {
 					if ((code & 0xfffd8000) != 0) {
-						cbuf[cp++] = (char) (0xD800 - (0x10000 >> 10) + (code >> 10));
+						cbuf[off++] = (char) (0xD800 - (0x10000 >> 10) + (code >> 10));
 						++wrote;
 						if (wrote == len) {
 							trail = 0xDC00 + (code & 0x3FF);
 						} else {
-							cbuf[cp++] = (char) (0xDC00 + (code & 0x3FF));
+							cbuf[off++] = (char) (0xDC00 + (code & 0x3FF));
 							++wrote;
 						}
 					} else {
-						cbuf[cp++] = (char) code;
+						cbuf[off++] = (char) code;
 						++wrote;
 					}
 				} else {
@@ -103,7 +105,7 @@ public class Utf8StreamReader extends Reader {
 				if (c < 0) {
 					break;
 				}
-				cbuf[cp++] = (char) c;
+				cbuf[off++] = (char) c;
 			}
 			wrote += i;
 			if (i == max) {

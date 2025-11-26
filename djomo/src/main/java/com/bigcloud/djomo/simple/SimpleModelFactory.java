@@ -22,8 +22,15 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URI;
 import java.net.URL;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.time.temporal.TemporalAmount;
 import java.util.Date;
@@ -66,7 +73,7 @@ public class SimpleModelFactory extends BaseModelFactory {
 				return new NumberModel(type, context);
 			}
 			if(rawType == BigDecimal.class) {
-				return magicString(BigDecimal.class, context, null, String.class);
+				return new BigDecimalModel(BigDecimal.class, context);
 			}
 			if(rawType == BigInteger.class) {
 				return magicString(BigInteger.class, context, null, String.class);
@@ -112,7 +119,27 @@ public class SimpleModelFactory extends BaseModelFactory {
 			return magicString(ZoneId.class, context, "of",  String.class);
 		}
 		else if((TemporalAmount.class.isAssignableFrom(rawType) || TemporalAccessor.class.isAssignableFrom(rawType)) && rawType.getPackageName().equals("java.time")) {
-			return magicString(rawType, context, "parse",  CharSequence.class);
+			if(LocalDate.class.equals(rawType)) {
+				return new LocalDateModel(context);
+			}
+			else if(LocalTime.class.equals(rawType)) {
+				return new LocalTimeModel(context);
+			}
+			else if (OffsetDateTime.class.equals(rawType)){
+				return new OffsetDateTimeModel(context);
+			}
+			else if(Instant.class.equals(rawType)) {
+				return new InstantModel(context);
+			}
+			else if(ZonedDateTime.class.equals(rawType)) {
+				return new DateTimeFormatterModel(rawType, context, DateTimeFormatter.ISO_ZONED_DATE_TIME);
+			}
+			else if(LocalDateTime.class.equals(rawType)) {
+				return new LocalDateTimeModel(context);
+			}
+			else {
+				return magicString(rawType, context, "parse",  CharSequence.class);
+			}
 		}
 		else if(String.class == rawType) {
 			return new StringModel(context);
@@ -150,6 +177,9 @@ public class SimpleModelFactory extends BaseModelFactory {
 			}
 			else {
 				constructor = lookup.unreflect(rawType.getDeclaredMethod(constructorMethod, param));
+			}
+			if(param == CharSequence.class) {
+				return new CharSequenceBasedModel<T>(rawType, context, constructor, lookup.unreflect(rawType.getDeclaredMethod(toStringMethod)));
 			}
 			return new StringBasedModel<T>(rawType, context, constructor, lookup.unreflect(rawType.getDeclaredMethod(toStringMethod)));
 		} catch (NoSuchMethodException | SecurityException | IllegalAccessException e) {

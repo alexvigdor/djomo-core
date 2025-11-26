@@ -16,6 +16,7 @@
 package com.bigcloud.djomo.test;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -43,8 +44,8 @@ public class NumberTest {
 						Double round = Double.valueOf(ds);
 						Assert.assertEquals(round, d);
 						Double parsed = json.fromString(ds, Double.class);
-						if(!round.equals(parsed)) {
-							System.out.println("Got "+parsed+" from "+ds+" or "+d);
+						if (!round.equals(parsed)) {
+							System.out.println("Got " + parsed + " from " + ds + " or " + d);
 						}
 						Assert.assertEquals(parsed, round);
 					}
@@ -83,9 +84,45 @@ public class NumberTest {
 	@Test
 	public void testMaxMin() throws IOException {
 		Json json = new Json();
-		for(Long testCase: new Long[] {Long.MAX_VALUE, Long.MAX_VALUE-1, Long.MIN_VALUE, Long.MIN_VALUE+1} ) {
+		for (Long testCase : new Long[] { Long.MAX_VALUE, Long.MAX_VALUE - 1, Long.MIN_VALUE, Long.MIN_VALUE + 1 }) {
 			Long parsed = json.fromString(testCase.toString(), Long.class);
 			Assert.assertEquals(parsed, testCase);
 		}
+	}
+
+	@Test
+	public void testDeepLoops() throws IOException {
+		Json json = new Json();
+		char[] sample = new char[100];
+		Arrays.fill(sample, ' ');
+		sample[90] = '1';
+		sample[91] = '2';
+		String sampleString = new String(sample);
+		int ival = json.fromString(sampleString, Integer.class);
+		Assert.assertEquals(ival, 12);
+		long lval = json.fromString(sampleString, Long.class);
+		Assert.assertEquals(lval, 12);
+		double dval = json.fromString(sampleString, Double.class);
+		Assert.assertEquals(dval, 12);
+		sample[89] = '-';
+		sampleString = new String(sample);
+		ival = json.fromString(sampleString, Integer.class);
+		Assert.assertEquals(ival, -12);
+		lval = json.fromString(sampleString, Long.class);
+		Assert.assertEquals(lval, -12);
+		dval = json.fromString(sampleString, Double.class);
+		Assert.assertEquals(dval, -12);
+		Assert.assertThrows(NumberFormatException.class, () -> json.fromString("   -   ", Integer.class));
+		Assert.assertThrows(NumberFormatException.class, () -> json.fromString("   -   ", Long.class));
+		Assert.assertThrows(NumberFormatException.class, () -> json.fromString("   -   ", Double.class));
+		Assert.assertThrows(NumberFormatException.class, () -> json.fromString("   3-   ", Integer.class));
+		Assert.assertThrows(NumberFormatException.class, () -> json.fromString("   3-   ", Long.class));
+		Assert.assertThrows(NumberFormatException.class, () -> json.fromString("   3-   ", Double.class));
+		Assert.assertThrows(NumberFormatException.class, () -> json.fromString("[   -   ]", Integer[].class));
+		Assert.assertThrows(NumberFormatException.class, () -> json.fromString("[  -   ]", Long[].class));
+		Assert.assertThrows(NumberFormatException.class, () -> json.fromString("[  -   ]", Double[].class));
+		Assert.assertThrows(NumberFormatException.class, () -> json.fromString("[   3-  ] ", Integer[].class));
+		Assert.assertThrows(NumberFormatException.class, () -> json.fromString(" [  3-  ] ", Long[].class));
+		Assert.assertThrows(NumberFormatException.class, () -> json.fromString(" [  3-  ] ", Double[].class));
 	}
 }

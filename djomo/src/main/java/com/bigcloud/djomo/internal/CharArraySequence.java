@@ -24,7 +24,7 @@ import com.bigcloud.djomo.io.Buffer;
  *
  */
 public class CharArraySequence implements CharSequence {
-	protected final Buffer buffer;
+	public final Buffer buffer;
 	public int start;
 	public int len;
 
@@ -80,4 +80,5 @@ public class CharArraySequence implements CharSequence {
 	public String toString() {
 		return new String(buffer.buffer, start, len);
 	}
+
 }

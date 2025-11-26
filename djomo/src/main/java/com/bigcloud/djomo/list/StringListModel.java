@@ -1,6 +1,6 @@
 /*******************************************************************************
- * Copyright 2022 Alex Vigdor
- * 
+ * Copyright 2025 Alex Vigdor
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,42 +13,52 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package com.bigcloud.djomo.simple;
+package com.bigcloud.djomo.list;
 
 import java.lang.reflect.Type;
+import java.util.List;
+import java.util.function.Consumer;
 
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
 
-/**
- * 
- * @author Alex Vigdor
- *
- */
-public class FloatModel extends NumberModel<Float> {
+public class StringListModel extends ImmutableListModel{
 
-	public FloatModel(Type type, ModelContext context) {
-		super(type, context);
+	public StringListModel(Type type, ModelContext context) {
+		super(type, context, String.class);
 	}
 
 	@Override
-	public Float parse(String str) {
-		return Float.valueOf(str);
+	public void visitItems(List t, Visitor visitor) {
+		t.forEach(new StringItemVisitor(visitor));
+	}
+	
+	@Override
+	public void parseItem(Object listMaker, Parser parser) {
+		parser.parseListItem();
+		var str = parser.parseString();
+		addItem(listMaker, str == null ? null : str.toString());
 	}
 
-	@Override
-	protected Float convertNumber(Number n) {
-		return n.floatValue();
-	}
+	private static class StringItemVisitor implements Consumer<String> {
+		final Visitor visitor;
+		
+		private StringItemVisitor(Visitor visitor) {
+			this.visitor = visitor;
+		}
 
-	@Override
-	public void visit(Float obj, Visitor visitor) {
-		visitor.visitFloat(obj);
-	}
-
-	@Override
-	public Float parse(Parser parser) {
-		return parser.parseFloat();
+		@Override
+		public void accept(String t) {
+			var v = visitor;
+			v.visitListItem();
+			if(t == null) {
+				v.visitNull();
+			}
+			else {
+				v.visitString(t);
+			}
+		}
+		
 	}
 }

@@ -40,6 +40,7 @@ import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.internal.CharSequenceLookup;
 import com.bigcloud.djomo.object.BeanField;
+import com.bigcloud.djomo.object.FixedFieldVisitor;
 
 /**
  * Common baseline behavior for Object Models with a predefined set of fields
@@ -52,6 +53,7 @@ public abstract class BaseObjectModel<T> extends BaseComplexModel<T> implements 
 	protected final CharSequenceLookup<Field> fields;
 	protected final Field[] sortedFields;
 	protected final List<Field> fieldList;
+	protected final FixedFieldVisitor fieldVisitor;
 
 	public BaseObjectModel(Type type, ModelContext context) throws IllegalAccessException {
 		super(type, context);
@@ -88,6 +90,7 @@ public abstract class BaseObjectModel<T> extends BaseComplexModel<T> implements 
 		}
 		this.sortedFields = sortedFields;
 		this.fieldList = List.of(sortedFields);
+		this.fieldVisitor = FixedFieldVisitor.visitorFor(sortedFields);
 	}
 
 	protected BaseObjectModel(Models models, Type type, Field... fields) {
@@ -96,6 +99,7 @@ public abstract class BaseObjectModel<T> extends BaseComplexModel<T> implements 
 		this.fieldList = List.of(sortedFields);
 		this.fields = new CharSequenceLookup<Field>(
 				fieldList.stream().collect(Collectors.toMap(f -> f.key().toString(), Function.identity())));
+		this.fieldVisitor = FixedFieldVisitor.visitorFor(sortedFields);
 	}
 
 	protected abstract Map<CharSequence, Field> initFields(ModelContext context) throws IllegalAccessException;
@@ -143,9 +147,7 @@ public abstract class BaseObjectModel<T> extends BaseComplexModel<T> implements 
 
 	@Override
 	public void visitFields(T t, Visitor visitor) {
-		for (Field f : sortedFields) {
-			f.visit(t, visitor);
-		}
+		fieldVisitor.visitFields(t, visitor);
 	}
 
 	@Override

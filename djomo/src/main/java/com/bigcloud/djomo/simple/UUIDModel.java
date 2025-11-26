@@ -16,7 +16,6 @@
 package com.bigcloud.djomo.simple;
 
 import java.lang.reflect.Type;
-import java.nio.CharBuffer;
 import java.util.UUID;
 
 import com.bigcloud.djomo.api.ModelContext;
@@ -25,7 +24,6 @@ import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.base.BaseModel;
 
 public class UUIDModel extends BaseModel<UUID>  {
-	private static final char[] hexchars = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 
 	public UUIDModel(Type type, ModelContext context) {
 		super(type, context);
@@ -33,25 +31,7 @@ public class UUIDModel extends BaseModel<UUID>  {
 
 	@Override
 	public void visit(UUID obj, Visitor visitor) {
-		char[] ucs = new char[36];
-		long val = obj.getMostSignificantBits();
-		var hc = hexchars;
-		for (int i = 0; i < 36; i++) {
-			switch (i) {
-			case 18:
-				val = obj.getLeastSignificantBits();
-			case 8:
-			case 13:
-			case 23:
-				ucs[i] = '-';
-				break;
-			default:
-				int b = (int) (val >>> 60);
-				ucs[i] = hc[b];
-				val = val << 4;
-			}
-		}
-		visitor.visitString(CharBuffer.wrap(ucs, 0, 36));
+		visitor.visitString(new UUIDPrinter(obj));
 	}
 
 	@Override
@@ -139,7 +119,6 @@ public class UUIDModel extends BaseModel<UUID>  {
 		}
 		return new UUID(msb, lsb);
 	}
-	
 
 	@Override
 	public UUID convert(Object o) {

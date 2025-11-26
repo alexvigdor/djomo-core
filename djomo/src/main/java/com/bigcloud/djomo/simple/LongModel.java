@@ -41,21 +41,6 @@ public class LongModel extends NumberModel<Long> {
 	}
 
 	@Override
-	protected Long convertDouble(double value) {
-		return (long) value;
-	}
-
-	@Override
-	protected Long convertInt(int value) {
-		return (long) value;
-	}
-
-	@Override
-	protected Long convertLong(long value) {
-		return value;
-	}
-
-	@Override
 	public void visit(Long obj, Visitor visitor) {
 		visitor.visitLong(obj);
 	}

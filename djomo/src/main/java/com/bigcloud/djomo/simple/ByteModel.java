@@ -38,21 +38,6 @@ public class ByteModel extends NumberModel<Byte> {
 	}
 
 	@Override
-	protected Byte convertDouble(double value) {
-		return (byte) value;
-	}
-
-	@Override
-	protected Byte convertInt(int value) {
-		return (byte) value;
-	}
-
-	@Override
-	protected Byte convertLong(long value) {
-		return (byte) value;
-	}
-
-	@Override
 	public void visit(Byte obj, Visitor visitor) {
 		visitor.visitInt(obj.intValue());
 	}

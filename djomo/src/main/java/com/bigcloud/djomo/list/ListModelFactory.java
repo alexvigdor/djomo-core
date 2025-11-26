@@ -16,6 +16,7 @@
 package com.bigcloud.djomo.list;
 
 import java.util.List;
+import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Type;
@@ -37,11 +38,18 @@ public class ListModelFactory extends BaseModelFactory {
 		Type valueType = getTypeParameter(type, 0);
 		Constructor<?> constructor = getConstructor(rawType);
 		if(rawType.isInterface() && (rawType==List.class || rawType==Collection.class || rawType == Iterable.class)){
+			if(valueType == String.class) {
+				return new StringListModel(type, context);
+			}
 			return new ImmutableListModel(type, context, valueType);
 		}
 		if (Collection.class.isAssignableFrom(rawType)) {
 			try {
-				return new CollectionModel<>(type, context, constructor == null ? null : lookup.unreflectConstructor(constructor), valueType);
+				MethodHandle handle = constructor == null ? null : lookup.unreflectConstructor(constructor);
+				if(valueType == String.class) {
+					return new StringCollectionModel<>(type, context, handle);
+				}
+				return new CollectionModel<>(type, context, handle, valueType);
 			} catch (IllegalAccessException e) {
 				throw new RuntimeException(e);
 			}
@@ -51,6 +59,18 @@ public class ListModelFactory extends BaseModelFactory {
 			}
 			if (rawType.getComponentType() == byte.class) {
 				return new ByteArrayModel(context);
+			}
+			if(rawType.getComponentType() == long.class) {
+				return new LongArrayModel(context);
+			}
+			if(rawType.getComponentType() == int.class) {
+				return new IntArrayModel(context);
+			}
+			if(rawType.getComponentType() == double.class) {
+				return new DoubleArrayModel(context);
+			}
+			if(rawType.getComponentType() == String.class) {
+				return new StringArrayModel(context);
 			}
 			return new ArrayModel<>(type, context);
 		} else if(Stream.class.isAssignableFrom(rawType)) {

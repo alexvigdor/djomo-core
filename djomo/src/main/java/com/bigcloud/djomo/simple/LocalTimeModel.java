@@ -1,6 +1,6 @@
 /*******************************************************************************
- * Copyright 2022 Alex Vigdor
- * 
+ * Copyright 2025 Alex Vigdor
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,40 +15,28 @@
  *******************************************************************************/
 package com.bigcloud.djomo.simple;
 
-import java.lang.reflect.Type;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
 
-/**
- * 
- * @author Alex Vigdor
- *
- */
-public class FloatModel extends NumberModel<Float> {
+public class LocalTimeModel extends DateTimeFormatterModel<LocalTime> {
 
-	public FloatModel(Type type, ModelContext context) {
-		super(type, context);
+	public LocalTimeModel(ModelContext context) {
+		super(LocalTime.class, context, DateTimeFormatter.ISO_LOCAL_TIME);
 	}
 
 	@Override
-	public Float parse(String str) {
-		return Float.valueOf(str);
+	public void visit(LocalTime obj, Visitor visitor) {
+		visitor.visitString(new DateTimePrinter.LocalTimePrinter(obj));
 	}
 
 	@Override
-	protected Float convertNumber(Number n) {
-		return n.floatValue();
+	public LocalTime parse(Parser parser) {
+		var seq = parser.parseString();
+		return DateTimeParser.parser(seq).getLocalTime();
 	}
 
-	@Override
-	public void visit(Float obj, Visitor visitor) {
-		visitor.visitFloat(obj);
-	}
-
-	@Override
-	public Float parse(Parser parser) {
-		return parser.parseFloat();
-	}
 }

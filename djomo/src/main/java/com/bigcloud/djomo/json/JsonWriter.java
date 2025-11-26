@@ -77,6 +77,27 @@ public class JsonWriter extends BaseJsonWriter implements AutoCloseable {
 
 	@Override
 	public void visitObjectField(Object name) {
+		if(name instanceof SafeCharSequence scs) {
+			int len = scs.length();
+			var lpos = pos;
+			if (BUF_LEN - lpos < len + 4) {
+				sink.next(lpos);
+				lpos = 0;
+			}
+			var buf = buffer;
+			if(first) {
+				first = false;
+			}
+			else {
+				buf[lpos++] = ',';
+			}
+			buf[lpos++] = '"';
+			lpos = scs.getChars(buf, lpos);
+			buf[lpos++]= '"';
+			buf[lpos]=':';
+			pos = lpos + 1;
+			return;
+		}
 		char[] buf = buffer;
 		int p;
 		if (!first) {
@@ -89,7 +110,12 @@ public class JsonWriter extends BaseJsonWriter implements AutoCloseable {
 		} else {
 			first = false;
 		}
-		visitString(name.toString());
+		if(name instanceof CharSequence cs) {
+			visitString(cs);
+		}
+		else {
+			visitString(name.toString());
+		}
 		if ((p = pos) == BUF_LEN) {
 			sink.next(BUF_LEN);
 			p = 0;

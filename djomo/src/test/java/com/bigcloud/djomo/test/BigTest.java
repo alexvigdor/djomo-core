@@ -21,12 +21,14 @@ import java.lang.invoke.MethodType;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Base64;
+import java.util.List;
 
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import com.bigcloud.djomo.Json;
 import com.bigcloud.djomo.Models;
+import com.bigcloud.djomo.StaticType;
 import com.bigcloud.djomo.simple.ByteArrayBasedModel;
 
 public class BigTest {
@@ -63,6 +65,24 @@ public class BigTest {
 		byte[] bytes = rt.bi.toByteArray();
 		BigInteger cv = json.models().get(BigInteger.class).convert(Base64.getEncoder().encodeToString(bytes));
 		Assert.assertEquals(cv, rt.bi);
+	}
+	
+	@Test
+	public void testUnquotedBig() throws IOException {
+		String source = "{\"bd\":123456789123456789.0123456789123456789, \"bi\": 123456789123456789123456789123456789}";
+		Json json = new Json();
+		var parsed = json.fromString(source);
+		var big = json.fromString(source, Big.class);
+		StringBuilder overflowBuilder = new StringBuilder("[");
+		for(int i = 0; i < 250; i++) {
+			if(i > 0) {
+				overflowBuilder.append(",");
+			}
+			overflowBuilder.append("123456789123456789.0123456789123456789");
+		}
+		overflowBuilder.append("]");
+		List<BigDecimal> result = json.fromString(overflowBuilder.toString(), new StaticType<List<BigDecimal>>() {});
+		result.forEach(bd -> Assert.assertEquals(bd, big.bd));
 	}
  	
 	public static record Big(

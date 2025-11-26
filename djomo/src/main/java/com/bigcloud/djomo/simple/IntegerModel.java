@@ -41,21 +41,6 @@ public class IntegerModel extends NumberModel<Integer> {
 	}
 
 	@Override
-	protected Integer convertDouble(double value) {
-		return (int) value;
-	}
-
-	@Override
-	protected Integer convertInt(int value) {
-		return value;
-	}
-
-	@Override
-	protected Integer convertLong(long value) {
-		return (int) value;
-	}
-
-	@Override
 	public void visit(Integer obj, Visitor visitor) {
 		visitor.visitInt(obj);
 	}

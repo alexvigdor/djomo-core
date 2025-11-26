@@ -89,10 +89,11 @@ public class TimeTest {
 		Assert.assertNotNull(instant);
 	}
 
-	@Test(expectedExceptions = ModelException.class)
 	public void testBadConvert() {
 		Models models = new Models();
-		models.get(Instant.class).convert(ZonedDateTime.now());
+		var now = ZonedDateTime.now();
+		var instant = models.get(Instant.class).convert(now);
+		Assert.assertEquals(instant, now.toInstant());
 	}
 
 	@Test
