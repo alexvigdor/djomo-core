@@ -44,9 +44,7 @@ public abstract class DateTimeParser {
 	public int seconds;
 	public int nanos;
 	public ZoneOffset zoneOffset;
-	protected int nextChar;
 	protected int nextPos;
-	protected int readDigits;
 	protected final CharSequence sequence;
 	protected final int length;
 
@@ -54,10 +52,6 @@ public abstract class DateTimeParser {
 		this.sequence = sequence;
 		this.length = sequence.length();
 	}
-
-	abstract int readNum();
-
-	abstract void load();
 
 	public static DateTimeParser parser(CharSequence sequence) {
 		if (sequence instanceof CharArraySequence seq) {
@@ -111,151 +105,20 @@ public abstract class DateTimeParser {
 		return Instant.ofEpochSecond(secs, nanos);
 	}
 
-	public final void parseLocalDate() {
-		if (length - nextPos < 10) {
-			throwBadFormat();
-		}
-		load();
-		boolean ne = nextChar == '-';
-		boolean po = nextChar == '+';
-		if (ne || po) {
-			load();
-		}
-		year = readNum();
-		if (ne) {
-			year = -year;
-		}
-		if (nextChar != '-') {
-			throwBadFormat();
-		}
-		load();
-		month = readNum();
-		if (nextChar != '-') {
-			throwBadFormat();
-		}
-		load();
-		day = readNum();
-	}
+	public abstract void parseLocalDate();
 
-	public final void parseLocalTime() {
-		if (length - nextPos < 5) {
-			throwBadFormat();
-		}
-		load();
-		hour = readNum();
-		if (nextChar != ':') {
-			throwBadFormat();
-		}
-		load();
-		minute = readNum();
-		if (nextChar == ':') {
-			load();
-			seconds = readNum();
-			if (nextChar == '.') {
-				load();
-				int nanos = readNum();
-				int reorder = 9 - readDigits;
-				// adjust nano scale
-				switch (reorder) {
-				case 1:
-					nanos *= 10;
-					break;
-				case 2:
-					nanos *= 100;
-					break;
-				case 3:
-					nanos *= 1000;
-					break;
-				case 4:
-					nanos *= 10000;
-					break;
-				case 5:
-					nanos *= 100000;
-					break;
-				case 6:
-					nanos *= 1000000;
-					break;
-				case 7:
-					nanos *= 10000000;
-					break;
-				case 8:
-					nanos *= 100000000;
-					break;
-				}
-				this.nanos = nanos;
-			}
-		}
-	}
+	public abstract void parseLocalTime();
 
-	public final void parseLocalDateTime() {
-		parseLocalDate();
-		var c = nextChar;
-		if (c != 'T' && c != ' ') {
-			throwBadFormat();
-		}
-		parseLocalTime();
-	}
+	public abstract void parseLocalDateTime();
 
-	public final void parseZoneOffset() {
-		if (length - nextPos < 1) {
-			zoneOffset = ZoneOffset.UTC;
-			return;
-		}
-		load();
-		var nc = nextChar;
-		if (nc == 'Z') {
-			zoneOffset = ZoneOffset.UTC;
-			return;
-		}
-		boolean ne = nc == '-';
-		boolean po = nc == '+';
-		if (ne || po) {
-			load();
-		}
-		var offsetHour = readNum();
-		if (ne) {
-			offsetHour = -offsetHour;
-		}
-		if (nextChar == ':') {
-			load();
-			var offsetMinutes = readNum();
-			if (ne) {
-				offsetMinutes = -offsetMinutes;
-			}
-			if (nextChar == ':') {
-				load();
-				var offsetSeconds = readNum();
-				if (ne) {
-					offsetSeconds = -offsetSeconds;
-				}
-				zoneOffset = ZoneOffset.ofHoursMinutesSeconds(offsetHour, offsetMinutes, offsetSeconds);
-			} else {
-				zoneOffset = ZoneOffset.ofHoursMinutes(offsetHour, offsetMinutes);
-			}
-		} else {
-			if (offsetHour > 10000 || offsetHour < -10000) {
-				var offsetSeconds = offsetHour % 100;
-				offsetHour /= 100;
-				var offsetMinutes = offsetHour % 100;
-				offsetHour /= 100;
-				zoneOffset = ZoneOffset.ofHoursMinutesSeconds(offsetHour, offsetMinutes, offsetSeconds);
-			} else if (offsetHour > 100 || offsetHour < -100) {
-				var offsetMinutes = offsetHour % 100;
-				offsetHour /= 100;
-				zoneOffset = ZoneOffset.ofHoursMinutes(offsetHour, offsetMinutes);
-			} else {
-				zoneOffset = ZoneOffset.ofHours(offsetHour);
-			}
-		}
-	}
+	public abstract void parseZoneOffset();
 
 	public final void parseOffsetDateTime() {
 		parseLocalDateTime();
-		nextPos--;
 		parseZoneOffset();
 	}
 
-	private void throwBadFormat() {
+	protected void throwBadFormat() {
 		throw new IllegalArgumentException("Invalid date format " + sequence);
 	}
 
@@ -265,49 +128,178 @@ public abstract class DateTimeParser {
 			super(seq);
 		}
 
-		@Override
-		final void load() {
-			nextChar = sequence.charAt(nextPos++);
+		public final void parseLocalDateTime() {
+			parseLocalDate();
+			var len = length;
+			var pos = nextPos;
+			if (pos < len) {
+				char c = sequence.charAt(pos);
+				if (c != 'T' && c != ' ') {
+					throwBadFormat();
+				}
+				nextPos = pos + 1;
+				parseLocalTime();
+			}
 		}
 
-		@Override
-		final int readNum() {
-			int nc = -1;
-			int num = 0;
-			int digits = 0;
-			char c = (char) nextChar;
-			int pos = nextPos;
-			int strlen = length;
-			var seq = sequence;
-
-			READ: while (true) {
-				switch (c) {
-				case '0':
-				case '1':
-				case '2':
-				case '3':
-				case '4':
-				case '5':
-				case '6':
-				case '7':
-				case '8':
-				case '9':
-					digits++;
-					num = num * 10 + c - 48;
-					break;
-				default:
-					nc = c;
-					break READ;
-				}
-				if (pos == strlen) {
-					break;
-				}
-				c = seq.charAt(pos++);
+		public final void parseLocalTime() {
+			var len = length;
+			var pos = nextPos;
+			if (len - pos < 5) {
+				throwBadFormat();
 			}
-			readDigits = digits;
-			nextPos = pos;
-			nextChar = nc;
-			return num;
+			var seq = sequence;
+			int hour = seq.charAt(pos++) - 48;
+			hour = hour * 10 + seq.charAt(pos++) - 48;
+			if (seq.charAt(pos++) != ':') {
+				throwBadFormat();
+			}
+			this.hour = hour;
+			int minute = seq.charAt(pos++) - 48;
+			minute = minute * 10 + seq.charAt(pos++) - 48;
+			this.minute = minute;
+			if (pos < len && seq.charAt(pos) == ':') {
+				++pos;
+				int seconds = seq.charAt(pos++) - 48;
+				seconds = seconds * 10 + seq.charAt(pos++) - 48;
+				this.seconds = seconds;
+				if (pos < len && seq.charAt(pos) == '.') {
+					++pos;
+					char nc = seq.charAt(pos);
+					if (nc >= '0' && nc <= '9') {
+						int nanos = 100000000 * (nc - 48);
+						nc = seq.charAt(++pos);
+						if (nc >= '0' && nc <= '9') {
+							nanos += 10000000 * (nc - 48);
+							nc = seq.charAt(++pos);
+							if (nc >= '0' && nc <= '9') {
+								nanos += 1000000 * (nc - 48);
+								nc = seq.charAt(++pos);
+								if (nc >= '0' && nc <= '9') {
+									nanos += 100000 * (nc - 48);
+									nc = seq.charAt(++pos);
+									if (nc >= '0' && nc <= '9') {
+										nanos += 10000 * (nc - 48);
+										nc = seq.charAt(++pos);
+										if (nc >= '0' && nc <= '9') {
+											nanos += 1000 * (nc - 48);
+											nc = seq.charAt(++pos);
+											if (nc >= '0' && nc <= '9') {
+												nanos += 100 * (nc - 48);
+												nc = seq.charAt(++pos);
+												if (nc >= '0' && nc <= '9') {
+													nanos += 10 * (nc - 48);
+													nc = seq.charAt(++pos);
+													if (nc >= '0' && nc <= '9') {
+														nanos += nc - 48;
+														++pos;
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+						this.nanos = nanos;
+					}
+
+				}
+			}
+			this.nextPos = pos;
+		}
+
+		public final void parseLocalDate() {
+			var len = length;
+			var pos = nextPos;
+			if (len - pos < 10) {
+				throwBadFormat();
+			}
+			var seq = sequence;
+			char nc = seq.charAt(pos++);
+			boolean ne = nc == '-';
+			boolean po = nc == '+';
+			if (ne || po) {
+				nc = seq.charAt(pos++);
+			}
+			int year = 0;
+			while (nc != '-') {
+				year = year * 10 + nc - 48;
+				nc = seq.charAt(pos++);
+			}
+			if (ne) {
+				year = -year;
+			}
+			this.year = year;
+			int month = seq.charAt(pos++) - 48;
+			month = month * 10 + seq.charAt(pos++) - 48;
+			this.month = month;
+			if (seq.charAt(pos++) != '-') {
+				throwBadFormat();
+			}
+			int day = seq.charAt(pos++) - 48;
+			day = day * 10 + seq.charAt(pos++) - 48;
+			this.day = day;
+			this.nextPos = pos;
+		}
+
+		public final void parseZoneOffset() {
+			var len = length;
+			var pos = nextPos;
+			if (len - pos < 2) {
+				zoneOffset = ZoneOffset.UTC;
+				return;
+			}
+			var seq = sequence;
+			char nc = seq.charAt(pos++);
+			if (nc == 'Z') {
+				zoneOffset = ZoneOffset.UTC;
+				return;
+			}
+			boolean ne = nc == '-';
+			boolean po = nc == '+';
+			if (ne || po) {
+				nc = seq.charAt(pos++);
+			}
+			var offsetHour = nc - 48;
+			if (pos < len) {
+				offsetHour = offsetHour * 10 + seq.charAt(pos++) - 48;
+				if (ne) {
+					offsetHour = -offsetHour;
+				}
+				if (pos < len) {
+					nc = seq.charAt(pos++);
+					if (nc == ':') {
+						nc = seq.charAt(pos++);
+					}
+					var offsetMinutes = nc - 48;
+					offsetMinutes = offsetMinutes * 10 + seq.charAt(pos++) - 48;
+					if (ne) {
+						offsetMinutes = -offsetMinutes;
+					}
+					if (pos < len) {
+						nc = seq.charAt(pos++);
+						if (nc == ':') {
+							nc = seq.charAt(pos++);
+						}
+						var offsetSeconds = nc - 48;
+						offsetSeconds = offsetSeconds * 10 + seq.charAt(pos++) - 48;
+						if (ne) {
+							offsetSeconds = -offsetSeconds;
+						}
+						zoneOffset = ZoneOffset.ofHoursMinutesSeconds(offsetHour, offsetMinutes, offsetSeconds);
+					} else {
+						zoneOffset = ZoneOffset.ofHoursMinutes(offsetHour, offsetMinutes);
+					}
+				} else {
+					zoneOffset = ZoneOffset.ofHours(offsetHour);
+				}
+			} else {
+				if (ne) {
+					offsetHour = -offsetHour;
+				}
+				zoneOffset = ZoneOffset.ofHours(offsetHour);
+			}
 		}
 
 	}
@@ -318,54 +310,183 @@ public abstract class DateTimeParser {
 
 		protected CharArraySequenceParser(CharArraySequence seq) {
 			super(seq);
-			this.buffer = seq.buffer.buffer;
+			this.buffer = seq.buffer;
 			this.start = seq.start;
 		}
 
-		@Override
-		final void load() {
-			nextChar = buffer[start + nextPos++];
-		}
-
-		@Override
-		final int readNum() {
-			var buf = buffer;
-			int nc = -1;
-			int num = 0;
-			int digits = 0;
-			char c = (char) nextChar;
-			int pos = nextPos;
-			int strlen = length;
-			int st = start;
-			READ: while (true) {
-				switch (c) {
-				case '0':
-				case '1':
-				case '2':
-				case '3':
-				case '4':
-				case '5':
-				case '6':
-				case '7':
-				case '8':
-				case '9':
-					digits++;
-					num = num * 10 + c - 48;
-					break;
-				default:
-					nc = c;
-					break READ;
+		public final void parseLocalDateTime() {
+			parseLocalDate();
+			var len = length;
+			var pos = nextPos;
+			if (pos < len) {
+				char c = buffer[start + pos];
+				if (c != 'T' && c != ' ') {
+					throwBadFormat();
 				}
-				if (pos == strlen) {
-					break;
-				}
-				c = buf[st + pos++];
+				nextPos = pos + 1;
+				parseLocalTime();
 			}
-			readDigits = digits;
-			nextPos = pos;
-			nextChar = nc;
-			return num;
 		}
 
+		public final void parseLocalTime() {
+			var len = length;
+			var pos = nextPos;
+			if (len - pos < 5) {
+				throwBadFormat();
+			}
+			int st = start;
+			var buf = buffer;
+			int hour = buf[st + pos++] - 48;
+			hour = hour * 10 + buf[st + pos++] - 48;
+			if (buf[st + pos++] != ':') {
+				throwBadFormat();
+			}
+			this.hour = hour;
+			int minute = buf[st + pos++] - 48;
+			minute = minute * 10 + buf[st + pos++] - 48;
+			this.minute = minute;
+			if (pos < len && buf[st + pos] == ':') {
+				++pos;
+				int seconds = buf[st + pos++] - 48;
+				seconds = seconds * 10 + buf[st + pos++] - 48;
+				this.seconds = seconds;
+				if (pos < len && buf[st + pos] == '.') {
+					++pos;
+					char nc = buf[st + pos];
+					if (nc >= '0' && nc <= '9') {
+						int nanos = 100000000 * (nc - 48);
+						nc = buf[st + ++pos];
+						if (nc >= '0' && nc <= '9') {
+							nanos += 10000000 * (nc - 48);
+							nc = buf[st + ++pos];
+							if (nc >= '0' && nc <= '9') {
+								nanos += 1000000 * (nc - 48);
+								nc = buf[st + ++pos];
+								if (nc >= '0' && nc <= '9') {
+									nanos += 100000 * (nc - 48);
+									nc = buf[st + ++pos];
+									if (nc >= '0' && nc <= '9') {
+										nanos += 10000 * (nc - 48);
+										nc = buf[st + ++pos];
+										if (nc >= '0' && nc <= '9') {
+											nanos += 1000 * (nc - 48);
+											nc = buf[st + ++pos];
+											if (nc >= '0' && nc <= '9') {
+												nanos += 100 * (nc - 48);
+												nc = buf[st + ++pos];
+												if (nc >= '0' && nc <= '9') {
+													nanos += 10 * (nc - 48);
+													nc = buf[st + ++pos];
+													if (nc >= '0' && nc <= '9') {
+														nanos += nc - 48;
+														++pos;
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+						this.nanos = nanos;
+					}
+
+				}
+			}
+			this.nextPos = pos;
+		}
+
+		public final void parseLocalDate() {
+			var len = length;
+			var pos = nextPos;
+			if (len - pos < 10) {
+				throwBadFormat();
+			}
+			int st = start;
+			var buf = buffer;
+			char nc = buf[st + pos++];
+			boolean ne = nc == '-';
+			boolean po = nc == '+';
+			if (ne || po) {
+				nc = buf[st + pos++];
+			}
+			int year = 0;
+			while (nc != '-') {
+				year = year * 10 + nc - 48;
+				nc = buf[st + pos++];
+			}
+			this.year = year;
+			int month = buf[st + pos++] - 48;
+			month = month * 10 + buf[st + pos++] - 48;
+			this.month = month;
+			if (buf[st + pos++] != '-') {
+				throwBadFormat();
+			}
+			int day = buf[st + pos++] - 48;
+			day = day * 10 + buf[st + pos++] - 48;
+			this.day = day;
+			this.nextPos = pos;
+		}
+
+		public final void parseZoneOffset() {
+			var len = length;
+			var pos = nextPos;
+			if (len - pos < 2) {
+				zoneOffset = ZoneOffset.UTC;
+				return;
+			}
+			int st = start;
+			var buf = buffer;
+			char nc = buf[st + pos++];
+			if (nc == 'Z') {
+				zoneOffset = ZoneOffset.UTC;
+				return;
+			}
+			boolean ne = nc == '-';
+			boolean po = nc == '+';
+			if (ne || po) {
+				nc = buf[st + pos++];
+			}
+			var offsetHour = nc - 48;
+			if (pos < len) {
+				offsetHour = offsetHour * 10 + buf[st + pos++] - 48;
+				if (ne) {
+					offsetHour = -offsetHour;
+				}
+				if (pos < len) {
+					nc = buf[st + pos++];
+					if (nc == ':') {
+						nc = buf[st + pos++];
+					}
+					var offsetMinutes = nc - 48;
+					offsetMinutes = offsetMinutes * 10 + buf[st + pos++] - 48;
+					if (ne) {
+						offsetMinutes = -offsetMinutes;
+					}
+					if (pos < len) {
+						nc = buf[st + pos++];
+						if (nc == ':') {
+							nc = buf[st + pos++];
+						}
+						var offsetSeconds = nc - 48;
+						offsetSeconds = offsetSeconds * 10 + buf[st + pos++] - 48;
+						if (ne) {
+							offsetSeconds = -offsetSeconds;
+						}
+						zoneOffset = ZoneOffset.ofHoursMinutesSeconds(offsetHour, offsetMinutes, offsetSeconds);
+					} else {
+						zoneOffset = ZoneOffset.ofHoursMinutes(offsetHour, offsetMinutes);
+					}
+				} else {
+					zoneOffset = ZoneOffset.ofHours(offsetHour);
+				}
+			} else {
+				if (ne) {
+					offsetHour = -offsetHour;
+				}
+				zoneOffset = ZoneOffset.ofHours(offsetHour);
+			}
+			nextPos = pos;
+		}
 	}
 }

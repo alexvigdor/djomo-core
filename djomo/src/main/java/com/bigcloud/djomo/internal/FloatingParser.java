@@ -334,7 +334,7 @@ public class FloatingParser {
 			} else if ("NaN".equals(val)) {
 				return Double.NaN;
 			}
-			throw new NumberFormatException(val);
+			throw new NumberFormatException("UNable to parse number '"+val+"'"+" "+illegal+" "+index+" "+endIndex+" "+digitCount);
 		}
 
 		// Re-parse significand in case of a potential overflow

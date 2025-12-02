@@ -15,8 +15,6 @@
  *******************************************************************************/
 package com.bigcloud.djomo.internal;
 
-import com.bigcloud.djomo.io.Buffer;
-
 /**
  * A simple CharSequence used when parsing to avoid creating extra strings for field lookups
  * 
@@ -24,11 +22,11 @@ import com.bigcloud.djomo.io.Buffer;
  *
  */
 public class CharArraySequence implements CharSequence {
-	public final Buffer buffer;
+	public final char[] buffer;
 	public int start;
 	public int len;
 
-	public CharArraySequence(Buffer buffer) {
+	public CharArraySequence(char[] buffer) {
 		this.buffer = buffer;
 	}
 
@@ -39,7 +37,7 @@ public class CharArraySequence implements CharSequence {
 
 	@Override
 	public char charAt(int index) {
-		return buffer.buffer[start + index];
+		return buffer[start + index];
 	}
 
 	@Override
@@ -51,7 +49,7 @@ public class CharArraySequence implements CharSequence {
 	}
 
 	public int hashCode() {
-		char[] b = buffer.buffer;
+		char[] b = buffer;
 		int h = 0;
 		int i = start, end = i+len;
 		for (; i < end; i++) {
@@ -62,7 +60,7 @@ public class CharArraySequence implements CharSequence {
 
 	public boolean equals(Object o) {
 		if (o instanceof CharSequence cs) {
-			char[] b = buffer.buffer;
+			char[] b = buffer;
 			int len = this.len;
 			int start = this.start;
 			if (cs.length() == len) {
@@ -78,7 +76,7 @@ public class CharArraySequence implements CharSequence {
 	}
 
 	public String toString() {
-		return new String(buffer.buffer, start, len);
+		return new String(buffer, start, len);
 	}
 
 }

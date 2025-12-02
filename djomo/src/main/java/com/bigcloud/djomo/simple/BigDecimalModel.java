@@ -36,7 +36,7 @@ public class BigDecimalModel extends BaseModel<BigDecimal> {
 	public BigDecimal parse(Parser parser) {
 		var chars = parser.parseString();
 		if (chars instanceof CharArraySequence cas) {
-			return new BigDecimal(cas.buffer.buffer, cas.start, cas.len);
+			return new BigDecimal(cas.buffer, cas.start, cas.len);
 		}
 		return new BigDecimal(chars.toString());
 	}

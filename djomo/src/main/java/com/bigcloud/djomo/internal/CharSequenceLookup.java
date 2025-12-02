@@ -119,7 +119,7 @@ public class CharSequenceLookup<T> {
 			return null;
 		}
 		if(cs instanceof CharArraySequence cas) {
-			var buf = cas.buffer.buffer;
+			var buf = cas.buffer;
 			var pos = cas.start;
 			var end = pos + csl;
 			char c = buf[pos++];

@@ -176,6 +176,16 @@ public class WriterTest {
 		assertTrue(roundTrip != testData);
 		assertEquals(roundTrip, testData);
 	}
+	@Test 
+	public void testMixedEscapeChars() throws IOException {
+		List<String> testData = List.of(
+				"a\"bc\rdef\nghij\tklmnop\fqrstuv\bqxyz\\\\/a",
+				"\u2028123\u2029456\u0010789\u00011011\u00031213\u001a");
+		String json = Json.toString(testData);
+		List<String> roundTrip = Json.fromString(json, new StaticType<List<String>>() {});
+		assertTrue(roundTrip != testData);
+		assertEquals(roundTrip, testData);
+	}
 
 	@Test
 	public void testBinaryWrite() throws IOException {

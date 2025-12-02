@@ -25,7 +25,6 @@ import org.testng.annotations.Test;
 
 import com.bigcloud.djomo.internal.CharArraySequence;
 import com.bigcloud.djomo.internal.CharSequenceLookup;
-import com.bigcloud.djomo.io.Buffer;
 
 public class CharSequenceLookupTest {
 	@Test
@@ -36,7 +35,7 @@ public class CharSequenceLookupTest {
 		lookup.toString();
 		testWords.forEach(word -> {
 			Assert.assertEquals(lookup.get(word), word);
-			CharArraySequence seq = new Buffer(word.toCharArray()).charArraySequence;
+			CharArraySequence seq = new CharArraySequence(word.toCharArray());
 			seq.start = 0; 
 			seq.len = word.length();
 			Assert.assertEquals(lookup.get(seq), word);

@@ -45,7 +45,7 @@ public abstract class BaseParser implements Parser {
 		}
 		this.parser = end;
 	}
-	
+
 	@Override
 	public Object parse(Model definition) {
 		return definition.parse(parser);

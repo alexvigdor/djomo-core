@@ -15,23 +15,29 @@
  *******************************************************************************/
 package com.bigcloud.djomo.json;
 
+import java.io.Reader;
+
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.api.Field;
 import com.bigcloud.djomo.api.ListModel;
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.ParserFilterFactory;
-import com.bigcloud.djomo.io.Buffer;
 
 public class MergeJsonParser extends JsonParser {
-	public MergeJsonParser(Models context, Buffer input, Buffer overflow, Object destination,
+	public MergeJsonParser(Models context, Reader input, Object destination,
 			ParserFilterFactory... filters) {
-		super(context, input, overflow, filters);
-		this.source = destination;
+		super(context, input, filters);
+		this.mergeDestination = destination;
 	}
 
 	protected Object object;
-	protected Object source;
+	protected Object mergeDestination;
 	protected Object list;
+	
+	public MergeJsonParser setMergeDestination(Object destination) {
+		this.mergeDestination = destination;
+		return this;
+	}
 
 	@Override
 	protected Object objectMaker(ObjectModel definition) {
@@ -56,9 +62,9 @@ public class MergeJsonParser extends JsonParser {
 		Field f = super.parseObjectField(model, field);
 		Object o = object;
 		if (f == null || o == null) {
-			source = null;
+			mergeDestination = null;
 		} else {
-			source = f.get(o);
+			mergeDestination = f.get(o);
 		}
 		return f;
 	}
@@ -66,8 +72,8 @@ public class MergeJsonParser extends JsonParser {
 	@Override
 	public Object parseList(ListModel definition) {
 		var ls = list;
-		list = source;
-		source = null;
+		list = mergeDestination;
+		mergeDestination = null;
 		var pl = super.parseList(definition);
 		list = ls;
 		return pl;
@@ -76,8 +82,8 @@ public class MergeJsonParser extends JsonParser {
 	@Override
 	public Object parseObject(ObjectModel definition) {
 		var ro = object;
-		object = source;
-		source = null;
+		object = mergeDestination;
+		mergeDestination = null;
 		var po = super.parseObject(definition);
 		object = ro;
 		return po;
@@ -86,7 +92,7 @@ public class MergeJsonParser extends JsonParser {
 	@Override
 	public Object parseNull() {
 		super.parseNull();
-		return source;
+		return mergeDestination;
 	}
 
 }

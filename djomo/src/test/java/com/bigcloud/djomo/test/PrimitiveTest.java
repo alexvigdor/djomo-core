@@ -16,7 +16,7 @@
 package com.bigcloud.djomo.test;
 
 import java.io.IOException;
-import java.io.StringReader;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -29,8 +29,6 @@ import com.bigcloud.djomo.Json;
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.StaticType;
 import com.bigcloud.djomo.api.Model;
-import com.bigcloud.djomo.io.Buffer;
-import com.bigcloud.djomo.json.JsonParser;
 
 import lombok.Builder;
 import lombok.Value;
@@ -92,28 +90,41 @@ public class PrimitiveTest {
 	public void testNumberBuffer() throws IOException {
 		Models models = new Models();
 		Map<String, Number> samples = Map.of("-387.2498e+13", -387.2498e+13, "-387.2498e+0", -387.2498, "-387.2", -387.2, "-387.", -387.0, "-3", -3.0);
+		char[] prefix = new char[8190];
+		Arrays.fill(prefix, ' ');
+		String prefixStr = new String(prefix);
+		Json json = new Json();
 		samples.forEach((str, num) -> {
-				Double val = new JsonParser(models, new Buffer(new char[7], new StringReader(str)), new Buffer(new char[26])).parseDouble();
-				Assert.assertEquals(val, num);
+			Double val;
+			try {
+				val = json.fromString(prefixStr+str, Double.class);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+			Assert.assertEquals(val, num);
 		});
-		Model<List<Double>> listDoubleModel = models.get(new StaticType<List<Double>>() {});
-		for (int bufsize : new int[] { 9, 11, 13, 15 }) {
-			samples.forEach((str, num) -> {
-				List<Double> val =
-						(List<Double>) new JsonParser(models, new Buffer(new char[bufsize], new StringReader("[" + str + "]")), new Buffer(new char[26])).parse(listDoubleModel);
-				Assert.assertEquals(val.get(0), num);
-			});
-		}
+		var listDoubleType = new StaticType<List<Double>>() {};
+		samples.forEach((str, num) -> {
+			List<Double> val;
+			try {
+				val = (List<Double>) json.fromString("["+prefixStr+str+"]", listDoubleType);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+			Assert.assertEquals(val.get(0), num);
+		});
 	}
 
 	@Test(expectedExceptions = NumberFormatException.class)
 	public void testBadNumber() throws IOException {
-		Double val = new JsonParser(new Models(), new Buffer(new char[3], new StringReader("-1..0")), new Buffer(new char[26])).parseDouble();
+		Json json = new Json();
+		json.fromString("-1..0", Double.class);
 	}
 
 	@Test(expectedExceptions = NumberFormatException.class)
 	public void testEmptyNumber() throws IOException {
-		Double val = new JsonParser(new Models(), new Buffer(new char[1], new StringReader("")), new Buffer(new char[26])).parseDouble();
+		Json json = new Json();
+		json.fromString("", Double.class);
 	}
 
 	@Test(expectedExceptions = NumberFormatException.class)

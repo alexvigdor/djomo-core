@@ -34,7 +34,6 @@ import com.bigcloud.djomo.api.ParserFilterFactory;
 import com.bigcloud.djomo.api.VisitorFilter;
 import com.bigcloud.djomo.api.VisitorFilterFactory;
 import com.bigcloud.djomo.base.AnnotationProcessor;
-import com.bigcloud.djomo.io.Buffer;
 import com.bigcloud.djomo.io.CharArraySink;
 import com.bigcloud.djomo.io.Utf8StreamReader;
 import com.bigcloud.djomo.io.Utf8StreamSink;
@@ -67,16 +66,6 @@ import com.bigcloud.djomo.json.MergeJsonParser;
  *
  */
 public class Json {
-	private static final ThreadLocal<char[]> readBuffer = new ThreadLocal<char[]>() {
-		public char[] initialValue() {
-			return new char[8192];
-		}
-	};
-	private static final ThreadLocal<char[]> parseBuffer = new ThreadLocal<char[]>() {
-		public char[] initialValue() {
-			return new char[4096];
-		}
-	};
 
 	private final Models models;
 	private final VisitorFilterFactory[] visitorFilters;
@@ -122,22 +111,19 @@ public class Json {
 	}
 
 	public <T> T read(Reader reader, T destination, ParserFilterFactory... filters) throws IOException {
-		var rb = new Buffer(readBuffer.get(), reader);
-		var pb = new Buffer(parseBuffer.get());
-		if (destination == null) {
-			return (T) new JsonParser(models, rb, pb, filters).parse();
+		if(destination == null) {
+			return (T) new JsonParser(models, reader, filters(filters)).parse();
 		}
-		var def = models.get(destination.getClass());
-		return (T) new MergeJsonParser(models, rb, pb, destination, filters(filters)).parse(def);
+		var m = models;
+		return (T) new MergeJsonParser(m, reader, destination, filters(filters)).parse(m.get(destination.getClass()));
 	}
 
 	private <T> T read(Reader reader, Model<T> definition, ParserFilterFactory... filters) {
-		var rb = new Buffer(readBuffer.get(), reader);
-		var pb = new Buffer(parseBuffer.get());
+		JsonParser parser = new JsonParser(models, reader, filters(filters));
 		if (definition == null) {
-			return (T) new JsonParser(models, rb, pb, filters).parse();
+			return (T) parser.parse();
 		}
-		return (T) new JsonParser(models, rb, pb, filters(filters)).parse(definition);
+		return (T) parser.parse(definition);
 	}
 
 	public Object read(InputStream in, ParserFilterFactory... filters) throws IOException {
