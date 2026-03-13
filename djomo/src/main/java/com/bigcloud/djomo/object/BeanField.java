@@ -46,7 +46,7 @@ public class BeanField implements Field, Cloneable {
 	protected final MethodHandle accessor;
 	protected final MethodHandle mutator;
 	protected final String name;
-	protected Object key;
+	protected final Object key;
 	protected final Model model;
 	protected final Annotation[] annotations;
 
@@ -61,6 +61,20 @@ public class BeanField implements Field, Cloneable {
 		} else {
 			this.key = name;
 		}
+		this.model = model;
+		this.annotations = annotations;
+	}
+
+	// Rekey constructor
+	BeanField(MethodHandle accessor, MethodHandle mutator, String name, Object key, Model model,
+			Annotation... annotations) {
+		this.accessor = accessor;
+		this.mutator = mutator;
+		this.name = name;
+		if (key instanceof String cs && cs.length() < 1000) {
+			key = new SafeString(cs);
+		}
+		this.key = key;
 		this.model = model;
 		this.annotations = annotations;
 	}
@@ -137,20 +151,7 @@ public class BeanField implements Field, Cloneable {
 
 	@Override
 	public Field rekey(Object newKey) {
-		BeanField cloned = clone();
-		cloned.key = newKey;
-		if (newKey instanceof String cs && cs.length() < 1000) {
-			newKey = new SafeString(cs);
-		}
-		return cloned;
-	}
-
-	protected BeanField clone() {
-		try {
-			return (BeanField) super.clone();
-		} catch (CloneNotSupportedException e) {
-			throw new RuntimeException(e);
-		}
+		return new BeanField(accessor, mutator, name, newKey, model, annotations);
 	}
 
 	public static Builder builder() {
@@ -162,6 +163,11 @@ public class BeanField implements Field, Cloneable {
 		public StringField(MethodHandle accessor, MethodHandle mutator, String name, Model model,
 				Annotation... annotations) {
 			super(accessor, mutator, name, model, annotations);
+		}
+
+		StringField(MethodHandle accessor, MethodHandle mutator, String name, Object key, Model model,
+				Annotation... annotations) {
+			super(accessor, mutator, name, key, model, annotations);
 		}
 
 		@Override
@@ -194,6 +200,11 @@ public class BeanField implements Field, Cloneable {
 			}
 		}
 
+		@Override
+		public Field rekey(Object newKey) {
+			return new StringField(accessor, mutator, name, newKey, model, annotations);
+		}
+
 	}
 
 	public static class DoubleField extends BeanField {
@@ -201,6 +212,11 @@ public class BeanField implements Field, Cloneable {
 		public DoubleField(MethodHandle accessor, MethodHandle mutator, String name, Model model,
 				Annotation... annotations) {
 			super(accessor, mutator, name, model, annotations);
+		}
+
+		DoubleField(MethodHandle accessor, MethodHandle mutator, String name, Object key, Model model,
+				Annotation... annotations) {
+			super(accessor, mutator, name, key, model, annotations);
 		}
 
 		@Override
@@ -225,6 +241,11 @@ public class BeanField implements Field, Cloneable {
 			visitor.visitDouble(val);
 		}
 
+		@Override
+		public Field rekey(Object newKey) {
+			return new DoubleField(accessor, mutator, name, newKey, model, annotations);
+		}
+
 	}
 
 	public static class FloatField extends BeanField {
@@ -232,6 +253,11 @@ public class BeanField implements Field, Cloneable {
 		public FloatField(MethodHandle accessor, MethodHandle mutator, String name, Model model,
 				Annotation... annotations) {
 			super(accessor, mutator, name, model, annotations);
+		}
+
+		FloatField(MethodHandle accessor, MethodHandle mutator, String name, Object key, Model model,
+				Annotation... annotations) {
+			super(accessor, mutator, name, key, model, annotations);
 		}
 
 		@Override
@@ -255,6 +281,11 @@ public class BeanField implements Field, Cloneable {
 			visitor.visitObjectField(key);
 			visitor.visitFloat(val);
 		}
+
+		@Override
+		public Field rekey(Object newKey) {
+			return new FloatField(accessor, mutator, name, newKey, model, annotations);
+		}
 	}
 
 	public static class LongField extends BeanField {
@@ -262,6 +293,11 @@ public class BeanField implements Field, Cloneable {
 		public LongField(MethodHandle accessor, MethodHandle mutator, String name, Model model,
 				Annotation... annotations) {
 			super(accessor, mutator, name, model, annotations);
+		}
+
+		public LongField(MethodHandle accessor, MethodHandle mutator, String name, Object key, Model model,
+				Annotation... annotations) {
+			super(accessor, mutator, name, key, model, annotations);
 		}
 
 		@Override
@@ -286,6 +322,10 @@ public class BeanField implements Field, Cloneable {
 			visitor.visitLong(val);
 		}
 
+		@Override
+		public Field rekey(Object newKey) {
+			return new LongField(accessor, mutator, name, newKey, model, annotations);
+		}
 	}
 
 	public static class IntField extends BeanField {
@@ -293,6 +333,11 @@ public class BeanField implements Field, Cloneable {
 		public IntField(MethodHandle accessor, MethodHandle mutator, String name, Model model,
 				Annotation... annotations) {
 			super(accessor, mutator, name, model, annotations);
+		}
+
+		IntField(MethodHandle accessor, MethodHandle mutator, String name, Object key, Model model,
+				Annotation... annotations) {
+			super(accessor, mutator, name, key, model, annotations);
 		}
 
 		@Override
@@ -316,6 +361,11 @@ public class BeanField implements Field, Cloneable {
 			visitor.visitObjectField(key);
 			visitor.visitInt(val);
 		}
+
+		@Override
+		public Field rekey(Object newKey) {
+			return new IntField(accessor, mutator, name, newKey, model, annotations);
+		}
 	}
 
 	public static class BooleanField extends BeanField {
@@ -323,6 +373,11 @@ public class BeanField implements Field, Cloneable {
 		public BooleanField(MethodHandle accessor, MethodHandle mutator, String name, Model model,
 				Annotation... annotations) {
 			super(accessor, mutator, name, model, annotations);
+		}
+
+		BooleanField(MethodHandle accessor, MethodHandle mutator, String name, Object key, Model model,
+				Annotation... annotations) {
+			super(accessor, mutator, name, key, model, annotations);
 		}
 
 		@Override
@@ -346,6 +401,11 @@ public class BeanField implements Field, Cloneable {
 			visitor.visitObjectField(key);
 			visitor.visitBoolean(val);
 		}
+
+		@Override
+		public Field rekey(Object newKey) {
+			return new BooleanField(accessor, mutator, name, newKey, model, annotations);
+		}
 	}
 
 	public static class ObjectField extends BeanField {
@@ -354,6 +414,12 @@ public class BeanField implements Field, Cloneable {
 		public ObjectField(MethodHandle accessor, MethodHandle mutator, String name, ObjectModel<?> model,
 				Annotation... annotations) {
 			super(accessor, mutator, name, model, annotations);
+			this.objectModel = model;
+		}
+
+		ObjectField(MethodHandle accessor, MethodHandle mutator, String name, Object key, ObjectModel<?> model,
+				Annotation... annotations) {
+			super(accessor, mutator, name, key, model, annotations);
 			this.objectModel = model;
 		}
 
@@ -367,6 +433,10 @@ public class BeanField implements Field, Cloneable {
 			}
 		}
 
+		@Override
+		public Field rekey(Object newKey) {
+			return new ObjectField(accessor, mutator, name, newKey, objectModel, annotations);
+		}
 	}
 
 	public static class ListField extends BeanField {
@@ -375,6 +445,12 @@ public class BeanField implements Field, Cloneable {
 		public ListField(MethodHandle accessor, MethodHandle mutator, String name, ListModel<?> model,
 				Annotation... annotations) {
 			super(accessor, mutator, name, model, annotations);
+			this.listModel = model;
+		}
+
+		ListField(MethodHandle accessor, MethodHandle mutator, String name, Object key, ListModel<?> model,
+				Annotation... annotations) {
+			super(accessor, mutator, name, key, model, annotations);
 			this.listModel = model;
 		}
 
@@ -388,6 +464,10 @@ public class BeanField implements Field, Cloneable {
 			}
 		}
 
+		@Override
+		public Field rekey(Object newKey) {
+			return new ListField(accessor, mutator, name, newKey, listModel, annotations);
+		}
 	}
 
 	public static class Builder {
