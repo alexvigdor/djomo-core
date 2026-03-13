@@ -23,9 +23,9 @@ import java.lang.reflect.Type;
 import java.util.EnumMap;
 import java.util.Map;
 
-import com.bigcloud.djomo.annotation.Ignore;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
+import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.base.BaseModelFactory;
 
 public class ObjectModelFactory extends BaseModelFactory {
@@ -36,38 +36,36 @@ public class ObjectModelFactory extends BaseModelFactory {
 		try {
 			Class<?> rawType = getRawType(type);
 			Constructor<?> constructor = getConstructor(rawType);
-			if(EnumMap.class.isAssignableFrom(rawType)) {
-				return new EnumMapModel<>(type, context);
-			}
-			else if(Map.class.isAssignableFrom(rawType)) {
-				return new MapModel<>(type, context, constructor == null ? null : lookup.unreflectConstructor(constructor));
-			}
-			else if(rawType.isRecord()) {
-			
-				return new RecordModel<>(type, context, lookup.unreflectConstructor(rawType.getDeclaredConstructors()[0]));
-			}
-			else {
+			ObjectModel<?> model;
+			if (EnumMap.class.isAssignableFrom(rawType)) {
+				model = new EnumMapModel<>(type, context);
+			} else if (Map.class.isAssignableFrom(rawType)) {
+				model = new MapModel<>(type, context,
+						constructor == null ? null : lookup.unreflectConstructor(constructor));
+			} else if (rawType.isRecord()) {
+
+				model = new RecordModel<>(type, context,
+						lookup.unreflectConstructor(rawType.getDeclaredConstructors()[0]));
+			} else {
 				Method[] methods = rawType.getMethods();
-				//Object foundBuilder = null;
 				Method builderMethod = null;
 				Method buildMethod = null;
 				for (Method method : methods) {
-					if(method.getAnnotation(Ignore.class) != null) {
-						continue;
-					}
 					String name = method.getName();
 					// fields can't be static methods, but builders can
-					if (Modifier.isStatic(method.getModifiers()) && (name.contains("builder") || name.contains("Builder")) && method.getParameterCount() == 0 && method.trySetAccessible()) {
+					if (Modifier.isStatic(method.getModifiers())
+							&& (name.contains("builder") || name.contains("Builder")) && method.getParameterCount() == 0
+							&& method.trySetAccessible()) {
 						Class<?> bc = method.getReturnType();
 						try {
 							Method bm = bc.getDeclaredMethod("build");
-							if(bm!=null && bm.getReturnType().equals(rawType) && bm.trySetAccessible()) {
+							if (bm != null && bm.getReturnType().equals(rawType) && bm.trySetAccessible()) {
 								builderMethod = method;
 							}
 						} catch (NoSuchMethodException | SecurityException e1) {
 							continue;
 						}
-					} 
+					}
 				}
 				if (builderMethod != null) {
 					for (Method method : builderMethod.getReturnType().getMethods()) {
@@ -79,14 +77,18 @@ public class ObjectModelFactory extends BaseModelFactory {
 						}
 					}
 				}
-				if(buildMethod!=null && builderMethod != null) {
-					return new BuilderModel<>(type, context, lookup.unreflect(builderMethod), lookup.unreflect(buildMethod));
+				if (buildMethod != null && builderMethod != null) {
+					model = new BuilderModel<>(type, context, lookup.unreflect(builderMethod),
+							lookup.unreflect(buildMethod));
+				} else {
+					model = new BeanModel<>(type, context,
+							constructor == null ? null : lookup.unreflectConstructor(constructor));
 				}
-				return new BeanModel<>(type, context, constructor == null ? null : lookup.unreflectConstructor(constructor));
 			}
-			} catch (IllegalAccessException e1) {
-				throw new RuntimeException(e1);
-			}
+			return EmbeddedObjectModel.processEmbedModels(model, type, context);
+		} catch (IllegalAccessException e1) {
+			throw new RuntimeException(e1);
+		}
 	}
 
 }

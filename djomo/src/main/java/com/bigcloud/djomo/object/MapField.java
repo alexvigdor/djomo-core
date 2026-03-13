@@ -15,6 +15,7 @@
  *******************************************************************************/
 package com.bigcloud.djomo.object;
 
+import java.lang.annotation.Annotation;
 import java.util.Map;
 
 import com.bigcloud.djomo.api.Field;
@@ -42,6 +43,11 @@ public class MapField implements Field {
 	@Override
 	public Object key() {
 		return key;
+	}
+
+	@Override
+	public <T extends Annotation> T getAnnotation(Class<T> annotationClass) {
+		return null;
 	}
 
 	@Override

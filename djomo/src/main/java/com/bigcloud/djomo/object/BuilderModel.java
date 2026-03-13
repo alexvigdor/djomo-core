@@ -68,7 +68,7 @@ public class BuilderModel<T> extends ObjectMethodsModel<T> {
 					if (name.startsWith("set") && name.length() > 3 && Character.isUpperCase(name.charAt(3))) {
 						name = name.substring(3, 4).toLowerCase().concat(name.substring(4));
 					}
-					mutator(lookup, context, fieldLookup.apply(name), method, typeArgs);
+					mutator(lookup, context, getFieldBuilder(fieldLookup, method, name), method, typeArgs);
 				} 
 			}
 		}

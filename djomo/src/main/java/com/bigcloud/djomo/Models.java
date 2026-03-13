@@ -48,6 +48,7 @@ import com.bigcloud.djomo.object.ObjectModelFactory;
 import com.bigcloud.djomo.poly.AnyModel;
 import com.bigcloud.djomo.poly.DefaultResolverModelFactory;
 import com.bigcloud.djomo.poly.PolyModelFactory;
+import com.bigcloud.djomo.poly.RemodelFactory;
 import com.bigcloud.djomo.poly.ResolverModel;
 import com.bigcloud.djomo.poly.ResolverModelFactory;
 import com.bigcloud.djomo.simple.NumberModel;
@@ -78,13 +79,14 @@ public class Models {
 
 	public Models(ModelFactory... factories) {
 		if(factories == null || factories.length == 0) {
-			modelFactories = new ModelFactory[5];
+			modelFactories = new ModelFactory[6];
 		}
 		else {
-			modelFactories = new ModelFactory[factories.length+5];
+			modelFactories = new ModelFactory[factories.length+6];
 			System.arraycopy(factories, 0, modelFactories, 0, factories.length);
 		}
-		modelFactories[modelFactories.length-5] = new DefaultResolverModelFactory();
+		modelFactories[modelFactories.length-6] = new DefaultResolverModelFactory();
+		modelFactories[modelFactories.length-5] = new RemodelFactory();
 		modelFactories[modelFactories.length-4] = new SimpleModelFactory();
 		modelFactories[modelFactories.length-3] = new ListModelFactory();
 		modelFactories[modelFactories.length-2] = new PolyModelFactory();

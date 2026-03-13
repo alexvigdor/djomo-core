@@ -48,6 +48,13 @@ public abstract class BaseComplexModel<T> extends BaseModel<T> {
 			}
 			return typeArgs;
 		}
+		else {
+			Class<T> clazz  = (Class<T>) type;
+			Type t = clazz.getGenericSuperclass();
+			if(t!=null) {
+				return getTypeArgs(t);
+			}
+		}
 		return typeArgs;
 	}
 

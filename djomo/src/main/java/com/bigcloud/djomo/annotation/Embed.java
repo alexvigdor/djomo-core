@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright 2022 Alex Vigdor
+ * Copyright 2026 Alex Vigdor
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,9 @@ import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 /**
- * Use on a field, getter or setter to exclude it from a model, so that it will not be visited or parsed
+ * Use on a field, getter or setter to indicate that the properties of the object stored in its value should be treated as first-class properties of the embedding type.
+ * 
+ * This can be used to facilitate composition of models, or to capture arbitrary properties in a Map on a class that has some fixed properties.
  * 
  * @author Alex Vigdor
  *
@@ -33,6 +35,6 @@ import java.lang.annotation.Target;
 @Retention(RUNTIME)
 @Target({ElementType.FIELD, ElementType.METHOD, ElementType.RECORD_COMPONENT})
 @Inherited
-public @interface Ignore {
+public @interface Embed {
 
 }

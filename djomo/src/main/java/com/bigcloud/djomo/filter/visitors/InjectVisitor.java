@@ -15,6 +15,7 @@
  *******************************************************************************/
 package com.bigcloud.djomo.filter.visitors;
 
+import java.lang.annotation.Annotation;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -56,6 +57,11 @@ public abstract class InjectVisitor<T> extends BaseVisitorFilter {
 			@Override
 			public Object key() {
 				return injectName;
+			}
+
+			@Override
+			public <T extends Annotation> T getAnnotation(Class<T> annotationClass) {
+				return null;
 			}
 
 			@Override

@@ -15,13 +15,15 @@
  *******************************************************************************/
 package com.bigcloud.djomo.filter;
 
+import java.lang.annotation.Annotation;
+
 import com.bigcloud.djomo.api.Field;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
 
 public abstract class FilterField implements Field, Cloneable {
-	Field field;
+	protected Field field;
 
 	public FilterField(Field field) {
 		this.field = field;
@@ -30,6 +32,11 @@ public abstract class FilterField implements Field, Cloneable {
 	@Override
 	public Object key() {
 		return field.key();
+	}
+
+	@Override
+	public <T extends Annotation> T getAnnotation(Class<T> annotationClass) {
+		return field.getAnnotation(annotationClass);
 	}
 
 	@Override

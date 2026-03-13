@@ -15,9 +15,12 @@
  *******************************************************************************/
 package com.bigcloud.djomo.object;
 
+import java.lang.annotation.Annotation;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.bigcloud.djomo.Resolver;
 import com.bigcloud.djomo.api.Field;
@@ -26,6 +29,7 @@ import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.error.AnnotationException;
 import com.bigcloud.djomo.error.GetFieldException;
 import com.bigcloud.djomo.error.SetFieldException;
 import com.bigcloud.djomo.filter.FilterField;
@@ -44,25 +48,36 @@ public class BeanField implements Field, Cloneable {
 	protected final String name;
 	protected Object key;
 	protected final Model model;
+	protected final Annotation[] annotations;
 
-	public BeanField(MethodHandle accessor, MethodHandle mutator, String name, Model model) {
+	public BeanField(MethodHandle accessor, MethodHandle mutator, String name, Model model, Annotation... annotations) {
 		this.accessor = accessor;
 		this.mutator = mutator == null
 				? MethodHandles.empty(MethodType.methodType(void.class, Object.class, model.getType()))
 				: mutator;
 		this.name = name;
-		if(name.length() < 1000) {
+		if (name.length() < 1000) {
 			this.key = new SafeString(name);
-		}
-		else {
+		} else {
 			this.key = name;
 		}
 		this.model = model;
+		this.annotations = annotations;
 	}
 
 	@Override
 	public Object key() {
 		return key;
+	}
+
+	@Override
+	public <T extends Annotation> T getAnnotation(Class<T> annotationClass) {
+		for (Annotation a : annotations) {
+			if (annotationClass.isInstance(a)) {
+				return (T) a;
+			}
+		}
+		return null;
 	}
 
 	@Override
@@ -124,7 +139,7 @@ public class BeanField implements Field, Cloneable {
 	public Field rekey(Object newKey) {
 		BeanField cloned = clone();
 		cloned.key = newKey;
-		if(newKey instanceof String cs && cs.length() < 1000) {
+		if (newKey instanceof String cs && cs.length() < 1000) {
 			newKey = new SafeString(cs);
 		}
 		return cloned;
@@ -144,8 +159,9 @@ public class BeanField implements Field, Cloneable {
 
 	public static class StringField extends BeanField {
 
-		public StringField(MethodHandle accessor, MethodHandle mutator, String name, Model model) {
-			super(accessor, mutator, name, model);
+		public StringField(MethodHandle accessor, MethodHandle mutator, String name, Model model,
+				Annotation... annotations) {
+			super(accessor, mutator, name, model, annotations);
 		}
 
 		@Override
@@ -182,8 +198,9 @@ public class BeanField implements Field, Cloneable {
 
 	public static class DoubleField extends BeanField {
 
-		public DoubleField(MethodHandle accessor, MethodHandle mutator, String name, Model model) {
-			super(accessor, mutator, name, model);
+		public DoubleField(MethodHandle accessor, MethodHandle mutator, String name, Model model,
+				Annotation... annotations) {
+			super(accessor, mutator, name, model, annotations);
 		}
 
 		@Override
@@ -212,8 +229,9 @@ public class BeanField implements Field, Cloneable {
 
 	public static class FloatField extends BeanField {
 
-		public FloatField(MethodHandle accessor, MethodHandle mutator, String name, Model model) {
-			super(accessor, mutator, name, model);
+		public FloatField(MethodHandle accessor, MethodHandle mutator, String name, Model model,
+				Annotation... annotations) {
+			super(accessor, mutator, name, model, annotations);
 		}
 
 		@Override
@@ -241,8 +259,9 @@ public class BeanField implements Field, Cloneable {
 
 	public static class LongField extends BeanField {
 
-		public LongField(MethodHandle accessor, MethodHandle mutator, String name, Model model) {
-			super(accessor, mutator, name, model);
+		public LongField(MethodHandle accessor, MethodHandle mutator, String name, Model model,
+				Annotation... annotations) {
+			super(accessor, mutator, name, model, annotations);
 		}
 
 		@Override
@@ -271,8 +290,9 @@ public class BeanField implements Field, Cloneable {
 
 	public static class IntField extends BeanField {
 
-		public IntField(MethodHandle accessor, MethodHandle mutator, String name, Model model) {
-			super(accessor, mutator, name, model);
+		public IntField(MethodHandle accessor, MethodHandle mutator, String name, Model model,
+				Annotation... annotations) {
+			super(accessor, mutator, name, model, annotations);
 		}
 
 		@Override
@@ -300,8 +320,9 @@ public class BeanField implements Field, Cloneable {
 
 	public static class BooleanField extends BeanField {
 
-		public BooleanField(MethodHandle accessor, MethodHandle mutator, String name, Model model) {
-			super(accessor, mutator, name, model);
+		public BooleanField(MethodHandle accessor, MethodHandle mutator, String name, Model model,
+				Annotation... annotations) {
+			super(accessor, mutator, name, model, annotations);
 		}
 
 		@Override
@@ -330,8 +351,9 @@ public class BeanField implements Field, Cloneable {
 	public static class ObjectField extends BeanField {
 		protected ObjectModel<?> objectModel;
 
-		public ObjectField(MethodHandle accessor, MethodHandle mutator, String name, ObjectModel<?> model) {
-			super(accessor, mutator, name, model);
+		public ObjectField(MethodHandle accessor, MethodHandle mutator, String name, ObjectModel<?> model,
+				Annotation... annotations) {
+			super(accessor, mutator, name, model, annotations);
 			this.objectModel = model;
 		}
 
@@ -350,8 +372,9 @@ public class BeanField implements Field, Cloneable {
 	public static class ListField extends BeanField {
 		protected ListModel<?> listModel;
 
-		public ListField(MethodHandle accessor, MethodHandle mutator, String name, ListModel<?> model) {
-			super(accessor, mutator, name, model);
+		public ListField(MethodHandle accessor, MethodHandle mutator, String name, ListModel<?> model,
+				Annotation... annotations) {
+			super(accessor, mutator, name, model, annotations);
 			this.listModel = model;
 		}
 
@@ -371,32 +394,34 @@ public class BeanField implements Field, Cloneable {
 		private MethodHandle accessor;
 		private MethodHandle mutator;
 		private String name;
+		private List<Annotation> annotations = new ArrayList<Annotation>();
 		private Model model;
 
 		public Field build() {
 			Field field;
+			var annotationArray = annotations.toArray(Annotation[]::new);
 			if (model.getType() == String.class) {
-				field = new StringField(accessor, mutator, name, model);
+				field = new StringField(accessor, mutator, name, model, annotationArray);
 			} else if (model.getType() == double.class) {
-				field = new DoubleField(accessor, mutator, name, model);
+				field = new DoubleField(accessor, mutator, name, model, annotationArray);
 			} else if (model.getType() == float.class) {
-				field = new FloatField(accessor, mutator, name, model);
+				field = new FloatField(accessor, mutator, name, model, annotationArray);
 			} else if (model.getType() == int.class) {
-				field = new IntField(accessor, mutator, name, model);
+				field = new IntField(accessor, mutator, name, model, annotationArray);
 			} else if (model.getType() == long.class) {
-				field = new LongField(accessor, mutator, name, model);
+				field = new LongField(accessor, mutator, name, model, annotationArray);
 			} else if (model.getType() == boolean.class) {
-				field = new BooleanField(accessor, mutator, name, model);
+				field = new BooleanField(accessor, mutator, name, model, annotationArray);
 			} else {
 				if (model instanceof ResolverModel rm && rm.getResolver() instanceof Resolver.Substitute rs) {
 					model = rs.getSubstitute();
 				}
 				if (model instanceof ObjectModel om) {
-					field = new ObjectField(accessor, mutator, name, om);
+					field = new ObjectField(accessor, mutator, name, om, annotationArray);
 				} else if (model instanceof ListModel lm) {
-					field = new ListField(accessor, mutator, name, lm);
+					field = new ListField(accessor, mutator, name, lm, annotationArray);
 				} else {
-					field = new BeanField(accessor, mutator, name, model);
+					field = new BeanField(accessor, mutator, name, model, annotationArray);
 				}
 			}
 			if (accessor == null) {
@@ -405,6 +430,7 @@ public class BeanField implements Field, Cloneable {
 					public Object get(Object o) {
 						return null;
 					}
+
 					@Override
 					public void visit(Object source, Visitor visitor) {
 					}
@@ -430,6 +456,17 @@ public class BeanField implements Field, Cloneable {
 
 		public Builder name(String name) {
 			this.name = name;
+			return this;
+		}
+
+		public Builder annotation(Annotation annotation) {
+			for (Annotation a : annotations) {
+				if (a.getClass().equals(annotation.getClass()) && !a.equals(annotation)) {
+					throw new AnnotationException("Field " + name + " has two non-matching Annotations declared: "
+							+ a + " and " + annotations);
+				}
+			}
+			annotations.add(annotation);
 			return this;
 		}
 	}

@@ -17,11 +17,16 @@ package com.bigcloud.djomo.base;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.bigcloud.djomo.Models;
+import com.bigcloud.djomo.annotation.Property;
+import com.bigcloud.djomo.api.Field;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Visitor;
+import com.bigcloud.djomo.error.AnnotationException;
 
 public abstract class BaseModel<T> implements Model<T> {
 	final protected Class<T> type;
@@ -90,5 +95,30 @@ public abstract class BaseModel<T> implements Model<T> {
 
 	public Models models() {
 		return models;
+	}
+
+	protected Map<CharSequence, Field> expandFieldMap(Field[] fields){
+		Map<CharSequence, Field> expandedFields = new HashMap<>();
+		// first populate fields into the map and check for conflicts
+		for(Field f: fields) {
+			String key = f.key().toString();
+			if(expandedFields.containsKey(key)) {
+				throw new AnnotationException("More than one field defined with property name '"+key+"' for type "+type.getTypeName());
+			}
+			expandedFields.put(f.key().toString(), f);
+		}
+		// next, populate aliases into the map, checking for conflicts
+		for(Field f: fields) {
+			Property prop = f.getAnnotation(Property.class);
+			if(prop != null) {
+				for(String alias: prop.alias()) {
+					if(expandedFields.containsKey(alias)) {
+						throw new AnnotationException("Alias '"+alias+"' for field '"+f.key()+"' conflicts with field '"+expandedFields.get(alias).key()+"' for type "+type.getTypeName());
+					}
+					expandedFields.put(alias,  f);
+				}
+			}
+		}
+		return expandedFields;
 	}
 }

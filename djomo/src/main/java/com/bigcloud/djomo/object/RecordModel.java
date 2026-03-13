@@ -71,15 +71,18 @@ public class RecordModel<T>
 				n -> BeanField.builder().name(n));
 		processMethods(lookup, context, fieldLookup);
 		var rcs = type.getRecordComponents();
-		for(int i=0; i<rcs.length;i++) {
+		for (int i = 0; i < rcs.length; i++) {
 			var rc = rcs[i];
 			var ac = rc.getAccessor();
-			if(ac.trySetAccessible()) {
-				accessor(lookup, context, fieldLookup.apply(rc.getName()), ac, typeArgs);
+			String name = rc.getName();
+			var fieldBuilder = getFieldBuilder(fieldLookup, rc, name);
+			if (ac.trySetAccessible()) {
+				accessor(lookup, context, fieldBuilder, ac, typeArgs);
 			}
 			// our mutator is an array accessor prebound to the right index
-			mutator(lookup, context, fieldLookup.apply(rc.getName()),
-					MethodHandles.insertArguments(MethodHandles.arrayElementSetter(Object[].class),1,i), rc.getGenericType(), typeArgs);
+			mutator(lookup, context, fieldBuilder,
+					MethodHandles.insertArguments(MethodHandles.arrayElementSetter(Object[].class), 1, i),
+					rc.getGenericType(), typeArgs);
 		}
 		return fields.entrySet().stream()
 				.map(e -> new AbstractMap.SimpleEntry<String, Field>(e.getKey(), e.getValue().build()))
@@ -94,8 +97,7 @@ public class RecordModel<T>
 
 	@Override
 	public T make(Object maker) {
-		// TODO Auto-generated method stub
-		return create((Object[])maker);
+		return create((Object[]) maker);
 	}
 
 }

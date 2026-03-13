@@ -27,13 +27,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.bigcloud.djomo.annotation.Ignore;
 import com.bigcloud.djomo.api.Field;
 import com.bigcloud.djomo.api.ModelContext;
 
 public class BeanModel<T> extends ObjectMethodsModel<T> {
 	private final MethodHandle constructor;
-	
+
 	public BeanModel(Type type, ModelContext context, MethodHandle constructor) throws IllegalAccessException {
 		super(type, context);
 		this.constructor = constructor;
@@ -47,7 +46,7 @@ public class BeanModel<T> extends ObjectMethodsModel<T> {
 			throw new RuntimeException("Unable to create instance of " + type.getName(), e);
 		}
 	}
-	
+
 	@Override
 	protected Map<CharSequence, Field> initFields(ModelContext context) throws IllegalAccessException {
 		MethodHandles.Lookup lookup = MethodHandles.lookup();
@@ -56,8 +55,8 @@ public class BeanModel<T> extends ObjectMethodsModel<T> {
 				n -> BeanField.builder().name(n));
 		// start with direct field access; method access will override
 		for (var field : type.getFields()) {
-			if (!Modifier.isStatic(field.getModifiers()) && field.getAnnotation(Ignore.class) == null && field.trySetAccessible() ) {
-				publicField(lookup, context, fieldLookup.apply(field.getName()), field, typeArgs);
+			if (!Modifier.isStatic(field.getModifiers()) && field.trySetAccessible()) {
+				publicField(lookup, context, getFieldBuilder(fieldLookup, field, field.getName()), field, typeArgs);
 			}
 		}
 		processMethods(lookup, context, fieldLookup);
@@ -73,7 +72,7 @@ public class BeanModel<T> extends ObjectMethodsModel<T> {
 		if (!Modifier.isStatic(method.getModifiers()) && name.startsWith("set") && name.length() > 3
 				&& method.getParameterCount() == 1 && method.trySetAccessible()) {
 			name = name.substring(3, 4).toLowerCase().concat(name.substring(4));
-			mutator(lookup, context, fieldLookup.apply(name), method, typeArgs);
+			mutator(lookup, context, getFieldBuilder(fieldLookup, method, name), method, typeArgs);
 		}
 	}
 

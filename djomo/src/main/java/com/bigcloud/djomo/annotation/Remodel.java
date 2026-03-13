@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright 2022 Alex Vigdor
+ * Copyright 2026 Alex Vigdor
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,17 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package com.bigcloud.djomo.error;
+package com.bigcloud.djomo.annotation;
 
-public class AnnotationException extends RuntimeException {
-	public AnnotationException(String string, Exception e) {
-		super(string, e);
-	}
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-	public AnnotationException(String string) {
-		super(string);
-	}
+import com.bigcloud.djomo.api.Model;
 
-	private static final long serialVersionUID = -8673809847005929255L;
-
+/**
+ * Used to attach a custom model to a data class
+ * 
+ * @author Alex Vigdor
+ *
+ */
+@Documented
+@Retention(value = RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+public @interface Remodel {
+	Class<? extends Model<?>> value();
 }

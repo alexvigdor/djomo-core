@@ -15,6 +15,8 @@
  *******************************************************************************/
 package com.bigcloud.djomo.api;
 
+import java.lang.annotation.Annotation;
+
 /**
  * A Field represents one key-value pair in an enclosing ObjectModel
  * 
@@ -27,4 +29,5 @@ public interface Field {
 	void visit(Object source, Visitor visitor);
 	void parse(Object destination, Parser parser);
 	Field rekey(Object newKey);
+	<T extends Annotation> T getAnnotation(Class<T> annotationClass);
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright 2022 Alex Vigdor
+ * Copyright 2026 Alex Vigdor
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,17 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package com.bigcloud.djomo.error;
+package com.bigcloud.djomo.annotation;
 
-public class AnnotationException extends RuntimeException {
-	public AnnotationException(String string, Exception e) {
-		super(string, e);
-	}
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
-	public AnnotationException(String string) {
-		super(string);
-	}
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 
-	private static final long serialVersionUID = -8673809847005929255L;
+@Documented
+@Retention(RUNTIME)
+@Target({ ElementType.FIELD, ElementType.METHOD, ElementType.RECORD_COMPONENT })
+@Inherited
+public @interface Property {
+	String value() default "";
 
+	String[] alias() default {};
 }

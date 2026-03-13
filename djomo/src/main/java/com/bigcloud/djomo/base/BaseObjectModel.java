@@ -25,13 +25,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.bigcloud.djomo.ModelType;
 import com.bigcloud.djomo.Models;
+import com.bigcloud.djomo.annotation.Ignore;
 import com.bigcloud.djomo.annotation.Order;
+import com.bigcloud.djomo.annotation.Property;
 import com.bigcloud.djomo.api.Field;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ModelContext;
@@ -58,9 +58,18 @@ public abstract class BaseObjectModel<T> extends BaseComplexModel<T> implements 
 	public BaseObjectModel(Type type, ModelContext context) throws IllegalAccessException {
 		super(type, context);
 		var fieldMap = initFields(context);
-		this.fields = new CharSequenceLookup<>(fieldMap);
 		@SuppressWarnings("unchecked")
-		Field[] sortedFields = fieldMap.values().toArray((Field[]) new Field[0]);
+		Field[] sortedFields = fieldMap.values().stream()
+			.filter(f -> f.getAnnotation(Ignore.class) == null)
+			.map(f -> {
+				Property prop = f.getAnnotation(Property.class);
+				if(prop != null && !prop.value().isBlank()) {
+					return f.rekey(prop.value());
+				}
+				return f;
+			}).toArray(Field[]::new);
+		var expandedFields = expandFieldMap(sortedFields);
+		this.fields = new CharSequenceLookup<>(expandedFields);
 		Order order = this.type.getAnnotation(Order.class);
 		if (order != null && order.value() != null && order.value().length > 0) {
 			final String[] declared = order.value();
@@ -97,8 +106,8 @@ public abstract class BaseObjectModel<T> extends BaseComplexModel<T> implements 
 		super(type, models);
 		this.sortedFields = fields;
 		this.fieldList = List.of(sortedFields);
-		this.fields = new CharSequenceLookup<Field>(
-				fieldList.stream().collect(Collectors.toMap(f -> f.key().toString(), Function.identity())));
+		var fieldMap = expandFieldMap(fields);
+		this.fields = new CharSequenceLookup<Field>(fieldMap);
 		this.fieldVisitor = FixedFieldVisitor.visitorFor(sortedFields);
 	}
 

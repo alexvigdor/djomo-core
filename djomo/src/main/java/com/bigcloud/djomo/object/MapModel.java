@@ -44,7 +44,13 @@ public class MapModel<T extends Map> extends BaseComplexModel<T> implements Obje
 		this.constructor = constructor;
 		if (typeArgs != null) {
 			Iterator<Type> ti = typeArgs.values().iterator();
-			keyModel = context.get(ti.next());
+			var keyType = ti.next();
+			if(keyType instanceof Class) {
+				keyModel = context.get(keyType);
+			}
+			else {
+				keyModel = null;
+			}
 			valueType = ti.next();
 		} else {
 			keyModel = null;
@@ -97,6 +103,10 @@ public class MapModel<T extends Map> extends BaseComplexModel<T> implements Obje
 		Object key;
 		if (keyModel != null) {
 			key = keyModel.convert(name);
+			if(key == name) {
+				// safeguard since the charsequence coming is volatile
+				key = name.toString();
+			}
 		} else {
 			key = name.toString();
 		}

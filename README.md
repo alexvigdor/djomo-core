@@ -271,6 +271,19 @@ Contact roundTrip = json.fromString(str, Contact.class);
 assertEquals(roundTrip, contact);
 ```
 
+If the data class is under your control and you always want to use a custom model with it, you can also use the `@Remodel` annotation and it will be automatically be picked up; if you also register a custom factory in the Models builder, that will take precedence over the model specified in `@Remodel`
+
+```
+@Value
+@Builder
+@Remodel(ContactModel.class)
+public static class Contact {
+	String firstName;
+	String lastName;
+}
+```
+
+
 A common need is to customize date representations in JSON, there is a built-in date formatting model factory that can be mapped to either java.util.Date or java.time.* classes.
 
 ```
@@ -287,6 +300,61 @@ Date date = json.fromString(str, Date.class);
 assertEquals(date.toInstant(), zdt.toInstant());
 ```
 
+#### Annotations: declarative control over serialization and deserialization
+
+While Djomo offers programmatic extension points via Models and Filters for complete control and customization of how data makes the journey from objects to JSON and back, it also offers a set of annotations that can be applied
+to data classes and fields to perform common manipulations without having to code custom logic.  We already covered the `@Resolve` and `@Remodel` annotations above, that can be used to handle polymorphism and arbitrary structural changes.
+
+One additional class-level annotation is provided, `@Order`, that can be used to specify the desired ordering of object fields in the json output.  Three field-level annotations can be used to control property visibility, naming, and nesting.
+
+ - `@Ignore` can be applied to a field, getter, setter or record element to indicate it should not be serialized or deserialized
+ - `@Property` can be applied to a field, getter, setter or record element to override how the property name appears when serializing, and to define acceptable aliases when deserializing a property
+ - `@Embed` can be used to make the fields of a child object appear as fields of the parent object in JSON; this allows a more flattened JSON representation of a complex object model, and provides a way to capture arbitrary additional fields from JSON when the embedded field is a Map.
+ 
+Here's an example showing these 4 additional annotations in use:
+
+```
+@Value
+@Builder
+@Order({ "message-title", "message-body" })
+public class Message {
+	@Property("message-title")
+	String title;
+	@Property(value = "message-body", alias = "body")
+	String body;
+	@Embed
+	Sender sender;
+}
+
+@Value
+@Builder
+public class Envelope {
+	int id;
+	@Embed
+	Message message;
+	@Embed
+	Map metadata;
+}
+
+Json json = new Json();
+Envelope envelope = Envelope.builder()
+		.id(123)
+		.message(Message.builder()
+				.sender(Sender.builder()
+						.firstName("John")
+						.lastName("Doe")
+						.build())
+				.title("Hello World")
+				.body("Is this thing on?")
+				.build())
+		.metadata(Map.of("spamScore", 0.75))
+		.build();
+String ser = json.toString(envelope);
+System.out.println(ser);
+	// output: {"id":123,"message-title":"Hello World","message-body":"Is this thing on?","firstName":"John","lastName":"Doe","spamScore":0.75}
+Envelope roundTrip = json.fromString(ser, Envelope.class);
+Assert.assertEquals(roundTrip, envelope);
+```
 
 
 #### Filters: customizing the parser and visitor
