@@ -67,7 +67,7 @@ public class ImmutableListModel extends BaseListModel<List> {
 	}
 
 	@Override
-	protected void addItem(Object maker, Object item) {
+	protected final void addItem(Object maker, Object item) {
 		((ImmutableList)maker).addItem(item);
 	}
 

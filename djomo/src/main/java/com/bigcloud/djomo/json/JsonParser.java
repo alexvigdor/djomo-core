@@ -17,6 +17,7 @@ package com.bigcloud.djomo.json;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.time.temporal.TemporalAccessor;
 import java.util.Arrays;
 
 import com.bigcloud.djomo.Models;
@@ -25,15 +26,17 @@ import com.bigcloud.djomo.api.ListModel;
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.ParserFilterFactory;
+import com.bigcloud.djomo.api.TemporalType;
 import com.bigcloud.djomo.base.BaseParser;
 import com.bigcloud.djomo.error.ModelException;
 import com.bigcloud.djomo.internal.CharArraySequence;
 import com.bigcloud.djomo.internal.FloatingParser;
 
+
 public class JsonParser extends BaseParser implements Parser {
 	private static final ThreadLocal<char[]> localInput = new ThreadLocal<char[]>() {
 		public char[] initialValue() {
-			return new char[8192];
+			return new char[16384];
 		}
 	};
 
@@ -42,6 +45,8 @@ public class JsonParser extends BaseParser implements Parser {
 			return new char[4096];
 		}
 	};
+	 // Scale to 9 digits: index 0 (0 digits) to index 9 (9 digits)
+	private static final int[] SCALE = { 0, 100_000_000, 10_000_000, 1_000_000, 100_000, 10_000, 1_000, 100, 10, 1 };
 	final char[] input = localInput.get();
 	final char[] overflow = localOverflow.get();
 	protected final CharArraySequence charArraySequence = new CharArraySequence(input);
@@ -78,18 +83,9 @@ public class JsonParser extends BaseParser implements Parser {
 		var buf = input;
 		while (true) {
 			int wp = inputLength;
-			while (rp < wp) {
+			for (; rp < wp; rp++) {
 				char c = buf[rp];
-				switch (c) {
-				case ' ':
-				case '\t':
-				case '\n':
-				case '\r':
-				case '\f':
-				case ',':
-					++rp;
-					break;
-				default:
+				if (c > ' ' && c != ',') {
 					readPosition = rp;
 					return c;
 				}
@@ -338,207 +334,38 @@ public class JsonParser extends BaseParser implements Parser {
 
 	@Override
 	public int parseInt() {
-		// CPD-OFF
-		final var buf = input;
-		int rp = readPosition;
-		int wp = inputLength;
-		int ip = rp;
-		boolean negative = false;
-		int value = 0;
-		// first loop / happy path
-		for (; rp < wp; rp++) {
-			int ch = buf[rp];
-			switch (ch) {
-			case '0':
-			case '1':
-			case '2':
-			case '3':
-			case '4':
-			case '5':
-			case '6':
-			case '7':
-			case '8':
-			case '9':
-				value = value * 10 + ch - 48;
-				break;
-			case '-':
-				if (rp == ip) {
-					negative = true;
-				} else {
-					throw new NumberFormatException("Number format error at " + describe());
-				}
-				break;
-			// whitespace chomping
-			case ' ':
-			case '\t':
-			case '\n':
-			case '\r':
-			case '\f':
-				if (ip == rp) {
-					ip++;
-					break;
-				}
-			default:
-				if (rp == ip || rp == ip + 1 && negative) {
-					throw new NumberFormatException("Number format error at " + describe());
-				}
-				readPosition = rp;
-				return negative ? 0 - value : value;
-			}
-		}
-		// buffer reload needed
-		int offset = rp - ip;
-		boolean done = false;
-		rp = 0;
-		while (!done && refill()) {
-			wp = inputLength;
-			// second loop; any valid number would only span a single buffer boundary
-			PARSE_LOOP: for (rp = ip = 0; rp < wp; rp++) {
-				int ch = buf[rp];
-				switch (ch) {
-				case '0':
-				case '1':
-				case '2':
-				case '3':
-				case '4':
-				case '5':
-				case '6':
-				case '7':
-				case '8':
-				case '9':
-					value = value * 10 + ch - 48;
-					break;
-				case '-':
-					if (rp == ip && offset == 0) {
-						negative = true;
-					} else {
-						throw new NumberFormatException("Number format error at " + describe());
-					}
-					break;
-				// whitespace chomping
-				case ' ':
-				case '\t':
-				case '\n':
-				case '\r':
-				case '\f':
-					if (offset == 0 && ip == rp) {
-						ip++;
-						break;
-					}
-				default:
-					if (offset == 0 && (ip == rp || rp == ip + 1 && negative)) {
-						throw new NumberFormatException("Number format error at " + describe());
-					}
-					done = true;
-					break PARSE_LOOP;
-				}
-			}
-			offset += rp - ip;
-		}
-		readPosition = rp;
-		return negative ? 0 - value : value;
-		// CPD-ON
+		//we have to account for the possibility the encoded data is longer than an int
+		return (int) parseLong();
 	}
 
 	@Override
 	public long parseLong() {
-		final var buf = input;
-		int rp = readPosition;
-		int wp = inputLength;
-		int ip = rp;
-		boolean negative = false;
-		long value = 0;
-		// first loop / happy path
-		for (; rp < wp; rp++) {
-			int ch = buf[rp];
-			switch (ch) {
-			case '0':
-			case '1':
-			case '2':
-			case '3':
-			case '4':
-			case '5':
-			case '6':
-			case '7':
-			case '8':
-			case '9':
-				value = value * 10 + ch - 48;
-				break;
-			case '-':
-				if (rp == ip) {
-					negative = true;
-				} else {
-					throw new NumberFormatException("Number format error at " + describe());
-				}
-				break;
-			// whitespace chomping
-			case ' ':
-			case '\t':
-			case '\n':
-			case '\r':
-			case '\f':
-				if (ip == rp) {
-					ip++;
-					break;
-				}
-			default:
-				if (rp == ip || rp == ip + 1 && negative) {
-					throw new NumberFormatException("Number format error at " + describe());
-				}
-				readPosition = rp;
-				return negative ? 0 - value : value;
+		char c = seek();
+		boolean negative = c == '-';
+		int pos = readPosition;
+		long val = 0;
+		// Fast path: digits are already in the current buffer
+		if (pos + 21 < inputLength) {
+			char[] b = input;
+			if (negative) {
+				c = b[++pos];
 			}
-		}
-		// buffer reload needed
-		int offset = rp - ip;
-		boolean done = false;
-		rp = 0;
-		while (!done && refill()) {
-			wp = inputLength;
-			PARSE_LOOP: for (rp = ip = 0; rp < wp; rp++) {
-				int ch = buf[rp];
-				switch (ch) {
-				case '0':
-				case '1':
-				case '2':
-				case '3':
-				case '4':
-				case '5':
-				case '6':
-				case '7':
-				case '8':
-				case '9':
-					value = value * 10 + ch - 48;
+			for (int i = 0; i < 20; i++) {
+				c = (char) (c - '0');
+				if (c >= 10) {
 					break;
-				case '-':
-					if (rp == ip && offset == 0) {
-						negative = true;
-					} else {
-						throw new NumberFormatException("Number format error at " + describe());
-					}
-					break;
-				// whitespace chomping
-				case ' ':
-				case '\t':
-				case '\n':
-				case '\r':
-				case '\f':
-					if (offset == 0 && ip == rp) {
-						ip++;
-						break;
-					}
-				default:
-					if (offset == 0 && (ip == rp || rp == ip + 1 && negative)) {
-						throw new NumberFormatException("Number format error at " + describe());
-					}
-					done = true;
-					break PARSE_LOOP;
 				}
+				val = val * 10 + c;
+				c = b[++pos];
 			}
-			offset += rp - ip;
+			readPosition = pos;
+		} else {
+			val = parseSlow(21, '-');
 		}
-		readPosition = rp;
-		return negative ? 0 - value : value;
+		if (negative) {
+			val = -val;
+		}
+		return val;
 	}
 
 	@Override
@@ -947,6 +774,289 @@ public class JsonParser extends BaseParser implements Parser {
 			return targetSize;
 		}
 		return curSize;
+	}
+
+	@Override
+	public <T extends TemporalAccessor> T parseTemporal(TemporalType<T> type) {
+		char next =	seek();
+		if(next != '"') {
+			throw new ModelException("Expected starting quote " + describe());
+		}
+		readPosition++;
+		var builder = TemporalType.builder();
+		char c = peek();
+		if(((char) (c - '0')) < 10) {
+			parseStandardDate(builder);
+		}
+		else if(c == '+') {
+			++readPosition;
+			parseExtendedDate(builder, 1);
+		}
+		else if(c == '-') {
+			++readPosition;
+			if (peek() == '-') {
+				++readPosition;
+				parseMonthDay(builder);
+			}
+			else {
+				// If not --, it's a negative Year
+				parseExtendedDate(builder, -1);
+			}
+		}
+		else if(c == 'T') {
+			builder.format = TemporalType.Format.TIME;
+			parseTime(builder);
+		}
+		else if(c=='Z'){
+			builder.format = TemporalType.Format.OFFSET;
+			builder.isUtc = true;
+		}
+		else {
+			throw new ModelException("Unexpected date/time format " + describe());
+		}
+		if(peek() == '"') {
+			readPosition++;
+		}
+		else {
+			throw new ModelException("Expected ending quote " + describe());
+		}
+		return type.from(builder);
+	}
+
+	private void parseMonthDay(TemporalType.Builder res) {
+		res.month = parseByte(-1);
+		res.day = parseByte('-');
+		res.format = TemporalType.Format.MONTH_DAY;
+	}
+
+	private void parseStandardDate(TemporalType.Builder res) {
+		res.year = parseInt(4);
+		if ((res.month = parseByte('-')) == 0) {
+			if (peek() == ':') {
+				// Special case: input was actually HH:mm (Year was 2 digits)
+				parseTimeFromYear(res);
+			} else {
+				res.format = TemporalType.Format.YEAR;
+			}
+		}
+		else {
+			parseDayTime(res);
+		}
+	}
+
+	private void parseTimeFromYear(TemporalType.Builder res) {
+		res.hour = (byte) res.year;
+		res.year = 0;
+		res.format = TemporalType.Format.TIME;
+		res.minute = parseByte(':');
+		res.second = parseByte(':');
+		parseNanos(res);
+		parseZone(res);
+	}
+
+	private void parseExtendedDate(TemporalType.Builder res, int sign) {
+		res.year = sign * parseInt(10);
+		if ((res.month = parseByte('-')) == 0) {
+			if (peek() == ':') {
+				// Special case: input was actually +HH:mm or -HHmmss
+				res.format = TemporalType.Format.OFFSET;
+				parseZone(res, res.year);
+				res.year = 0;
+			} else {
+				res.format = TemporalType.Format.YEAR;
+			}
+		} else {
+			parseDayTime(res);
+		}
+	}
+
+	private void parseDayTime(TemporalType.Builder res) {
+		if ((res.day = parseByte('-')) == 0) {
+			res.format = TemporalType.Format.YEAR_MONTH;
+		} else {
+			// 3. Time Part
+			char t = peek();
+			if (t == 'T') {
+				res.format = TemporalType.Format.DATE_TIME;
+				parseTime(res);
+			} else {
+				res.format = TemporalType.Format.DATE;
+			}
+		}
+	}
+
+	private void parseTime(TemporalType.Builder res) {
+		res.hour = parseByte('T');
+		res.minute = parseByte(':');
+		res.second = parseByte(':');
+
+		// Sub-seconds
+		parseNanos(res);
+		parseZone(res);
+	}
+
+	private void parseNanos(TemporalType.Builder res) {
+		char dot = peek();
+		if (dot == '.') {
+			int st = ++readPosition;
+			int value = parseInt(9);
+			int count = readPosition - st;
+			if (count < 0) {
+				// buffer overflow correction
+				count += input.length;
+			}
+			res.nanos = value * SCALE[count];
+		}
+	}
+
+	private void parseZone(TemporalType.Builder res) {
+		int sign = 0;
+		char off = peek();
+		if (off == 'Z') {
+			res.isUtc = true;
+			++readPosition;
+		} else if (off == '+') {
+			sign = 1;
+		} else if (off == '-') {
+			sign = -1;
+		}
+		if (sign != 0) {
+			byte h = parseByte(off);
+			byte m = parseByte(':');
+			byte s = parseByte(':');
+			res.offsetTotalSeconds = sign * (h * 3600 + m * 60 + s);
+			if (res.format == TemporalType.Format.TIME) {
+				res.format = TemporalType.Format.OFFSET_TIME;
+			}
+		}
+		parseZoneId(res);
+	}
+
+	private void parseZoneId(TemporalType.Builder res) {
+		int rp = readPosition;
+		int wp = inputLength;
+		if (rp == wp) {
+			if (refill()) {
+				rp = 0;
+				wp = inputLength;
+			} else {
+				return;
+			}
+		}
+		char[] buf = input;
+		if (buf[rp] == '[') {
+			int start = ++rp;
+			while (rp < wp) {
+				if (buf[rp++] == ']') {
+					res.zoneId = new String(buf, start, rp - start - 1);
+					readPosition = rp;
+					return;
+				}
+			}
+			var ov = overflow;
+			// buffer overflow
+			int op = rp - start;
+			System.arraycopy(buf, start, ov, 0, op);
+			if (refill()) {
+				rp = 0;
+				wp = inputLength;
+				char c;
+				while (rp < wp) {
+					c = buf[rp++];
+					if (c == ']') {
+						res.zoneId = new String(ov, 0, op);
+						readPosition = rp;
+						return;
+					}
+					ov[op++] = c;
+				}
+			}
+			throw new ModelException("Expected closing ] " + describe());
+		}
+	}
+
+	private void parseZone(TemporalType.Builder res, int parsedHour) {
+		int sign = parsedHour > 0 ? 1 : -1;
+		parsedHour *= sign;
+		int h = parsedHour < 99 ? parsedHour : parsedHour < 9999 ? parsedHour/100 : parsedHour/10000;
+		int m = parsedHour < 99 ? parseByte(':') : parsedHour < 9999 ? parsedHour % 100 : parsedHour / 100 % 100;
+		int s = parsedHour < 9999 ? parseByte(':') : parsedHour % 10;
+		res.offsetTotalSeconds = sign * (h * 3600 + m * 60 + s);
+		parseZoneId(res);
+	}
+
+	private int parseInt(int max) {
+		int pos = readPosition;
+		// Fast path: digits are already in the current buffer
+		if (pos + max < inputLength) {
+			char[] b = input;
+			char c = b[pos];
+			int val = 0;
+			for (int i = 0; i < max; i++) {
+				c = (char) (c - '0');
+				if(c >= 10) {
+					break;
+				}
+				val = val * 10 + c;
+				c = b[++pos];
+			}
+			readPosition = pos;
+			return val;
+		} else {
+			return (int) parseSlow(max, -1);
+		}
+	}
+
+	private byte parseByte(int skipFirst) {
+		int pos = readPosition;
+		if (pos + 3 < inputLength) {
+			char[] b = input;
+			char c = b[pos];
+			if (c == skipFirst) {
+				c = b[++pos];
+			}
+			c = (char) (c - '0');
+			if(c >= 10) {
+				return 0;
+			}
+			byte val = (byte) c;
+			c = (char) (b[++pos] - '0');
+			if(c < 10) {
+				++pos;
+				val = (byte) (10 * val + c);
+			}
+			readPosition = pos;
+			return val;
+		}
+		else {
+			return (byte) parseSlow(2, skipFirst);
+		}
+	}
+
+	private long parseSlow(int max, int skipFirst) {
+		char c = peek();
+		if (c == skipFirst) {
+			++readPosition;
+			c = peek();
+		}
+		long val = 0;
+		// Slow path: component crosses buffer boundary
+		for (int i = 0; i < max; i++) {
+			c = (char) (c - '0');
+			if(c >= 10) {
+				break;
+			}
+			val = val * 10 + c;
+			++readPosition;
+			c = peek();
+		}
+		return val;
+	}
+
+	private char peek() {
+		if (readPosition >= inputLength && !refill())
+			return '\0';
+		return input[readPosition];
 	}
 
 }

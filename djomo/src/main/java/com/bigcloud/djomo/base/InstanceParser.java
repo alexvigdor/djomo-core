@@ -15,6 +15,8 @@
  *******************************************************************************/
 package com.bigcloud.djomo.base;
 
+import java.time.temporal.TemporalAccessor;
+
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.api.Field;
 import com.bigcloud.djomo.api.ListModel;
@@ -22,6 +24,7 @@ import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.ParserFilterFactory;
+import com.bigcloud.djomo.api.TemporalType;
 
 /**
  * A parser implementation that reads from an instance of an existing object
@@ -184,6 +187,17 @@ public class InstanceParser extends BaseParser implements Parser {
 	@Override
 	public String parseString() {
 		return source == null ? null : source.toString();
+	}
+
+	@Override
+	public <T extends TemporalAccessor> T parseTemporal(TemporalType<T> type) {
+		if(source == null) {
+			return null;
+		}
+		if(type.getTemporalClass().isInstance(source)) {
+			return (T) source;
+		}
+		return models.get(type.getTemporalClass()).convert(source);
 	}
 
 }

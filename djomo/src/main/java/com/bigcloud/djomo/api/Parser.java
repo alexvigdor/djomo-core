@@ -15,6 +15,8 @@
  *******************************************************************************/
 package com.bigcloud.djomo.api;
 
+import java.time.temporal.TemporalAccessor;
+
 import com.bigcloud.djomo.Models;
 /**
  * Interface for object parsers; the interface is source agnostic, it could be parsing from a binary or character stream, or from an already existing object model.
@@ -28,6 +30,7 @@ public interface Parser {
 	Object parseObject(ObjectModel model);
 	Field parseObjectField(ObjectModel model, CharSequence field);
 	Object parseList(ListModel model);
+	<T extends TemporalAccessor> T parseTemporal(TemporalType<T> type);
 	void parseListItem();
 	int parseInt();
 	long parseLong();

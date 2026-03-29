@@ -15,6 +15,13 @@
  *******************************************************************************/
 package com.bigcloud.djomo.json;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
+import java.time.temporal.TemporalAccessor;
 import java.util.Arrays;
 
 import com.bigcloud.djomo.Models;
@@ -356,6 +363,227 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 			buf[p++] = 'e';
 		}
 		pos = p;
+	}
+
+	@Override
+	public <T extends TemporalAccessor> void visitTemporal(T time) {
+		var p = pos;
+		int room = BUF_LEN - p;
+		if (room < 80) {
+			sink.next(p);
+			p = 0;
+		}
+		buffer[p++] = '"';
+		if(time instanceof OffsetDateTime t) {
+			p = writeTemporal(t, p);
+		}
+		else if(time instanceof Instant t) {
+			p = writeTemporal(t, p);
+		}
+		else if(time instanceof ZonedDateTime t) {
+			p = writeTemporal(t, p);
+		}
+		else if(time instanceof LocalDateTime t) {
+			p = writeTemporal(t, p);
+		}
+		else if(time instanceof LocalDate t) {
+			p = writeTemporal(t, p);
+		}
+		else if(time instanceof LocalTime t) {
+			p = writeTemporal(t, p);
+		}
+		else {
+			var str = time.toString();
+			int len = str.length();
+			str.getChars(0, len, buffer, p);
+			p += len;
+		}
+		buffer[p++] = '"';
+		pos = p;
+	}
+
+	final int writeTemporal(LocalTime time, int pos) {
+		return printLocalTime(buffer, pos, time.getHour(), time.getMinute(), time.getSecond(), time.getNano());
+	}
+
+	final int writeTemporal(LocalDate time, int pos) {
+		return printLocalDate(buffer, pos, time.getYear(), time.getMonthValue(), time.getDayOfMonth());
+	}
+
+	final int writeTemporal(LocalDateTime time, int pos) {
+		var buf = buffer;
+		pos = printLocalDate(buf, pos, time.getYear(), time.getMonthValue(), time.getDayOfMonth());
+		buf[pos++] = 'T';
+		return printLocalTime(buf, pos, time.getHour(), time.getMinute(), time.getSecond(), time.getNano());
+	}
+
+	final int writeTemporal(OffsetDateTime time, int pos) {
+		var buf = buffer;
+		var lt = time.toLocalDateTime();
+		var localDate = lt.toLocalDate();
+		var localTime = lt.toLocalTime();
+		pos = printLocalDate(buf, pos, localDate.getYear(), localDate.getMonthValue(), localDate.getDayOfMonth());
+		buf[pos++] = 'T';
+		pos = printLocalTime(buf, pos, localTime.getHour(), localTime.getMinute(), localTime.getSecond(), localTime.getNano());
+		return printOffset(buf, pos, time.getOffset().getTotalSeconds());
+	}
+
+	final int writeTemporal(ZonedDateTime time, int pos) {
+		var buf = buffer;
+		var lt = time.toLocalDateTime();
+		var localDate = lt.toLocalDate();
+		var localTime = lt.toLocalTime();
+		pos = printLocalDate(buf, pos, localDate.getYear(), localDate.getMonthValue(), localDate.getDayOfMonth());
+		buf[pos++] = 'T';
+		pos = printLocalTime(buf, pos, localTime.getHour(), localTime.getMinute(), localTime.getSecond(), localTime.getNano());
+		pos = printOffset(buf, pos, time.getOffset().getTotalSeconds());
+		var zone = time.getZone().toString();
+		int zl = zone.length();
+		buf[pos++] = '[';
+		zone.getChars(0, zl, buf, pos);
+		pos+=zl;
+		buf[pos++] = ']';
+		return pos;
+	}
+
+	final int writeTemporal(Instant time, int pos) {
+		var buf = buffer;
+		long second = time.getEpochSecond();
+		int nanos = time.getNano();
+		var localDate = LocalDate.ofEpochDay(Math.floorDiv(second, 86400));
+		var localTime = LocalTime.ofNanoOfDay(Math.floorMod(second, 86400) * 1000_000_000l + nanos);
+		pos = printLocalDate(buf, pos, localDate.getYear(), localDate.getMonthValue(), localDate.getDayOfMonth());
+		buf[pos++] = 'T';
+		pos = printLocalTime(buf, pos, localTime.getHour(), localTime.getMinute(), localTime.getSecond(), localTime.getNano());
+		buf[pos++] = 'Z';
+		return pos;
+	}
+
+	// max length 18
+	protected final int printLocalTime(char[] buf, int pos, int hour, int minute, int seconds, int nanos) {
+		if (hour < 10) {
+			buf[pos++] = '0';
+			buf[pos++] = (char) (hour + 48);
+		} else {
+			buf[pos++] = (char) ((hour / 10) + 48);
+			buf[pos++] = (char) ((hour % 10) + 48);
+		}
+		buf[pos++] = ':';
+		if (minute < 10) {
+			buf[pos++] = '0';
+			buf[pos++] = (char) (minute + 48);
+		} else {
+			buf[pos++] = (char) ((minute / 10) + 48);
+			buf[pos++] = (char) ((minute % 10) + 48);
+		}
+		if (seconds > 0 || nanos > 0) {
+			buf[pos++] = ':';
+			if (seconds < 10) {
+				buf[pos++] = '0';
+				buf[pos++] = (char) (seconds + 48);
+			} else {
+				buf[pos++] = (char) ((seconds / 10) + 48);
+				buf[pos++] = (char) ((seconds % 10) + 48);
+			}
+			if (nanos > 0) {
+				buf[pos++] = '.';
+				boolean sig = false;
+				int sigdigits = 9;
+				int c;
+				for (int i = 8; i >= 0; i--) {
+					c = nanos % 10;
+					nanos /= 10;
+					if (c == 0 && !sig) {
+						--sigdigits;
+						continue;
+					}
+					buf[pos + i] = (char) (c + 48);
+					sig = true;
+				}
+				pos += sigdigits;
+			}
+		}
+		return pos;
+	}
+
+	// max-length 16
+	protected final int printLocalDate(char[] buf, int pos, int year, int month, int day) {
+		if (year < 0) {
+			buf[pos++] = '-';
+			year = -year;
+		} else if (year > 9999) {
+			buf[pos++] = '+';
+		}
+		int digits = 4;
+		if (year > 9999) {
+			digits = year <= 99999 ? 5 : year <= 999999 ? 6 : year <= 9999999 ? 7 : year <= 99999999 ? 8 : 9;
+		}
+		for (int i = digits - 1; i >= 0; i--) {
+			buf[pos + i] = (char) ((year % 10) + 48);
+			year /= 10;
+		}
+		pos += digits;
+		buf[pos++] = '-';
+		if (month < 10) {
+			buf[pos++] = '0';
+			buf[pos++] = (char) (month + 48);
+		} else {
+			buf[pos++] = '1';
+			buf[pos++] = (char) (month + 38);
+		}
+		buf[pos++] = '-';
+		if (day < 10) {
+			buf[pos++] = '0';
+			buf[pos++] = (char) (day + 48);
+		} else {
+			buf[pos++] = (char) ((day / 10) + 48);
+			buf[pos++] = (char) ((day % 10) + 48);
+		}
+		return pos;
+	}
+
+	//max-length 9
+	protected final int printOffset(char[] buf, int pos, int totalSeconds) {
+		if(totalSeconds == 0) {
+			buf[pos] = 'Z';
+			return pos+1;
+		}
+		if(totalSeconds < 0) {
+			totalSeconds = -totalSeconds;
+			buf[pos++] = '-';
+		}
+		else {
+			buf[pos++] = '+';
+		}
+		int hours = totalSeconds / 3600;
+		if (hours < 10) {
+			buf[pos++] = '0';
+			buf[pos++] = (char) (hours + 48);
+		} else {
+			buf[pos++] = (char) ((hours / 10) + 48);
+			buf[pos++] = (char) ((hours % 10) + 48);
+		}
+		int minutes = totalSeconds % 3600 / 60;
+		buf[pos++] = ':';
+		if (minutes < 10) {
+			buf[pos++] = '0';
+			buf[pos++] = (char) (minutes + 48);
+		} else {
+			buf[pos++] = (char) ((minutes / 10) + 48);
+			buf[pos++] = (char) ((minutes % 10) + 48);
+		}
+		int seconds = totalSeconds % 60;
+		if(seconds > 0) {
+			buf[pos++] = ':';
+			if (seconds < 10) {
+				buf[pos++] = '0';
+				buf[pos++] = (char) (seconds + 48);
+			} else {
+				buf[pos++] = (char) ((seconds / 10) + 48);
+				buf[pos++] = (char) ((seconds % 10) + 48);
+			}
+		}
+		return pos;
 	}
 
 }

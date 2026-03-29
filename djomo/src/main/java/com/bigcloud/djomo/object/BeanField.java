@@ -19,6 +19,7 @@ import java.lang.annotation.Annotation;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,6 +29,7 @@ import com.bigcloud.djomo.api.ListModel;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.Parser;
+import com.bigcloud.djomo.api.TemporalType;
 import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.error.AnnotationException;
 import com.bigcloud.djomo.error.GetFieldException;
@@ -197,6 +199,54 @@ public class BeanField implements Field, Cloneable {
 				visitor.visitNull();
 			} else {
 				visitor.visitString(val);
+			}
+		}
+
+		@Override
+		public Field rekey(Object newKey) {
+			return new StringField(accessor, mutator, name, newKey, model, annotations);
+		}
+
+	}
+
+	public static class TemporalField extends BeanField {
+		TemporalType<?> temporalType;
+
+		public TemporalField(MethodHandle accessor, MethodHandle mutator, String name, Model model,
+				Annotation... annotations) {
+			super(accessor, mutator, name, model, annotations);
+			temporalType = TemporalType.typeOf(model.getType());
+		}
+
+		TemporalField(MethodHandle accessor, MethodHandle mutator, String name, Object key, Model model,
+				Annotation... annotations) {
+			super(accessor, mutator, name, key, model, annotations);
+			temporalType = TemporalType.typeOf(model.getType());
+		}
+
+		@Override
+		public void parse(Object dest, Parser parser) {
+			TemporalAccessor value = parser.parseTemporal(temporalType);
+			try {
+				mutator.invoke(dest, value);
+			} catch (Throwable e) {
+				throw createSetException(dest, value, e);
+			}
+		}
+
+		@Override
+		public void visit(Object source, Visitor visitor) {
+			TemporalAccessor val;
+			try {
+				val = (TemporalAccessor) accessor.invoke(source);
+			} catch (Throwable e) {
+				throw createGetException(source, e);
+			}
+			visitor.visitObjectField(key);
+			if (val == null) {
+				visitor.visitNull();
+			} else {
+				visitor.visitTemporal(val);
 			}
 		}
 
@@ -492,6 +542,8 @@ public class BeanField implements Field, Cloneable {
 				field = new LongField(accessor, mutator, name, model, annotationArray);
 			} else if (model.getType() == boolean.class) {
 				field = new BooleanField(accessor, mutator, name, model, annotationArray);
+			} else if(TemporalAccessor.class.isAssignableFrom(model.getType())) {
+				field = new TemporalField(accessor, mutator, name, model, annotationArray);
 			} else {
 				if (model instanceof ResolverModel rm && rm.getResolver() instanceof Resolver.Substitute rs) {
 					model = rs.getSubstitute();

@@ -85,7 +85,7 @@ public class StringArrayModel extends BaseListModel<String[]>{
 	}
 
 	@Override
-	protected void addItem(Object maker, Object item) {
+	protected final void addItem(Object maker, Object item) {
 		var buf = (StringArrayBuffer) maker;
 		var p = buf.pointer;
 		if(p == buf.buffer.length) {

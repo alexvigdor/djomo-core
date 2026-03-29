@@ -20,6 +20,7 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import com.bigcloud.djomo.api.ModelContext;
+import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.base.BaseListModel;
 
@@ -72,14 +73,24 @@ public class DoubleArrayModel extends BaseListModel<double[]>{
 	}
 
 	@Override
-	protected void addItem(Object maker, Object item) {
-		var buf = (DoubleArrayBuffer) maker;
-		var p = buf.pointer;
-		if(p == buf.buffer.length) {
-			buf.buffer = Arrays.copyOf(buf.buffer, p * 2);
+	public void parseItem(Object maker, Parser parser) {
+		parser.parseListItem();
+		addDouble((DoubleArrayBuffer) maker, parser.parseDouble());
+	}
+
+	@Override
+	protected final void addItem(Object maker, Object item) {
+		addDouble((DoubleArrayBuffer) maker, (double) item);
+	}
+
+	private void addDouble(DoubleArrayBuffer buffer, double value) {
+		var p = buffer.pointer;
+		var buf = buffer.buffer;
+		if(p == buf.length) {
+			buf = buffer.buffer = Arrays.copyOf(buf, p * 2);
 		}
-		buf.buffer[p] = (double) item;
-		buf.pointer = p + 1;
+		buf[p] = value;
+		buffer.pointer = p + 1;
 	}
 
 	private static class DoubleArrayBuffer{

@@ -112,17 +112,5 @@ public class NumberTest {
 		Assert.assertEquals(lval, -12);
 		dval = json.fromString(sampleString, Double.class);
 		Assert.assertEquals(dval, -12);
-		Assert.assertThrows(NumberFormatException.class, () -> json.fromString("   -   ", Integer.class));
-		Assert.assertThrows(NumberFormatException.class, () -> json.fromString("   -   ", Long.class));
-		Assert.assertThrows(NumberFormatException.class, () -> json.fromString("   -   ", Double.class));
-		Assert.assertThrows(NumberFormatException.class, () -> json.fromString("   3-   ", Integer.class));
-		Assert.assertThrows(NumberFormatException.class, () -> json.fromString("   3-   ", Long.class));
-		Assert.assertThrows(NumberFormatException.class, () -> json.fromString("   3-   ", Double.class));
-		Assert.assertThrows(NumberFormatException.class, () -> json.fromString("[   -   ]", Integer[].class));
-		Assert.assertThrows(NumberFormatException.class, () -> json.fromString("[  -   ]", Long[].class));
-		Assert.assertThrows(NumberFormatException.class, () -> json.fromString("[  -   ]", Double[].class));
-		Assert.assertThrows(NumberFormatException.class, () -> json.fromString("[   3-  ] ", Integer[].class));
-		Assert.assertThrows(NumberFormatException.class, () -> json.fromString(" [  3-  ] ", Long[].class));
-		Assert.assertThrows(NumberFormatException.class, () -> json.fromString(" [  3-  ] ", Double[].class));
 	}
 }

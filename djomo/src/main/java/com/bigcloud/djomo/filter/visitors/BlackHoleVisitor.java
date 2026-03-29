@@ -15,6 +15,8 @@
  *******************************************************************************/
 package com.bigcloud.djomo.filter.visitors;
 
+import java.time.temporal.TemporalAccessor;
+
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.api.ListModel;
 import com.bigcloud.djomo.api.Model;
@@ -89,6 +91,10 @@ public class BlackHoleVisitor implements VisitorFilter{
 	@Override
 	public void filter(Visitor visitor) {
 		
+	}
+
+	@Override
+	public <T extends TemporalAccessor> void visitTemporal(T time) {
 	}
 
 }

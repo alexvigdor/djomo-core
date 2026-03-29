@@ -15,6 +15,8 @@
  *******************************************************************************/
 package com.bigcloud.djomo.api;
 
+import java.time.temporal.TemporalAccessor;
+
 import com.bigcloud.djomo.Models;
 
 /**
@@ -36,6 +38,8 @@ public interface Visitor {
 	void visitObjectField(Object name);
 	
 	<T> void visit(T object, Model<T> model);
+
+	<T extends TemporalAccessor> void visitTemporal(T time);
 
 	void visit(Object obj);
 

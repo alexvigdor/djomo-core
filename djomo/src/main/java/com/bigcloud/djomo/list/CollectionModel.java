@@ -82,7 +82,7 @@ public class CollectionModel<T extends Collection> extends BaseListModel<T> {
 	}
 
 	@Override
-	protected void addItem(Object maker, Object item) {
+	protected final void addItem(Object maker, Object item) {
 		((T)maker).add(item);
 	}
 }

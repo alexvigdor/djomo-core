@@ -22,15 +22,8 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URI;
 import java.net.URL;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.time.temporal.TemporalAmount;
 import java.util.Date;
@@ -118,28 +111,11 @@ public class SimpleModelFactory extends BaseModelFactory {
 		else if(ZoneId.class.isAssignableFrom(rawType)) {
 			return magicString(ZoneId.class, context, "of",  String.class);
 		}
-		else if((TemporalAmount.class.isAssignableFrom(rawType) || TemporalAccessor.class.isAssignableFrom(rawType)) && rawType.getPackageName().equals("java.time")) {
-			if(LocalDate.class.equals(rawType)) {
-				return new LocalDateModel(context);
-			}
-			else if(LocalTime.class.equals(rawType)) {
-				return new LocalTimeModel(context);
-			}
-			else if (OffsetDateTime.class.equals(rawType)){
-				return new OffsetDateTimeModel(context);
-			}
-			else if(Instant.class.equals(rawType)) {
-				return new InstantModel(context);
-			}
-			else if(ZonedDateTime.class.equals(rawType)) {
-				return new DateTimeFormatterModel(rawType, context, DateTimeFormatter.ISO_ZONED_DATE_TIME);
-			}
-			else if(LocalDateTime.class.equals(rawType)) {
-				return new LocalDateTimeModel(context);
-			}
-			else {
-				return magicString(rawType, context, "parse",  CharSequence.class);
-			}
+		else if(TemporalAccessor.class.isAssignableFrom(rawType) && rawType.getPackageName().startsWith("java.time")) {
+			return new TemporalAccessorModel<TemporalAccessor>(type, context);
+		}
+		else if(TemporalAmount.class.isAssignableFrom(rawType) && rawType.getPackageName().startsWith("java.time")) {
+			return magicString(rawType, context, "parse",  CharSequence.class);
 		}
 		else if(String.class == rawType) {
 			return new StringModel(context);
@@ -162,7 +138,6 @@ public class SimpleModelFactory extends BaseModelFactory {
 		else if(Throwable.class.isAssignableFrom(rawType)) {
 			return magicString(Throwable.class, context, null, String.class);
 		}
-	
 		return null;
 	}
 

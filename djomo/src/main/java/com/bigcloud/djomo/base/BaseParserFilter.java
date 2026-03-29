@@ -15,6 +15,8 @@
  *******************************************************************************/
 package com.bigcloud.djomo.base;
 
+import java.time.temporal.TemporalAccessor;
+
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.api.Field;
 import com.bigcloud.djomo.api.ListModel;
@@ -22,6 +24,7 @@ import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.ParserFilter;
+import com.bigcloud.djomo.api.TemporalType;
 
 /**
  * <p>
@@ -141,5 +144,10 @@ public class BaseParserFilter implements ParserFilter, Cloneable {
 	@Override
 	public BaseParserFilter newParserFilter() {
 		return clone();
+	}
+
+	@Override
+	public <T extends TemporalAccessor> T parseTemporal(TemporalType<T> type) {
+		return parser.parseTemporal(type);
 	}
 }
