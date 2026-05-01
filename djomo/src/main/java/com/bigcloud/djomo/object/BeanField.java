@@ -545,7 +545,7 @@ public class BeanField implements Field, Cloneable {
 			} else if(TemporalAccessor.class.isAssignableFrom(model.getType())) {
 				field = new TemporalField(accessor, mutator, name, model, annotationArray);
 			} else {
-				if (model instanceof ResolverModel rm && rm.getResolver() instanceof Resolver.Substitute rs) {
+				if (model instanceof ResolverModel rm && rm.getResolver() instanceof Resolver.Substitute rs  && rs.getSubstitute() != null) {
 					model = rs.getSubstitute();
 				}
 				if (model instanceof ObjectModel om) {

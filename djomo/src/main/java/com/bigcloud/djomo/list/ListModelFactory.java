@@ -15,12 +15,14 @@
  *******************************************************************************/
 package com.bigcloud.djomo.list;
 
-import java.util.List;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import com.bigcloud.djomo.api.Model;
@@ -37,22 +39,32 @@ public class ListModelFactory extends BaseModelFactory {
 		Class<?> rawType = getRawType(type);
 		Type valueType = getTypeParameter(type, 0);
 		Constructor<?> constructor = getConstructor(rawType);
-		if(rawType.isInterface() && (rawType==List.class || rawType==Collection.class || rawType == Iterable.class)){
-			if(valueType == String.class) {
-				return new StringListModel(type, context);
-			}
-			return new ImmutableListModel(type, context, valueType);
-		}
 		if (Collection.class.isAssignableFrom(rawType)) {
-			try {
-				MethodHandle handle = constructor == null ? null : lookup.unreflectConstructor(constructor);
-				if(valueType == String.class) {
-					return new StringCollectionModel<>(type, context, handle);
+			Supplier<Collection> supplier;
+			if (rawType == List.class || rawType == Collection.class || rawType == ArrayList.class || rawType == Iterable.class) {
+				supplier = () -> new ArrayList(122);
+			} else if (constructor != null) {
+				try {
+					final MethodHandle handle = lookup.unreflectConstructor(constructor);
+					supplier = () -> {
+						try {
+							return (Collection) handle.invoke();
+						} catch (Throwable e) {
+							throw new RuntimeException("Failed to create collection of type " + rawType, e);
+						}
+					};
+				} catch (IllegalAccessException e) {
+					throw new RuntimeException(e);
 				}
-				return new CollectionModel<>(type, context, handle, valueType);
-			} catch (IllegalAccessException e) {
-				throw new RuntimeException(e);
+			} else {
+				supplier = () -> {
+					throw new UnsupportedOperationException("No default constructor for " + rawType);
+				};
 			}
+			if (valueType == String.class) {
+				return new StringCollectionModel<>(type, context, supplier);
+			}
+			return new CollectionModel<>(type, context, supplier, valueType);
 		} else if (rawType.isArray()) {
 			if (rawType.getComponentType() == char.class) {
 				return new CharArrayModel(context);
@@ -60,20 +72,20 @@ public class ListModelFactory extends BaseModelFactory {
 			if (rawType.getComponentType() == byte.class) {
 				return new ByteArrayModel(context);
 			}
-			if(rawType.getComponentType() == long.class) {
+			if (rawType.getComponentType() == long.class) {
 				return new LongArrayModel(context);
 			}
-			if(rawType.getComponentType() == int.class) {
+			if (rawType.getComponentType() == int.class) {
 				return new IntArrayModel(context);
 			}
-			if(rawType.getComponentType() == double.class) {
+			if (rawType.getComponentType() == double.class) {
 				return new DoubleArrayModel(context);
 			}
-			if(rawType.getComponentType() == String.class) {
+			if (rawType.getComponentType() == String.class) {
 				return new StringArrayModel(context);
 			}
 			return new ArrayModel<>(type, context);
-		} else if(Stream.class.isAssignableFrom(rawType)) {
+		} else if (Stream.class.isAssignableFrom(rawType)) {
 			return new StreamModel<>(type, context, valueType);
 		}
 		return null;

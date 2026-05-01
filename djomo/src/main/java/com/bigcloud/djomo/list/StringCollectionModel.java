@@ -15,20 +15,18 @@
  *******************************************************************************/
 package com.bigcloud.djomo.list;
 
-import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Type;
 import java.util.Collection;
+import java.util.function.Supplier;
 
 import com.bigcloud.djomo.api.ModelContext;
 import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
 
 public class StringCollectionModel<T extends Collection<String>> extends CollectionModel<T> {
-	final MethodHandle constructor;
 
-	public StringCollectionModel(Type type, ModelContext context, MethodHandle constructor) {
+	public StringCollectionModel(Type type, ModelContext context, Supplier<T> constructor) {
 		super(type, context, constructor, String.class);
-		this.constructor = constructor;
 	}
 
 	@Override

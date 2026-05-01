@@ -15,10 +15,10 @@
  *******************************************************************************/
 package com.bigcloud.djomo.list;
 
-import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import com.bigcloud.djomo.api.ModelContext;
@@ -26,23 +26,23 @@ import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.base.BaseListModel;
 
 public class CollectionModel<T extends Collection> extends BaseListModel<T> {
-	final MethodHandle constructor;
+	final Supplier<T> constructor;
 
-	public CollectionModel(Type type, ModelContext context, MethodHandle constructor, Type valueType) {
+	public CollectionModel(Type type, ModelContext context, Supplier<T> constructor, Type valueType) {
 		super(type, context,  context.get(valueType != null ? valueType : Object.class));
 		this.constructor = constructor;
 	}
 
 	@Override
 	public Object maker(T obj) {
-		Collection maker = (Collection) maker();
+		T maker = maker();
 		obj.forEach(maker::add);
 		return maker;
 	}
 
 	@Override
-	public Object maker() {
-		return newInstance();
+	public T maker() {
+		return constructor.get();
 	}
 
 	@Override
@@ -53,18 +53,6 @@ public class CollectionModel<T extends Collection> extends BaseListModel<T> {
 	@Override
 	public Stream stream(T t) {
 		return t.stream();
-	}
-
-	public T newInstance() {
-		try {
-			var c = constructor;
-			if(c == null) {
-				throw new RuntimeException("No constructor for "+type);
-			}
-			return (T) c.invoke();
-		} catch (Throwable e) {
-			throw new RuntimeException(e);
-		}
 	}
 
 	@Override

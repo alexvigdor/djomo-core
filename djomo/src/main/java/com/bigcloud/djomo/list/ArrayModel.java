@@ -17,6 +17,7 @@ package com.bigcloud.djomo.list;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -35,17 +36,17 @@ public class ArrayModel<T> extends BaseListModel<T> {
 
 	@Override
 	public Object maker(T obj) {
-		ImmutableList start = new ImmutableList();
+		ArrayList start = new ArrayList();
 		int len = Array.getLength(obj);
 		for(int i=0; i<len;i++) {
-			start.addItem(Array.get(obj,  i));
+			start.add(Array.get(obj,  i));
 		}
 		return start;
 	}
 
 	@Override
 	public Object maker() {
-		return new ImmutableList();
+		return new ArrayList();
 	}
 
 	@Override
@@ -74,19 +75,19 @@ public class ArrayModel<T> extends BaseListModel<T> {
 
 	@Override
 	public T make(Object maker) {
-		ImmutableList list = (ImmutableList) maker;
-		int len = list.pointer;
+		ArrayList list = (ArrayList) maker;
+		int len = list.size();
 		Object array = Array.newInstance(componentType, len);
-		var items = list.items;
-		for (int i = 0; i < len; i++) {
-			Array.set(array, i, items[i]);
+		int i = 0;
+		for (Object o: list) {
+			Array.set(array, i++, o);
         }
 		return (T) array;
 	}
 
 	@Override
 	protected final void addItem(Object maker, Object item) {
-		((ImmutableList)maker).addItem(item);
+		((ArrayList)maker).add(item);
 	}
 
 }

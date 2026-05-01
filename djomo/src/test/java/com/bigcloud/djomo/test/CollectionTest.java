@@ -38,7 +38,6 @@ import com.bigcloud.djomo.StaticType;
 import com.bigcloud.djomo.api.ListModel;
 import com.bigcloud.djomo.api.Model;
 import com.bigcloud.djomo.base.InstanceParser;
-import com.bigcloud.djomo.list.ImmutableList;
 
 public class CollectionTest {
 	@Test
@@ -72,12 +71,6 @@ public class CollectionTest {
 		String data = "[1,2,[3,4]]";
 		Json json = new Json();
 		List parsed = (List) json.fromString(data);
-		Assert.assertEquals(parsed.getClass(), ImmutableList.class);
-		Assert.assertEquals(parsed.get(2).getClass(), ImmutableList.class);
-		json = new Json(Models.builder()
-				.resolver(new Resolver.Substitute<>(List.class, ArrayList.class))
-				.build());
-		parsed = (List) json.fromString(data);
 		Assert.assertEquals(parsed.getClass(), ArrayList.class);
 		Assert.assertEquals(parsed.get(2).getClass(), ArrayList.class);
 		parsed = json.fromString(data, Stack.class);
