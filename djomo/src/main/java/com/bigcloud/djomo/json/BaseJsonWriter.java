@@ -90,136 +90,204 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 
 	@Override
 	public void visitString(CharSequence str) {
+		if (str instanceof SafeCharSequence scs) {
+			visitSafeCharSequence(scs);
+		} else {
+			visitStringFast(str);
+		}
+	}
+
+	private void visitSafeCharSequence(SafeCharSequence scs) {
+		int len = scs.length();
+		var lpos = pos;
+		var buf = buffer;
+		if (BUF_LEN - lpos < len + 2) {
+			sink.next(lpos);
+			lpos = 0;
+		}
+		buf[lpos++] = '"';
+		lpos = scs.getChars(buf, lpos);
+		buf[lpos] = '"';
+		pos = lpos + 1;
+	}
+
+	private void visitStringFast(CharSequence str) {
 		int len = str.length();
 		var lpos = pos;
 		var buf = buffer;
-		if(str instanceof SafeCharSequence scs) {
-			if (BUF_LEN - lpos < len + 2) {
+		int room = BUF_LEN - lpos;
+		int roomNeeded = len + 2;
+		if (roomNeeded < BUF_LEN) {
+			if (room < roomNeeded) {
 				sink.next(lpos);
 				lpos = 0;
 			}
 			buf[lpos++] = '"';
-			lpos = scs.getChars(buf, lpos);
-			buf[lpos]= '"';
-			pos = lpos + 1;
-			return;
+			copyStringToBuffer(str, 0, buf, lpos, len);
+			lpos = scanAndEscapeChars(buf, lpos, len);
+			if (lpos == BUF_LEN) {
+				sink.next(lpos);
+				lpos = 0;
+			}
+			buf[lpos++] = '"';
+			pos = lpos;
+		} else {
+			visitStringLoop(str, len, room, lpos, buf);
 		}
-		if (lpos == BUF_LEN) {
-			sink.next(BUF_LEN);
+	}
+
+	private void copyStringToBuffer(CharSequence str, int start, char[] buf, int lpos, int len) {
+		if (str instanceof String s) {
+			s.getChars(start, start + len, buf, lpos);
+		} else {
+			for (int x = 0; x < len; x++) {
+				buf[lpos + x] = str.charAt(x + start);
+			}
+		}
+	}
+
+	private void visitStringLoop(CharSequence str, int len, int room, int lpos, char[] buf) {
+		if (room < 2) {
+			sink.next(lpos);
 			lpos = 0;
+			room = BUF_LEN;
 		}
 		buf[lpos++] = '"';
 		int start = 0;
-		int room = BUF_LEN - lpos;
 		if (len < room) {
 			room = len;
+		} else {
+			--room;
 		}
-		var sbuf = strBuffer;
-		var spec = special;
-		int c = 0, p, l, i;
+
 		while (true) {
-			if (str instanceof String s) {
-				s.getChars(start, start + room, buf, lpos);
-			}
-			else {
-				for (int x = 0; x < room; x++) {
-					buf[lpos + x] = str.charAt(x + start);
-				}
-			}
-			for (i = 0; i < room; i++) {
-				c = buf[lpos];
-				if (spec[c]) {
-					break;
-				}
-				++lpos;
-			}
-			if (i < room) {
-				p = 0;
-				int rem = room - i - 1;
-				System.arraycopy(buf, lpos + 1, sbuf, 0, rem);
-				while (true) {
-					if (BUF_LEN - lpos < 2) {
-						sink.next(lpos);
-						lpos = 0;
-					}
-					buf[lpos++] = '\\';
-					switch (c) {
-					case '\n':
-						buf[lpos++] = 'n';
-						break;
-					case '\r':
-						buf[lpos++] = 'r';
-						break;
-					case '\t':
-						buf[lpos++] = 't';
-						break;
-					case '\f':
-						buf[lpos++] = 'f';
-						break;
-					case '\b':
-						buf[lpos++] = 'b';
-						break;
-					case '"':
-						buf[lpos++] = '"';
-						break;
-					case '\\':
-						buf[lpos++] = '\\';
-						break;
-					default:
-						buf[lpos++] = 'u';
-						if (BUF_LEN - lpos < 4) {
-							sink.next(lpos);
-							lpos = 0;
-						}
-						final char[] hex = hexchars;
-						buf[lpos++] = hex[c / 4096];
-						c = c % 4096;
-						buf[lpos++] = hex[c / 256];
-						c = c % 256;
-						buf[lpos++] = hex[c / 16];
-						c = c % 16;
-						buf[lpos++] = hex[c];
-					}
-					for (i = p; i < rem; i++) {
-						c = sbuf[i];
-						if (spec[c]) {
-							break;
-						}
-					}
-					if (i > p) {
-						l = i - p;
-						if (BUF_LEN - lpos < l) {
-							sink.next(lpos);
-							lpos = 0;
-						}
-						System.arraycopy(sbuf, p, buf, lpos, l);
-						lpos += l;
-					}
-					if (i == rem) {
-						break;
-					}
-					p = i + 1;
-				}
+			copyStringToBuffer(str, start, buf, lpos, room);
+			lpos = scanAndEscapeChars(buf, lpos, room);
+			if (lpos == BUF_LEN) {
+				sink.next(lpos);
+				lpos = 0;
 			}
 			if ((len -= room) == 0) {
 				break;
 			}
 			start += room;
-			if (lpos == BUF_LEN) {
-				sink.next(lpos);
-				lpos = 0;
-			}
 			room = BUF_LEN - lpos;
 			if (len < room) {
 				room = len;
 			}
 		}
-		if (lpos == BUF_LEN) {
-			sink.next(BUF_LEN);
-			lpos = 0;
-		}
 		buf[lpos] = '"';
 		pos = lpos + 1;
+	}
+
+	private int scanAndEscapeChars(char[] buf, int lpos, int len) {
+		var spec = special;
+		int target = lpos + len;
+
+		// Scan for first special character
+		for (; lpos < target; lpos++) {
+			if (spec[buf[lpos]]) {
+				break;
+			}
+		}
+
+		// If no special chars found, we're done with this chunk
+		if (target == lpos) {
+			return lpos;
+		}
+
+		// Found special char - delegate to escape handler
+		return handleEscapeSequence(buf, lpos, len, lpos - (target - len));
+	}
+
+	private int handleEscapeSequence(char[] buf, int lpos, int len, int firstSpecialIdx) {
+		var spec = special;
+		var sbuf = strBuffer;
+
+		// Handle escaping starting from the first special character
+		int c = buf[lpos];
+		int p = 0;
+		int rem = len - firstSpecialIdx - 1;
+		if (rem > 0) {
+			System.arraycopy(buf, lpos + 1, sbuf, 0, rem);
+		}
+
+		while (true) {
+			if (BUF_LEN - lpos < 2) {
+				sink.next(lpos);
+				lpos = 0;
+			}
+			buf[lpos++] = '\\';
+			lpos = escapeChar(buf, lpos, c);
+
+			// Scan for next special character in sbuf
+			int i;
+			for (i = p; i < rem; i++) {
+				c = sbuf[i];
+				if (spec[c]) {
+					break;
+				}
+			}
+
+			if (i > p) {
+				int l = i - p;
+				if (BUF_LEN - lpos < l) {
+					sink.next(lpos);
+					lpos = 0;
+				}
+				System.arraycopy(sbuf, p, buf, lpos, l);
+				lpos += l;
+			}
+
+			if (i >= rem) {
+				break;
+			}
+
+			p = i + 1;
+		}
+
+		return lpos;
+	}
+
+	private int escapeChar(char[] buf, int lpos, int c) {
+		switch (c) {
+		case '\n':
+			buf[lpos++] = 'n';
+			break;
+		case '\r':
+			buf[lpos++] = 'r';
+			break;
+		case '\t':
+			buf[lpos++] = 't';
+			break;
+		case '\f':
+			buf[lpos++] = 'f';
+			break;
+		case '\b':
+			buf[lpos++] = 'b';
+			break;
+		case '"':
+			buf[lpos++] = '"';
+			break;
+		case '\\':
+			buf[lpos++] = '\\';
+			break;
+		default:
+			buf[lpos++] = 'u';
+			if (BUF_LEN - lpos < 4) {
+				sink.next(lpos);
+				lpos = 0;
+			}
+			final char[] hex = hexchars;
+			buf[lpos++] = hex[c / 4096];
+			c = c % 4096;
+			buf[lpos++] = hex[c / 256];
+			c = c % 256;
+			buf[lpos++] = hex[c / 16];
+			c = c % 16;
+			buf[lpos++] = hex[c];
+		}
+		return lpos;
 	}
 
 	@Override
@@ -280,7 +348,7 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 
 	@Override
 	public void visitLong(long value) {
-		if(value <= Integer.MAX_VALUE && value >= Integer.MIN_VALUE) {
+		if (value <= Integer.MAX_VALUE && value >= Integer.MIN_VALUE) {
 			visitInt((int) value);
 			return;
 		}
@@ -291,7 +359,7 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 			p = 0;
 		}
 		char[] buf = buffer;
-		if(value == Long.MIN_VALUE) {
+		if (value == Long.MIN_VALUE) {
 			String.valueOf(Long.MIN_VALUE).getChars(0, 20, buf, p);
 			pos = p + 20;
 			return;
@@ -304,7 +372,8 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 		}
 		// we are above 2147483647 or below -2147483648
 		int stringLen = normal < 100000000000000l
-				? normal < 100000000000l ? normal < 10000000000l ? 10 : 11 : normal < 1000000000000l ? 12 : normal < 10000000000000l ? 13 : 14
+				? normal < 100000000000l ? normal < 10000000000l ? 10 : 11
+						: normal < 1000000000000l ? 12 : normal < 10000000000000l ? 13 : 14
 				: normal < 10000000000000000l ? normal < 1000000000000000l ? 15 : 16
 						: normal < 100000000000000000l ? 17 : normal < 1000000000000000000l ? 18 : 19;
 
@@ -374,25 +443,19 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 			p = 0;
 		}
 		buffer[p++] = '"';
-		if(time instanceof OffsetDateTime t) {
+		if (time instanceof OffsetDateTime t) {
 			p = writeTemporal(t, p);
-		}
-		else if(time instanceof Instant t) {
+		} else if (time instanceof Instant t) {
 			p = writeTemporal(t, p);
-		}
-		else if(time instanceof ZonedDateTime t) {
+		} else if (time instanceof ZonedDateTime t) {
 			p = writeTemporal(t, p);
-		}
-		else if(time instanceof LocalDateTime t) {
+		} else if (time instanceof LocalDateTime t) {
 			p = writeTemporal(t, p);
-		}
-		else if(time instanceof LocalDate t) {
+		} else if (time instanceof LocalDate t) {
 			p = writeTemporal(t, p);
-		}
-		else if(time instanceof LocalTime t) {
+		} else if (time instanceof LocalTime t) {
 			p = writeTemporal(t, p);
-		}
-		else {
+		} else {
 			var str = time.toString();
 			int len = str.length();
 			str.getChars(0, len, buffer, p);
@@ -424,7 +487,8 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 		var localTime = lt.toLocalTime();
 		pos = printLocalDate(buf, pos, localDate.getYear(), localDate.getMonthValue(), localDate.getDayOfMonth());
 		buf[pos++] = 'T';
-		pos = printLocalTime(buf, pos, localTime.getHour(), localTime.getMinute(), localTime.getSecond(), localTime.getNano());
+		pos = printLocalTime(buf, pos, localTime.getHour(), localTime.getMinute(), localTime.getSecond(),
+				localTime.getNano());
 		return printOffset(buf, pos, time.getOffset().getTotalSeconds());
 	}
 
@@ -435,13 +499,14 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 		var localTime = lt.toLocalTime();
 		pos = printLocalDate(buf, pos, localDate.getYear(), localDate.getMonthValue(), localDate.getDayOfMonth());
 		buf[pos++] = 'T';
-		pos = printLocalTime(buf, pos, localTime.getHour(), localTime.getMinute(), localTime.getSecond(), localTime.getNano());
+		pos = printLocalTime(buf, pos, localTime.getHour(), localTime.getMinute(), localTime.getSecond(),
+				localTime.getNano());
 		pos = printOffset(buf, pos, time.getOffset().getTotalSeconds());
 		var zone = time.getZone().toString();
 		int zl = zone.length();
 		buf[pos++] = '[';
 		zone.getChars(0, zl, buf, pos);
-		pos+=zl;
+		pos += zl;
 		buf[pos++] = ']';
 		return pos;
 	}
@@ -454,7 +519,8 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 		var localTime = LocalTime.ofNanoOfDay(Math.floorMod(second, 86400) * 1000_000_000l + nanos);
 		pos = printLocalDate(buf, pos, localDate.getYear(), localDate.getMonthValue(), localDate.getDayOfMonth());
 		buf[pos++] = 'T';
-		pos = printLocalTime(buf, pos, localTime.getHour(), localTime.getMinute(), localTime.getSecond(), localTime.getNano());
+		pos = printLocalTime(buf, pos, localTime.getHour(), localTime.getMinute(), localTime.getSecond(),
+				localTime.getNano());
 		buf[pos++] = 'Z';
 		return pos;
 	}
@@ -542,17 +608,16 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 		return pos;
 	}
 
-	//max-length 9
+	// max-length 9
 	protected final int printOffset(char[] buf, int pos, int totalSeconds) {
-		if(totalSeconds == 0) {
+		if (totalSeconds == 0) {
 			buf[pos] = 'Z';
-			return pos+1;
+			return pos + 1;
 		}
-		if(totalSeconds < 0) {
+		if (totalSeconds < 0) {
 			totalSeconds = -totalSeconds;
 			buf[pos++] = '-';
-		}
-		else {
+		} else {
 			buf[pos++] = '+';
 		}
 		int hours = totalSeconds / 3600;
@@ -573,7 +638,7 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 			buf[pos++] = (char) ((minutes % 10) + 48);
 		}
 		int seconds = totalSeconds % 60;
-		if(seconds > 0) {
+		if (seconds > 0) {
 			buf[pos++] = ':';
 			if (seconds < 10) {
 				buf[pos++] = '0';
