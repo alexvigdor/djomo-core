@@ -29,95 +29,65 @@ public class IndentingJsonWriter extends BaseJsonWriter {
 		super(context, sink, filters);
 		this.indent = indent.toCharArray();
 	}
+
 	protected void indent() {
-		for(int i=0;i<depth;i++) {
-			System.arraycopy(indent, 0, buffer, pos, indent.length);
-			pos+=indent.length;
+		var ind = indent;
+		int il = ind.length;
+		int d = depth;
+		var buf = buffer;
+		int p = reserve(1 + d * il);
+		buf[p++] = '\n';
+		for (int i = 0; i < d; i++) {
+			System.arraycopy(ind, 0, buf, p, il);
+			p += il;
 		}
+		pos = p;
 	}
 
 	public <T> void visitObject(T model, ObjectModel<T> definition) {
-		char[] buf = buffer;
-		if(pos==BUF_LEN) {
-			sink.next(BUF_LEN);
-			pos = 0;
-		}
-		buf[pos++] = '{';
+		append('{');
 		first = true;
 		depth++;
 		super.visitObject(model, definition);
 		depth--;
-		if(!first) {
-			reserve(2+(depth*indent.length));
-			buf[pos++] = '\n';
+		if (!first) {
 			indent();
-		}
-		else {
+		} else {
 			first = false;
-			if (pos == BUF_LEN) {
-				sink.next(BUF_LEN);
-				pos = 0;
-			}
 		}
-		buf[pos++] = '}';
+		append('}');
 	}
 
 	public <T> void visitList(T model, ListModel<T> definition) {
-		char[] buf = buffer;
-		if(pos==BUF_LEN) {
-			sink.next(BUF_LEN);
-			pos = 0;
-		}
-		buf[pos++] = '[';
+		append('[');
 		first = true;
 		depth++;
 		super.visitList(model, definition);
 		depth--;
-		if(!first) {
-			reserve(2+(depth*indent.length));
-			buf[pos++] = '\n';
+		if (!first) {
 			indent();
-		}
-		else {
+		} else {
 			first = false;
-			if (pos == BUF_LEN) {
-				sink.next(BUF_LEN);
-				pos = 0;
-			}
 		}
-		buf[pos++] = ']';
+		append(']');
 	}
 
 	public void visitObjectField(Object name) {
-		char[] buf = buffer;
-		if (!first) {
-			reserve(2+(depth*indent.length));
-			buf[pos++] = ',';
-		}
-		else {
-			reserve(1+(depth*indent.length));
-			first = false;
-		}
-		buf[pos++] = '\n';
-		indent();
+		delimit();
 		visitString(name.toString());
-		reserve(3);
-		buf[pos++] = ' ';
-		buf[pos++] = ':';
-		buf[pos++] = ' ';
+		append(' ', ':', ' ');
 	}
 
 	public void visitListItem() {
-		char[] buf = buffer;
+		delimit();
+	}
+
+	private void delimit() {
 		if (!first) {
-			reserve(2+(depth*indent.length));
-			buf[pos++] = ',';
-		}
-		else {
-			reserve(1+(depth*indent.length));
+			append(',');
+		} else {
 			first = false;
 		}
-		buf[pos++] = '\n';
 		indent();
 	}
 }

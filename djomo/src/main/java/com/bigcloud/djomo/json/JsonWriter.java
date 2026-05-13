@@ -35,43 +35,19 @@ public class JsonWriter extends BaseJsonWriter implements AutoCloseable {
 
 	@Override
 	public <T> void visitObject(T model, ObjectModel<T> definition) {
-		char[] buf = buffer;
-		int p;
-		if ((p = pos) == BUF_LEN) {
-			sink.next(BUF_LEN);
-			p = 0;
-		}
-		buf[p] = '{';
-		pos = p + 1;
+		append('{');
 		first = true;
 		definition.visitFields(model, current);
-		if ((p = pos) == BUF_LEN) {
-			sink.next(BUF_LEN);
-			p = 0;
-		}
-		buf[p] = '}';
-		pos = p + 1;
+		append('}');
 		first = false;
 	}
 
 	@Override
 	public <T> void visitList(T model, ListModel<T> definition) {
-		char[] buf = buffer;
-		int p;
-		if ((p = pos) == BUF_LEN) {
-			sink.next(BUF_LEN);
-			p = 0;
-		}
-		buf[p] = '[';
-		pos = p + 1;
+		append('[');
 		first = true;
 		definition.visitItems(model, current);
-		if ((p = pos) == BUF_LEN) {
-			sink.next(BUF_LEN);
-			p = 0;
-		}
-		buf[p] = ']';
-		pos = p + 1;
+		append(']');
 		first = false;
 	}
 
@@ -79,11 +55,7 @@ public class JsonWriter extends BaseJsonWriter implements AutoCloseable {
 	public void visitObjectField(Object name) {
 		if(name instanceof SafeCharSequence scs) {
 			int len = scs.length();
-			var lpos = pos;
-			if (BUF_LEN - lpos < len + 4) {
-				sink.next(lpos);
-				lpos = 0;
-			}
+			var lpos = reserve(len + 4);
 			var buf = buffer;
 			if(first) {
 				first = false;
@@ -94,17 +66,14 @@ public class JsonWriter extends BaseJsonWriter implements AutoCloseable {
 			buf[lpos++] = '"';
 			lpos = scs.getChars(buf, lpos);
 			buf[lpos++]= '"';
-			buf[lpos]=':';
-			pos = lpos + 1;
+			buf[lpos++]=':';
+			pos = lpos;
 			return;
 		}
-		char[] buf = buffer;
 		int p;
+		char[] buf = buffer;
 		if (!first) {
-			if ((p = pos) == BUF_LEN) {
-				sink.next(BUF_LEN);
-				p = 0;
-			}
+			p = reserve(1);
 			buf[p] = ',';
 			pos = p + 1;
 		} else {
@@ -116,10 +85,7 @@ public class JsonWriter extends BaseJsonWriter implements AutoCloseable {
 		else {
 			visitString(name.toString());
 		}
-		if ((p = pos) == BUF_LEN) {
-			sink.next(BUF_LEN);
-			p = 0;
-		}
+		p = reserve(1);
 		buf[p] = ':';
 		pos = p + 1;
 	}
@@ -127,13 +93,7 @@ public class JsonWriter extends BaseJsonWriter implements AutoCloseable {
 	@Override
 	public void visitListItem() {
 		if (!first) {
-			int p;
-			if ((p = pos) == BUF_LEN) {
-				sink.next(BUF_LEN);
-				p = 0;
-			}
-			buffer[p] = ',';
-			pos = p + 1;
+			append(',');
 		} else {
 			first = false;
 		}

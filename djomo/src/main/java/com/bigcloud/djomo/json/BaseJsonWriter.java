@@ -65,27 +65,32 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 		sink.buffer(buffer);
 	}
 
-	protected final void reserve(int len) {
-		if (BUF_LEN - pos < len) {
-			sink.next(pos);
-			pos = 0;
+	protected final int reserve(int len) {
+		int p = pos;
+		if (BUF_LEN - p < len) {
+			sink.next(p);
+			// caller will update pos
+			p = 0;
 		}
+		return p;
+	}
+
+	protected final void append(char c) {
+		int p = reserve(1);
+		buffer[p] = c;
+		pos = p + 1;
+	}
+
+	protected final void append(char... chars) {
+		int cl = chars.length;
+		int p = reserve(cl);
+		System.arraycopy(chars, 0, buffer, p, cl);
+		pos = p + cl;
 	}
 
 	@Override
 	public void visitNull() {
-		var p = pos;
-		int room = BUF_LEN - p;
-		if (room < 4) {
-			sink.next(p);
-			p = 0;
-		}
-		var buf = buffer;
-		buf[p++] = 'n';
-		buf[p++] = 'u';
-		buf[p++] = 'l';
-		buf[p++] = 'l';
-		pos = p;
+		append('n', 'u', 'l', 'l');
 	}
 
 	@Override
@@ -98,41 +103,27 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 	}
 
 	private void visitSafeCharSequence(SafeCharSequence scs) {
-		int len = scs.length();
-		var lpos = pos;
 		var buf = buffer;
-		if (BUF_LEN - lpos < len + 2) {
-			sink.next(lpos);
-			lpos = 0;
-		}
+		int lpos = reserve(scs.length() + 2);
 		buf[lpos++] = '"';
 		lpos = scs.getChars(buf, lpos);
-		buf[lpos] = '"';
-		pos = lpos + 1;
+		buf[lpos++] = '"';
+		pos = lpos;
 	}
 
 	private void visitStringFast(CharSequence str) {
 		int len = str.length();
-		var lpos = pos;
 		var buf = buffer;
-		int room = BUF_LEN - lpos;
 		int roomNeeded = len + 2;
 		if (roomNeeded < BUF_LEN) {
-			if (room < roomNeeded) {
-				sink.next(lpos);
-				lpos = 0;
-			}
+			int lpos = reserve(roomNeeded);
 			buf[lpos++] = '"';
 			copyStringToBuffer(str, 0, buf, lpos, len);
-			lpos = scanAndEscapeChars(buf, lpos, len);
-			if (lpos == BUF_LEN) {
-				sink.next(lpos);
-				lpos = 0;
-			}
-			buf[lpos++] = '"';
-			pos = lpos;
+			pos = scanAndEscapeChars(buf, lpos, len);
+			append('"');
 		} else {
-			visitStringLoop(str, len, room, lpos, buf);
+			int lpos = pos;
+			visitStringLoop(str, len, BUF_LEN - lpos, lpos, buf);
 		}
 	}
 
@@ -412,26 +403,11 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 
 	@Override
 	public void visitBoolean(boolean value) {
-		var p = pos;
-		int room = BUF_LEN - p;
-		if (room < 5) {
-			sink.next(p);
-			p = 0;
-		}
-		char[] buf = buffer;
 		if (value) {
-			buf[p++] = 't';
-			buf[p++] = 'r';
-			buf[p++] = 'u';
-			buf[p++] = 'e';
+			append('t', 'r', 'u', 'e');
 		} else {
-			buf[p++] = 'f';
-			buf[p++] = 'a';
-			buf[p++] = 'l';
-			buf[p++] = 's';
-			buf[p++] = 'e';
+			append('f', 'a', 'l', 's', 'e');
 		}
-		pos = p;
 	}
 
 	@Override
@@ -442,7 +418,8 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 			sink.next(p);
 			p = 0;
 		}
-		buffer[p++] = '"';
+		var buf = buffer;
+		buf[p++] = '"';
 		if (time instanceof OffsetDateTime t) {
 			p = writeTemporal(t, p);
 		} else if (time instanceof Instant t) {
@@ -458,10 +435,10 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 		} else {
 			var str = time.toString();
 			int len = str.length();
-			str.getChars(0, len, buffer, p);
+			str.getChars(0, len, buf, p);
 			p += len;
 		}
-		buffer[p++] = '"';
+		buf[p++] = '"';
 		pos = p;
 	}
 
