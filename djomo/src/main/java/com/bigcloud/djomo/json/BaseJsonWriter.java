@@ -43,6 +43,12 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 			return new char[BUF_LEN];
 		}
 	};
+	private static final char[] MIN_LONG_CHARS = { '-', '9', '2', '2', '3', '3', '7', '2', '0', '3', '6', '8', '5', '4',
+			'7', '7', '5', '8', '0', '8' };
+	private static final char[] MIN_INT_CHARS = { '-', '2', '1', '4', '7', '4', '8', '3', '6', '4', '8' };
+	private static final char[] NULL_CHARS = { 'n', 'u', 'l', 'l' };
+	private static final char[] TRUE_CHARS = { 't', 'r', 'u', 'e' };
+	private static final char[] FALSE_CHARS = { 'f', 'a', 'l', 's', 'e' };
 	private static final char[] hexchars = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E',
 			'F' };
 	private static final boolean[] special = new boolean[65536];
@@ -76,12 +82,16 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 	}
 
 	protected final void append(char c) {
-		int p = reserve(1);
+		int p = pos;
+		if (BUF_LEN == p) {
+			sink.next(p);
+			p = 0;
+		}
 		buffer[p] = c;
 		pos = p + 1;
 	}
 
-	protected final void append(char... chars) {
+	protected final void append(char[] chars) {
 		int cl = chars.length;
 		int p = reserve(cl);
 		System.arraycopy(chars, 0, buffer, p, cl);
@@ -90,7 +100,7 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 
 	@Override
 	public void visitNull() {
-		append('n', 'u', 'l', 'l');
+		append(NULL_CHARS);
 	}
 
 	@Override
@@ -119,8 +129,13 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 			int lpos = reserve(roomNeeded);
 			buf[lpos++] = '"';
 			copyStringToBuffer(str, 0, buf, lpos, len);
-			pos = scanAndEscapeChars(buf, lpos, len);
-			append('"');
+			lpos = scanAndEscapeChars(buf, lpos, len);
+			if (lpos == BUF_LEN) {
+				sink.next(lpos);
+				lpos = 0;
+			}
+			buf[lpos++] = '"';
+			pos = lpos;
 		} else {
 			int lpos = pos;
 			visitStringLoop(str, len, BUF_LEN - lpos, lpos, buf);
@@ -288,136 +303,80 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 
 	@Override
 	public void visitInt(int value) {
-		var p = pos;
-		int room = BUF_LEN - p;
-		if (room < 11) {
-			sink.next(p);
-			p = 0;
-		}
-		char[] buf = buffer;
-		switch (value) {
-		case 0:
-		case 1:
-		case 2:
-		case 3:
-		case 4:
-		case 5:
-		case 6:
-		case 7:
-		case 8:
-		case 9:
-			buf[p] = (char) ('0' + value);
-			pos = p + 1;
-			break;
-		case Integer.MIN_VALUE:
-			String.valueOf(Integer.MIN_VALUE).getChars(0, 11, buf, p);
-			pos = p + 11;
-			break;
-		default:
-			boolean negative = false;
-			int normal = value;
-			if (value < 0) {
-				negative = true;
-				normal = -normal;
+		final boolean small = value < 10;
+		int length = 0;
+		if (small) {
+			if (value >= 0) {
+				append((char) ('0' + value));
+				return;
 			}
-			int stringLen = normal < 100000
-					? normal < 100 ? normal < 10 ? 1 : 2 : normal < 1000 ? 3 : normal < 10000 ? 4 : 5
-					: normal < 10000000 ? normal < 1000000 ? 6 : 7
-							: normal < 100000000 ? 8 : normal < 1000000000 ? 9 : 10;
-
-			if (negative) {
-				buf[p] = '-';
-				++stringLen;
+			if (value == Integer.MIN_VALUE) {
+				append(MIN_INT_CHARS);
+				return;
 			}
-			pos = p += stringLen;
-			do {
-				buf[--p] = (char) (48 + (normal % 10));
-				normal /= 10;
-			} while (normal != 0);
+			value = -value;
+			length = 1;
 		}
+		length += stringSize(value);
+		length += reserve(length);
+		pos = length;
+		formatIntBytesBackward(value, length, small);
 	}
 
 	@Override
 	public void visitLong(long value) {
-		if (value <= Integer.MAX_VALUE && value >= Integer.MIN_VALUE) {
-			visitInt((int) value);
-			return;
+		final boolean small = value < 10;
+		int length = 0;
+		if (small) {
+			if (value >= 0) {
+				append((char) ('0' + value));
+				return;
+			}
+			if (value == Long.MIN_VALUE) {
+				append(MIN_LONG_CHARS);
+				return;
+			}
+			value = -value;
+			length = 1;
 		}
-		var p = pos;
-		int room = BUF_LEN - p;
-		if (room < 20) {
-			sink.next(p);
-			p = 0;
+		length += stringSizeLong(value);
+		length += reserve(length);
+		pos = length;
+		var buf = buffer;
+		while (value > Integer.MAX_VALUE) {
+			long q = value / 100;
+			int r = (int) (value - (q * 100));
+			value = q;
+			buf[--length] = DigitOnes[r];
+			buf[--length] = DigitTens[r];
 		}
-		char[] buf = buffer;
-		if (value == Long.MIN_VALUE) {
-			String.valueOf(Long.MIN_VALUE).getChars(0, 20, buf, p);
-			pos = p + 20;
-			return;
-		}
-		boolean negative = false;
-		long normal = value;
-		if (value < 0) {
-			negative = true;
-			normal = -normal;
-		}
-		// we are above 2147483647 or below -2147483648
-		int stringLen = normal < 100000000000000l
-				? normal < 100000000000l ? normal < 10000000000l ? 10 : 11
-						: normal < 1000000000000l ? 12 : normal < 10000000000000l ? 13 : 14
-				: normal < 10000000000000000l ? normal < 1000000000000000l ? 15 : 16
-						: normal < 100000000000000000l ? 17 : normal < 1000000000000000000l ? 18 : 19;
-
-		if (negative) {
-			buf[p] = '-';
-			++stringLen;
-		}
-		pos = p += stringLen;
-		do {
-			buf[--p] = (char) (48 + (normal % 10));
-			normal /= 10;
-		} while (normal != 0);
+		formatIntBytesBackward((int) value, length, small);
 	}
 
 	@Override
 	public void visitFloat(float value) {
-		var p = pos;
-		int room = BUF_LEN - p;
-		if (room < 15) {
-			sink.next(p);
-			p = 0;
-		}
+		var p = reserve(15);
 		pos = FloatPrinter.printFloat(value, buffer, p);
 	}
 
 	@Override
 	public void visitDouble(double value) {
-		var p = pos;
-		int room = BUF_LEN - p;
-		if (room < 24) {
-			sink.next(p);
-			p = 0;
-		}
+		var p = reserve(24);
 		pos = DoublePrinter.printDouble(value, buffer, p);
 	}
 
 	@Override
 	public void visitBoolean(boolean value) {
 		if (value) {
-			append('t', 'r', 'u', 'e');
+			append(TRUE_CHARS);
 		} else {
-			append('f', 'a', 'l', 's', 'e');
+			append(FALSE_CHARS);
 		}
 	}
 
 	@Override
 	public <T extends TemporalAccessor> void visitTemporal(T time) {
-		var p = pos;
-		int room = BUF_LEN - p;
-		if (room < 80) {
-			sink.next(p);
-			p = 0;
-		}
+		var p = reserve(80);
 		var buf = buffer;
 		buf[p++] = '"';
 		if (time instanceof OffsetDateTime t) {
@@ -440,6 +399,105 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 		}
 		buf[p++] = '"';
 		pos = p;
+	}
+
+	// CPD-OFF
+	private static final char[] DigitTens = {
+			'0', '0', '0', '0', '0', '0', '0', '0', '0', '0',
+			'1', '1', '1', '1', '1', '1', '1', '1', '1', '1',
+			'2', '2', '2', '2', '2', '2', '2', '2', '2', '2',
+			'3', '3', '3', '3', '3', '3', '3', '3', '3', '3',
+			'4', '4', '4', '4', '4', '4', '4', '4', '4', '4',
+			'5', '5', '5', '5', '5', '5', '5', '5', '5', '5',
+			'6', '6', '6', '6', '6', '6', '6', '6', '6', '6',
+			'7', '7', '7', '7', '7', '7', '7', '7', '7', '7',
+			'8', '8', '8', '8', '8', '8', '8', '8', '8', '8',
+			'9', '9', '9', '9', '9', '9', '9', '9', '9', '9',
+	};
+
+	private static final char[] DigitOnes = {
+			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+	};
+	// CPD-ON
+
+	private void formatIntBytesBackward(int vInt, int writeIdx, boolean negative) {
+		var buf = this.buffer;
+		while (vInt >= 100) {
+			int q = vInt / 100;
+			int r = vInt - (q * 100);
+			vInt = q;
+			buf[--writeIdx] = DigitOnes[r];
+			buf[--writeIdx] = DigitTens[r];
+		}
+		if (vInt >= 10) {
+			buf[--writeIdx] = DigitOnes[vInt];
+			buf[--writeIdx] = DigitTens[vInt];
+		} else {
+			buf[--writeIdx] = (char) ('0' + vInt);
+		}
+		if (negative) {
+			buf[--writeIdx] = '-';
+		}
+	}
+
+	private static final long[] MAX_VALUES_FOR_DIGITS = {
+			0L,
+			9L,
+			99L,
+			999L,
+			9999L,
+			99999L,
+			999999L,
+			9999999L,
+			99999999L,
+			999999999L,
+			9999999999L,
+			99999999999L,
+			999999999999L,
+			9999999999999L,
+			99999999999999L,
+			999999999999999L,
+			9999999999999999L,
+			99999999999999999L,
+			999999999999999999L,
+			9223372036854775806L
+	};
+
+	private static final int[] LZ_TO_MIN_DIGITS_INT = {
+			10, 9, 9, 9, 8, 8, 8, 7, 7, 7, 6, 6, 6, 6, 5, 5,
+			5, 4, 4, 4, 3, 3, 3, 3, 2, 2, 2, 1, 1, 1, 0, 0, 0
+	};
+
+	private static final int[] LZ_TO_MIN_DIGITS_LONG = {
+			0, 18, 18, 18, 18, 17, 17, 17, 16, 16, 16, 15, 15, 15, 15, 14, 14,
+			14, 13, 13, 13, 12, 12, 12, 12, 11, 11, 11, 10, 10, 10, 9, 9, 9,
+			9, 8, 8, 8, 7, 7, 7, 6, 6, 6, 6, 5, 5, 5, 4, 4, 4,
+			3, 3, 3, 3, 2, 2, 2, 1, 1, 1, 0, 0, 0, 0
+	};
+
+	private static int stringSize(int x) {
+		int lz = Integer.numberOfLeadingZeros(x);
+		return calculateSize(x, LZ_TO_MIN_DIGITS_INT[lz]);
+	}
+
+	private static int stringSizeLong(long x) {
+		int lz = Long.numberOfLeadingZeros(x);
+		return calculateSize(x, LZ_TO_MIN_DIGITS_LONG[lz]);
+	}
+
+	private static int calculateSize(long x, int digits) {
+		long maxVal = MAX_VALUES_FOR_DIGITS[digits];
+		int correction = (int) ((maxVal - x) >>> 63);
+		return digits + correction;
 	}
 
 	final int writeTemporal(LocalTime time, int pos) {

@@ -22,6 +22,7 @@ import com.bigcloud.djomo.api.VisitorFilterFactory;
 import com.bigcloud.djomo.io.CharSink;
 
 public class IndentingJsonWriter extends BaseJsonWriter {
+	private static final char[] FIELD_SEP = { ' ', ':', ' ' };
 	private final char[] indent;
 	private int depth = 0;
 
@@ -75,7 +76,7 @@ public class IndentingJsonWriter extends BaseJsonWriter {
 	public void visitObjectField(Object name) {
 		delimit();
 		visitString(name.toString());
-		append(' ', ':', ' ');
+		append(FIELD_SEP);
 	}
 
 	public void visitListItem() {
