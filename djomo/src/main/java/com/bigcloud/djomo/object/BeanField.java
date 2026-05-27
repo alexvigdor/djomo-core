@@ -22,6 +22,7 @@ import java.lang.invoke.MethodType;
 import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import com.bigcloud.djomo.Resolver;
 import com.bigcloud.djomo.api.Field;
@@ -252,7 +253,52 @@ public class BeanField implements Field, Cloneable {
 
 		@Override
 		public Field rekey(Object newKey) {
-			return new StringField(accessor, mutator, name, newKey, model, annotations);
+			return new TemporalField(accessor, mutator, name, newKey, model, annotations);
+		}
+
+	}
+
+	public static class UUIDField extends BeanField {
+
+		public UUIDField(MethodHandle accessor, MethodHandle mutator, String name, Model model,
+				Annotation... annotations) {
+			super(accessor, mutator, name, model, annotations);
+		}
+
+		UUIDField(MethodHandle accessor, MethodHandle mutator, String name, Object key, Model model,
+				Annotation... annotations) {
+			super(accessor, mutator, name, key, model, annotations);
+		}
+
+		@Override
+		public void parse(Object dest, Parser parser) {
+			UUID value = parser.parseUUID();
+			try {
+				mutator.invoke(dest, value);
+			} catch (Throwable e) {
+				throw createSetException(dest, value, e);
+			}
+		}
+
+		@Override
+		public void visit(Object source, Visitor visitor) {
+			UUID val;
+			try {
+				val = (UUID) accessor.invoke(source);
+			} catch (Throwable e) {
+				throw createGetException(source, e);
+			}
+			visitor.visitObjectField(key);
+			if (val == null) {
+				visitor.visitNull();
+			} else {
+				visitor.visitUUID(val);
+			}
+		}
+
+		@Override
+		public Field rekey(Object newKey) {
+			return new UUIDField(accessor, mutator, name, newKey, model, annotations);
 		}
 
 	}
@@ -544,7 +590,10 @@ public class BeanField implements Field, Cloneable {
 				field = new BooleanField(accessor, mutator, name, model, annotationArray);
 			} else if(TemporalAccessor.class.isAssignableFrom(model.getType())) {
 				field = new TemporalField(accessor, mutator, name, model, annotationArray);
-			} else {
+			} else if (UUID.class.isAssignableFrom(model.getType())) {
+				field = new UUIDField(accessor, mutator, name, model, annotationArray);
+			}
+			else {
 				if (model instanceof ResolverModel rm && rm.getResolver() instanceof Resolver.Substitute rs  && rs.getSubstitute() != null) {
 					model = rs.getSubstitute();
 				}

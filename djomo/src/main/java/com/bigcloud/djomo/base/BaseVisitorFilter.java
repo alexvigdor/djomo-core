@@ -16,6 +16,7 @@
 package com.bigcloud.djomo.base;
 
 import java.time.temporal.TemporalAccessor;
+import java.util.UUID;
 
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.api.ListModel;
@@ -152,5 +153,10 @@ public class BaseVisitorFilter implements VisitorFilter, Cloneable {
 	@Override
 	public <T extends TemporalAccessor> void visitTemporal(T time) {
 		visitor.visitTemporal(time);
+	}
+
+	@Override
+	public void visitUUID(UUID value) {
+		visitor.visitUUID(value);
 	}
 }

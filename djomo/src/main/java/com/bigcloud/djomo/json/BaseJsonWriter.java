@@ -23,6 +23,7 @@ import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.time.temporal.TemporalAccessor;
 import java.util.Arrays;
+import java.util.UUID;
 
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.api.VisitorFilterFactory;
@@ -49,8 +50,8 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 	private static final char[] NULL_CHARS = { 'n', 'u', 'l', 'l' };
 	private static final char[] TRUE_CHARS = { 't', 'r', 'u', 'e' };
 	private static final char[] FALSE_CHARS = { 'f', 'a', 'l', 's', 'e' };
-	private static final char[] hexchars = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E',
-			'F' };
+	private static final char[] hexchars = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e',
+			'f' };
 	private static final boolean[] special = new boolean[65536];
 	static {
 		Arrays.fill(special, 0, 32, true);
@@ -372,6 +373,32 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 		} else {
 			append(FALSE_CHARS);
 		}
+	}
+
+	@Override
+	public void visitUUID(UUID uuid) {
+		var p = reserve(38);
+		var buf = buffer;
+		buf[p++] = '"';
+		long val = uuid.getMostSignificantBits();
+		var hc = hexchars;
+		for (int i = 0; i < 36; i++) {
+			switch (i) {
+			case 18:
+				val = uuid.getLeastSignificantBits();
+			case 8:
+			case 13:
+			case 23:
+				buf[p++] = '-';
+				break;
+			default:
+				int b = (int) (val >>> 60);
+				buf[p++] = hc[b];
+				val = val << 4;
+			}
+		}
+		buf[p++] = '"';
+		pos = p;
 	}
 
 	@Override

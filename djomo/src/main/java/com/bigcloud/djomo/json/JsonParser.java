@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.time.temporal.TemporalAccessor;
 import java.util.Arrays;
+import java.util.UUID;
 
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.api.Field;
@@ -460,6 +461,102 @@ public class JsonParser extends BaseParser implements Parser {
 			return false;
 		default:
 			throw new ModelException("Unexpected input for boolean " + describe());
+		}
+	}
+
+	@Override
+	public UUID parseUUID() {
+		expect('"');
+		int rp = readPosition;
+		var buf = input;
+		long msb = 0;
+		long lsb = 0;
+		int upos = 0;
+		while (true) {
+			int wp = inputLength;
+			while (rp < wp) {
+				char ch = buf[rp++];
+				switch (upos++) {
+				case 18:
+					msb = lsb;
+					lsb = 0;
+				case 8:
+				case 13:
+				case 23:
+					if (ch != '-') {
+						readPosition = rp;
+						throw new IllegalArgumentException("Illegal UUID format " + describe());
+					}
+					break;
+				case 36:
+					readPosition = rp;
+					if (ch != '"') {
+						throw new IllegalArgumentException("Illegal UUID format " + describe());
+					}
+					return new UUID(msb, lsb);
+				default:
+					lsb = lsb << 4;
+					switch (ch) {
+					case '0':
+						break;
+					case '1':
+						lsb += 1;
+						break;
+					case '2':
+						lsb += 2;
+						break;
+					case '3':
+						lsb += 3;
+						break;
+					case '4':
+						lsb += 4;
+						break;
+					case '5':
+						lsb += 5;
+						break;
+					case '6':
+						lsb += 6;
+						break;
+					case '7':
+						lsb += 7;
+						break;
+					case '8':
+						lsb += 8;
+						break;
+					case '9':
+						lsb += 9;
+						break;
+					case 'A':
+					case 'a':
+						lsb += 10;
+						break;
+					case 'B':
+					case 'b':
+						lsb += 11;
+						break;
+					case 'C':
+					case 'c':
+						lsb += 12;
+						break;
+					case 'D':
+					case 'd':
+						lsb += 13;
+						break;
+					case 'E':
+					case 'e':
+						lsb += 14;
+						break;
+					case 'F':
+					case 'f':
+						lsb += 15;
+						break;
+					default:
+						throw new IllegalArgumentException("Illegal hex char " + ch);
+					}
+				}
+			}
+			refillStrict();
+			rp = 0;
 		}
 	}
 

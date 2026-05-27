@@ -16,6 +16,7 @@
 package com.bigcloud.djomo.api;
 
 import java.time.temporal.TemporalAccessor;
+import java.util.UUID;
 
 import com.bigcloud.djomo.Models;
 
@@ -54,6 +55,8 @@ public interface Visitor {
 	void visitBoolean(boolean value);
 
 	void visitString(CharSequence value);
+
+	void visitUUID(UUID value);
 
 	Models models();
 

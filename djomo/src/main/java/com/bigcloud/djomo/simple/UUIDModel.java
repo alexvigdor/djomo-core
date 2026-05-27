@@ -31,93 +31,12 @@ public class UUIDModel extends BaseModel<UUID>  {
 
 	@Override
 	public void visit(UUID obj, Visitor visitor) {
-		visitor.visitString(new UUIDPrinter(obj));
+		visitor.visitUUID(obj);
 	}
 
 	@Override
 	public UUID parse(Parser parser) {
-		CharSequence chars = parser.parseString();
-		if(chars.length() != 36) {
-			throw new IllegalArgumentException("Unexpect UUID length " + chars.length());
-		}
-		long msb = 0;
-		long lsb = 0;
-		int upos = 0;
-		for (int i = 0; i < 36; i++) {
-			char ch = chars.charAt(i);
-			switch (upos++) {
-			case 18:
-				msb = lsb;
-				lsb = 0;
-			case 8:
-			case 13:
-			case 23:
-				if (ch != '-') {
-					throw new IllegalArgumentException("Illegal UUID format " + chars);
-				}
-				break;
-			default:
-				lsb = lsb << 4;
-				switch (ch) {
-				case '0':
-					break;
-				case '1':
-					lsb += 1;
-					break;
-				case '2':
-					lsb += 2;
-					break;
-				case '3':
-					lsb += 3;
-					break;
-				case '4':
-					lsb += 4;
-					break;
-				case '5':
-					lsb += 5;
-					break;
-				case '6':
-					lsb += 6;
-					break;
-				case '7':
-					lsb += 7;
-					break;
-				case '8':
-					lsb += 8;
-					break;
-				case '9':
-					lsb += 9;
-					break;
-				case 'A':
-				case 'a':
-					lsb += 10;
-					break;
-				case 'B':
-				case 'b':
-					lsb += 11;
-					break;
-				case 'C':
-				case 'c':
-					lsb += 12;
-					break;
-				case 'D':
-				case 'd':
-					lsb += 13;
-					break;
-				case 'E':
-				case 'e':
-					lsb += 14;
-					break;
-				case 'F':
-				case 'f':
-					lsb += 15;
-					break;
-				default:
-					throw new IllegalArgumentException("Illegal hex char " + ch);
-				}
-			}
-		}
-		return new UUID(msb, lsb);
+		return parser.parseUUID();
 	}
 
 	@Override

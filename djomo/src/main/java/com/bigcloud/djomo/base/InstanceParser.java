@@ -16,6 +16,7 @@
 package com.bigcloud.djomo.base;
 
 import java.time.temporal.TemporalAccessor;
+import java.util.UUID;
 
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.api.Field;
@@ -198,6 +199,17 @@ public class InstanceParser extends BaseParser implements Parser {
 			return (T) source;
 		}
 		return models.get(type.getTemporalClass()).convert(source);
+	}
+
+	@Override
+	public UUID parseUUID() {
+		if(source instanceof UUID u) {
+			return u;
+		}
+		if(source == null) {
+			return null;
+		}
+		return models.get(UUID.class).convert(source);
 	}
 
 }

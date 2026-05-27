@@ -16,6 +16,7 @@
 package com.bigcloud.djomo.api;
 
 import java.time.temporal.TemporalAccessor;
+import java.util.UUID;
 
 import com.bigcloud.djomo.Models;
 /**
@@ -38,6 +39,7 @@ public interface Parser {
 	double parseDouble();
 	boolean parseBoolean();
 	CharSequence parseString();
+	UUID parseUUID();
 	Object parseNull();
 	Models models();
 }

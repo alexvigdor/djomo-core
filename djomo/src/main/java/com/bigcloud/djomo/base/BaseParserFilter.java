@@ -16,6 +16,7 @@
 package com.bigcloud.djomo.base;
 
 import java.time.temporal.TemporalAccessor;
+import java.util.UUID;
 
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.api.Field;
@@ -149,5 +150,10 @@ public class BaseParserFilter implements ParserFilter, Cloneable {
 	@Override
 	public <T extends TemporalAccessor> T parseTemporal(TemporalType<T> type) {
 		return parser.parseTemporal(type);
+	}
+
+	@Override
+	public UUID parseUUID() {
+		return parser.parseUUID();
 	}
 }
