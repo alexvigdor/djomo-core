@@ -17,6 +17,8 @@ package com.bigcloud.djomo.list;
 
 import java.lang.reflect.Type;
 import java.util.Collection;
+import java.util.List;
+import java.util.RandomAccess;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -58,10 +60,19 @@ public class CollectionModel<T extends Collection> extends BaseListModel<T> {
 	@Override
 	public void visitItems(T t, Visitor visitor) {
 		var m = itemModel;
-		t.forEach(i -> {
-			visitor.visitListItem();
-			m.tryVisit(i, visitor);
-		});
+		if(t instanceof RandomAccess && t instanceof List l) {
+			int len = l.size();
+			for(int i = 0; i < len; i++) {
+				visitor.visitListItem();
+				m.tryVisit(l.get(i), visitor);
+			}
+		}
+		else {
+			for(var i : t) {
+				visitor.visitListItem();
+				m.tryVisit(i, visitor);
+			}
+		}
 	}
 	
 	@Override

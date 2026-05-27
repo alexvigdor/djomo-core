@@ -17,6 +17,8 @@ package com.bigcloud.djomo.list;
 
 import java.lang.reflect.Type;
 import java.util.Collection;
+import java.util.List;
+import java.util.RandomAccess;
 import java.util.function.Supplier;
 
 import com.bigcloud.djomo.api.ModelContext;
@@ -31,15 +33,30 @@ public class StringCollectionModel<T extends Collection<String>> extends Collect
 
 	@Override
 	public void visitItems(T t, Visitor visitor) {
-		t.forEach(i -> {
-			visitor.visitListItem();
-			if(i == null) {
-				visitor.visitNull();
+		if(t instanceof RandomAccess && t instanceof List l) {
+			int len = t.size();
+			for(int i = 0; i < len; i++) {
+				visitor.visitListItem();
+				String s = (String) l.get(i);
+				if(s == null) {
+					visitor.visitNull();
+				}
+				else {
+					visitor.visitString(s);
+				}
 			}
-			else {
-				visitor.visitString(i);
+		}
+		else {
+			for(var i: t) {
+				visitor.visitListItem();
+				if(i == null) {
+					visitor.visitNull();
+				}
+				else {
+					visitor.visitString(i);
+				}
 			}
-		});
+		}
 	}
 	
 	@Override
