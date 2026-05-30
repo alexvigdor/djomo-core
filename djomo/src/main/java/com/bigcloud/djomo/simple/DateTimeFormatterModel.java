@@ -17,6 +17,7 @@ package com.bigcloud.djomo.simple;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.time.format.DateTimeFormatter;
@@ -44,7 +45,7 @@ public class DateTimeFormatterModel<T extends TemporalAccessor> extends BaseMode
 		this.format = format;
 		try {
 			Method method = this.type.getDeclaredMethod("from", TemporalAccessor.class);
-			fromHandle = MethodHandles.lookup().unreflect(method);
+			fromHandle = MethodHandles.lookup().unreflect(method).asType(MethodType.methodType(TemporalAccessor.class, TemporalAccessor.class));
 		} catch (NoSuchMethodException | SecurityException | IllegalAccessException e) {
 			throw new ModelException("Unable to create formatter model for type " + type.getTypeName(), e);
 		}
@@ -54,7 +55,7 @@ public class DateTimeFormatterModel<T extends TemporalAccessor> extends BaseMode
 	public T convert(Object o) {
 		if (o instanceof TemporalAccessor t) {
 			try {
-				return (T) fromHandle.invoke(t);
+				return (T) fromHandle.invokeExact(t);
 			} catch (Throwable e) {
 				throw new ModelException("Unable to convert TemporalAccessor " + t + " of type "
 						+ t.getClass().getName() + " to " + type.getTypeName(), e);

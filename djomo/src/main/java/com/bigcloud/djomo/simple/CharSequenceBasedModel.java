@@ -16,6 +16,7 @@
 package com.bigcloud.djomo.simple;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Type;
 
 import com.bigcloud.djomo.api.ModelContext;
@@ -30,14 +31,14 @@ public class CharSequenceBasedModel<T> extends BaseModel<T> {
 
 	public CharSequenceBasedModel(Type type, ModelContext context, MethodHandle constructor, MethodHandle toString) {
 		super(type, context);
-		this.constructor = constructor;
-		this.toString = toString;
+		this.constructor = constructor.asType(MethodType.methodType(Object.class, CharSequence.class));
+		this.toString = toString.asType(MethodType.methodType(CharSequence.class, Object.class));
 	}
 
 	@Override
 	public void visit(T obj, Visitor visitor) {
 		try {
-			visitor.visitString((CharSequence) toString.invoke(obj));
+			visitor.visitString((CharSequence) toString.invokeExact(obj));
 		} catch (RuntimeException e) {
 			throw e;
 		} catch (Throwable e) {
@@ -48,7 +49,7 @@ public class CharSequenceBasedModel<T> extends BaseModel<T> {
 	@Override
 	public T parse(Parser parser) {
 		try {
-			return (T) constructor.invoke(parser.parseString());
+			return (T) constructor.invokeExact(parser.parseString());
 		} catch (RuntimeException e) {
 			throw e;
 		} catch (Throwable e) {
@@ -66,8 +67,8 @@ public class CharSequenceBasedModel<T> extends BaseModel<T> {
 			return (T) o;
 		}
 		try {
-			String p = getParseable(o);
-			return (T) constructor.invoke(p);
+			CharSequence p = getParseable(o);
+			return (T) constructor.invokeExact(p);
 		} catch (Throwable e) {
 			throw new ModelException("Error converting " + o + " to " + type.getTypeName(), e);
 		}

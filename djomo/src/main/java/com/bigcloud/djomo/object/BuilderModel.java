@@ -17,6 +17,7 @@ package com.bigcloud.djomo.object;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
@@ -37,14 +38,14 @@ public class BuilderModel<T> extends ObjectMethodsModel<T> {
 
 	public BuilderModel(Type type, ModelContext context, MethodHandle builderMethod, MethodHandle buildMethod) throws IllegalAccessException {
 		super(type, context);
-		this.builderMethod = builderMethod;
-		this.buildMethod = buildMethod;
+		this.builderMethod = builderMethod.asType(MethodType.methodType(Object.class));
+		this.buildMethod = buildMethod.asType(MethodType.methodType(Object.class, Object.class));
 	}
 
 	@Override
 	public Object maker() {
 		try {
-			return builderMethod.invoke();
+			return builderMethod.invokeExact();
 		} catch ( Throwable e) {
 			throw new RuntimeException(e);
 		}
@@ -99,7 +100,7 @@ public class BuilderModel<T> extends ObjectMethodsModel<T> {
 	@Override
 	public T make(Object maker) {
 		try {
-			return (T) buildMethod.invoke(maker);
+			return (T) buildMethod.invokeExact(maker);
 		} catch ( Throwable e) {
 			throw new RuntimeException(e);
 		}

@@ -17,6 +17,7 @@ package com.bigcloud.djomo.simple;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.time.temporal.TemporalAccessor;
@@ -41,9 +42,9 @@ public class TemporalAccessorModel<T extends TemporalAccessor> extends BaseModel
 		MethodHandle parseHandle;
 		try {
 			Method method = this.type.getDeclaredMethod("from", TemporalAccessor.class);
-			fromHandle = MethodHandles.lookup().unreflect(method);
+			fromHandle = MethodHandles.lookup().unreflect(method).asType(MethodType.methodType(TemporalAccessor.class, TemporalAccessor.class));
 			Method parseMethod = this.type.getDeclaredMethod("parse", CharSequence.class);
-			parseHandle = MethodHandles.lookup().unreflect(parseMethod);
+			parseHandle = MethodHandles.lookup().unreflect(parseMethod).asType(MethodType.methodType(TemporalAccessor.class, String.class));
 
 		} catch (NoSuchMethodException | SecurityException | IllegalAccessException e) {
 			// this just limits conversion capabilities
@@ -61,7 +62,7 @@ public class TemporalAccessorModel<T extends TemporalAccessor> extends BaseModel
 				return (T) ta;
 			}
 			try {
-				return (T) fromHandle.invoke(ta);
+				return (T) fromHandle.invokeExact(ta);
 			} catch (Throwable e) {
 				throw new ModelException("Unable to convert TemporalAccessor " + ta + " of type "
 						+ ta.getClass().getName() + " to " + type.getTypeName(), e);
@@ -73,7 +74,7 @@ public class TemporalAccessorModel<T extends TemporalAccessor> extends BaseModel
 		if (parseHandle != null) {
 			try {
 				String p = getParseable(t);
-				return (T) parseHandle.invoke(p);
+				return (T) parseHandle.invokeExact(p);
 			} catch (Throwable e) {
 				throw new ModelException("Error converting " + t + " to " + type.getTypeName(), e);
 			}

@@ -17,6 +17,7 @@ package com.bigcloud.djomo.object;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
@@ -35,13 +36,13 @@ public class BeanModel<T> extends ObjectMethodsModel<T> {
 
 	public BeanModel(Type type, ModelContext context, MethodHandle constructor) throws IllegalAccessException {
 		super(type, context);
-		this.constructor = constructor;
+		this.constructor = constructor == null ? null : constructor.asType(MethodType.methodType(Object.class));
 	}
 
 	@Override
 	public Object maker() {
 		try {
-			return (T) constructor.invoke();
+			return constructor.invokeExact();
 		} catch (Throwable e) {
 			throw new RuntimeException("Unable to create instance of " + type.getName(), e);
 		}

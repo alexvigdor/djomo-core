@@ -30,7 +30,7 @@ public class StringBasedModel<T> extends CharSequenceBasedModel<T> {
 	@Override
 	public T parse(Parser parser) {
 		try {
-			return (T) constructor.invoke(parser.parseString().toString());
+			return (T) constructor.invokeExact((CharSequence)parser.parseString().toString());
 		} catch (RuntimeException e) {
 			throw e;
 		} catch (Throwable e) {

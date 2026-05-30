@@ -16,6 +16,7 @@
 package com.bigcloud.djomo.object;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Type;
 import java.util.Iterator;
 import java.util.List;
@@ -41,7 +42,7 @@ public class MapModel<T extends Map> extends BaseComplexModel<T> implements Obje
 		super(type, context);
 		this.context = context;
 		Type valueType = null;
-		this.constructor = constructor;
+		this.constructor = constructor == null ? null : constructor.asType(MethodType.methodType(Map.class));
 		if (typeArgs != null) {
 			Iterator<Type> ti = typeArgs.values().iterator();
 			var keyType = ti.next();
@@ -119,7 +120,7 @@ public class MapModel<T extends Map> extends BaseComplexModel<T> implements Obje
 			if (c == null) {
 				throw new RuntimeException("No constructor for " + type);
 			}
-			return (T) c.invoke();
+			return (T) c.invokeExact();
 		} catch (Throwable e) {
 			throw new RuntimeException(e);
 		}

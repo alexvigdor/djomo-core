@@ -105,7 +105,7 @@ public class BeanField implements Field, Cloneable {
 	@Override
 	public Object get(Object o) {
 		try {
-			return accessor.invoke(o);
+			return accessor.invokeExact(o);
 		} catch (Throwable e) {
 			throw createGetException(o, e);
 		}
@@ -119,7 +119,7 @@ public class BeanField implements Field, Cloneable {
 	@Override
 	public void set(Object receiver, Object value) {
 		try {
-			mutator.invoke(receiver, value);
+			mutator.invokeExact(receiver, value);
 		} catch (Throwable e) {
 			throw createSetException(receiver, value, e);
 		}
@@ -134,7 +134,7 @@ public class BeanField implements Field, Cloneable {
 	public void visit(Object source, Visitor visitor) {
 		Object val;
 		try {
-			val = accessor.invoke(source);
+			val = accessor.invokeExact(source);
 		} catch (Throwable e) {
 			throw createGetException(source, e);
 		}
@@ -146,7 +146,7 @@ public class BeanField implements Field, Cloneable {
 	public void parse(Object dest, Parser parser) {
 		var value = parser.parse(model);
 		try {
-			mutator.invoke(dest, value);
+			mutator.invokeExact(dest, value);
 		} catch (Throwable e) {
 			throw createSetException(dest, value, e);
 		}
@@ -178,9 +178,9 @@ public class BeanField implements Field, Cloneable {
 			CharSequence value = parser.parseString();
 			try {
 				if (value != null) {
-					mutator.invoke(dest, value.toString());
+					mutator.invokeExact(dest, value.toString());
 				} else {
-					mutator.invoke(dest, null);
+					mutator.invokeExact(dest, (String) null);
 				}
 			} catch (Throwable e) {
 				throw createSetException(dest, value, e);
@@ -191,7 +191,7 @@ public class BeanField implements Field, Cloneable {
 		public void visit(Object source, Visitor visitor) {
 			String val;
 			try {
-				val = (String) accessor.invoke(source);
+				val = (String) accessor.invokeExact(source);
 			} catch (Throwable e) {
 				throw createGetException(source, e);
 			}
@@ -208,6 +208,23 @@ public class BeanField implements Field, Cloneable {
 			return new StringField(accessor, mutator, name, newKey, model, annotations);
 		}
 
+		@Override
+		public Object get(Object o) {
+			try {
+				return (String) accessor.invokeExact(o);
+			} catch (Throwable e) {
+				throw createGetException(o, e);
+			}
+		}
+
+		@Override
+		public void set(Object receiver, Object value) {
+			try {
+				mutator.invokeExact(receiver, (String) value);
+			} catch (Throwable e) {
+				throw createSetException(receiver, value, e);
+			}
+		}
 	}
 
 	public static class TemporalField extends BeanField {
@@ -229,7 +246,7 @@ public class BeanField implements Field, Cloneable {
 		public void parse(Object dest, Parser parser) {
 			TemporalAccessor value = parser.parseTemporal(temporalType);
 			try {
-				mutator.invoke(dest, value);
+				mutator.invokeExact(dest, (Object) value);
 			} catch (Throwable e) {
 				throw createSetException(dest, value, e);
 			}
@@ -237,9 +254,9 @@ public class BeanField implements Field, Cloneable {
 
 		@Override
 		public void visit(Object source, Visitor visitor) {
-			TemporalAccessor val;
+			Object val;
 			try {
-				val = (TemporalAccessor) accessor.invoke(source);
+				val = accessor.invokeExact(source);
 			} catch (Throwable e) {
 				throw createGetException(source, e);
 			}
@@ -247,7 +264,7 @@ public class BeanField implements Field, Cloneable {
 			if (val == null) {
 				visitor.visitNull();
 			} else {
-				visitor.visitTemporal(val);
+				visitor.visitTemporal((TemporalAccessor) val);
 			}
 		}
 
@@ -274,7 +291,7 @@ public class BeanField implements Field, Cloneable {
 		public void parse(Object dest, Parser parser) {
 			UUID value = parser.parseUUID();
 			try {
-				mutator.invoke(dest, value);
+				mutator.invokeExact(dest, (Object) value);
 			} catch (Throwable e) {
 				throw createSetException(dest, value, e);
 			}
@@ -282,9 +299,9 @@ public class BeanField implements Field, Cloneable {
 
 		@Override
 		public void visit(Object source, Visitor visitor) {
-			UUID val;
+			Object val;
 			try {
-				val = (UUID) accessor.invoke(source);
+				val = accessor.invokeExact(source);
 			} catch (Throwable e) {
 				throw createGetException(source, e);
 			}
@@ -292,7 +309,7 @@ public class BeanField implements Field, Cloneable {
 			if (val == null) {
 				visitor.visitNull();
 			} else {
-				visitor.visitUUID(val);
+				visitor.visitUUID((UUID) val);
 			}
 		}
 
@@ -319,7 +336,7 @@ public class BeanField implements Field, Cloneable {
 		public void parse(Object dest, Parser parser) {
 			double value = parser.parseDouble();
 			try {
-				mutator.invoke(dest, value);
+				mutator.invokeExact(dest, value);
 			} catch (Throwable e) {
 				throw createSetException(dest, value, e);
 			}
@@ -329,12 +346,30 @@ public class BeanField implements Field, Cloneable {
 		public void visit(Object source, Visitor visitor) {
 			double val;
 			try {
-				val = (double) accessor.invoke(source);
+				val = (double) accessor.invokeExact(source);
 			} catch (Throwable e) {
 				throw createGetException(source, e);
 			}
 			visitor.visitObjectField(key);
 			visitor.visitDouble(val);
+		}
+
+		@Override
+		public Object get(Object o) {
+			try {
+				return (double) accessor.invokeExact(o);
+			} catch (Throwable e) {
+				throw createGetException(o, e);
+			}
+		}
+
+		@Override
+		public void set(Object receiver, Object value) {
+			try {
+				mutator.invokeExact(receiver, (double) value);
+			} catch (Throwable e) {
+				throw createSetException(receiver, value, e);
+			}
 		}
 
 		@Override
@@ -360,7 +395,7 @@ public class BeanField implements Field, Cloneable {
 		public void parse(Object dest, Parser parser) {
 			float value = parser.parseFloat();
 			try {
-				mutator.invoke(dest, value);
+				mutator.invokeExact(dest, value);
 			} catch (Throwable e) {
 				throw createSetException(dest, value, e);
 			}
@@ -370,12 +405,30 @@ public class BeanField implements Field, Cloneable {
 		public void visit(Object source, Visitor visitor) {
 			float val;
 			try {
-				val = (float) accessor.invoke(source);
+				val = (float) accessor.invokeExact(source);
 			} catch (Throwable e) {
 				throw createGetException(source, e);
 			}
 			visitor.visitObjectField(key);
 			visitor.visitFloat(val);
+		}
+
+		@Override
+		public Object get(Object o) {
+			try {
+				return (float) accessor.invokeExact(o);
+			} catch (Throwable e) {
+				throw createGetException(o, e);
+			}
+		}
+
+		@Override
+		public void set(Object receiver, Object value) {
+			try {
+				mutator.invokeExact(receiver, (float) value);
+			} catch (Throwable e) {
+				throw createSetException(receiver, value, e);
+			}
 		}
 
 		@Override
@@ -400,7 +453,7 @@ public class BeanField implements Field, Cloneable {
 		public void parse(Object dest, Parser parser) {
 			long value = parser.parseLong();
 			try {
-				mutator.invoke(dest, value);
+				mutator.invokeExact(dest, value);
 			} catch (Throwable e) {
 				throw createSetException(dest, value, e);
 			}
@@ -410,12 +463,30 @@ public class BeanField implements Field, Cloneable {
 		public void visit(Object source, Visitor visitor) {
 			long val;
 			try {
-				val = (long) accessor.invoke(source);
+				val = (long) accessor.invokeExact(source);
 			} catch (Throwable e) {
 				throw createGetException(source, e);
 			}
 			visitor.visitObjectField(key);
 			visitor.visitLong(val);
+		}
+
+		@Override
+		public Object get(Object o) {
+			try {
+				return (long) accessor.invokeExact(o);
+			} catch (Throwable e) {
+				throw createGetException(o, e);
+			}
+		}
+
+		@Override
+		public void set(Object receiver, Object value) {
+			try {
+				mutator.invokeExact(receiver, (long) value);
+			} catch (Throwable e) {
+				throw createSetException(receiver, value, e);
+			}
 		}
 
 		@Override
@@ -440,7 +511,7 @@ public class BeanField implements Field, Cloneable {
 		public void parse(Object dest, Parser parser) {
 			int value = parser.parseInt();
 			try {
-				mutator.invoke(dest, value);
+				mutator.invokeExact(dest, value);
 			} catch (Throwable e) {
 				throw createSetException(dest, value, e);
 			}
@@ -450,12 +521,30 @@ public class BeanField implements Field, Cloneable {
 		public void visit(Object source, Visitor visitor) {
 			int val;
 			try {
-				val = (int) accessor.invoke(source);
+				val = (int) accessor.invokeExact(source);
 			} catch (Throwable e) {
 				throw createGetException(source, e);
 			}
 			visitor.visitObjectField(key);
 			visitor.visitInt(val);
+		}
+
+		@Override
+		public Object get(Object o) {
+			try {
+				return (int) accessor.invokeExact(o);
+			} catch (Throwable e) {
+				throw createGetException(o, e);
+			}
+		}
+
+		@Override
+		public void set(Object receiver, Object value) {
+			try {
+				mutator.invokeExact(receiver, (int) value);
+			} catch (Throwable e) {
+				throw createSetException(receiver, value, e);
+			}
 		}
 
 		@Override
@@ -480,7 +569,7 @@ public class BeanField implements Field, Cloneable {
 		public void parse(Object dest, Parser parser) {
 			boolean value = parser.parseBoolean();
 			try {
-				mutator.invoke(dest, value);
+				mutator.invokeExact(dest, value);
 			} catch (Throwable e) {
 				throw createSetException(dest, value, e);
 			}
@@ -490,12 +579,30 @@ public class BeanField implements Field, Cloneable {
 		public void visit(Object source, Visitor visitor) {
 			boolean val;
 			try {
-				val = (boolean) accessor.invoke(source);
+				val = (boolean) accessor.invokeExact(source);
 			} catch (Throwable e) {
 				throw createGetException(source, e);
 			}
 			visitor.visitObjectField(key);
 			visitor.visitBoolean(val);
+		}
+
+		@Override
+		public Object get(Object o) {
+			try {
+				return (boolean) accessor.invokeExact(o);
+			} catch (Throwable e) {
+				throw createGetException(o, e);
+			}
+		}
+
+		@Override
+		public void set(Object receiver, Object value) {
+			try {
+				mutator.invokeExact(receiver, (boolean) value);
+			} catch (Throwable e) {
+				throw createSetException(receiver, value, e);
+			}
 		}
 
 		@Override
@@ -523,7 +630,7 @@ public class BeanField implements Field, Cloneable {
 		public void parse(Object dest, Parser parser) {
 			var value = parser.parseObject(objectModel);
 			try {
-				mutator.invoke(dest, value);
+				mutator.invokeExact(dest, value);
 			} catch (Throwable e) {
 				throw createSetException(dest, value, e);
 			}
@@ -554,7 +661,7 @@ public class BeanField implements Field, Cloneable {
 		public void parse(Object dest, Parser parser) {
 			var value = parser.parseList(listModel);
 			try {
-				mutator.invoke(dest, value);
+				mutator.invokeExact(dest, value);
 			} catch (Throwable e) {
 				throw createSetException(dest, value, e);
 			}
@@ -576,35 +683,58 @@ public class BeanField implements Field, Cloneable {
 		public Field build() {
 			Field field;
 			var annotationArray = annotations.toArray(Annotation[]::new);
-			if (model.getType() == String.class) {
-				field = new StringField(accessor, mutator, name, model, annotationArray);
-			} else if (model.getType() == double.class) {
-				field = new DoubleField(accessor, mutator, name, model, annotationArray);
-			} else if (model.getType() == float.class) {
-				field = new FloatField(accessor, mutator, name, model, annotationArray);
-			} else if (model.getType() == int.class) {
-				field = new IntField(accessor, mutator, name, model, annotationArray);
-			} else if (model.getType() == long.class) {
-				field = new LongField(accessor, mutator, name, model, annotationArray);
-			} else if (model.getType() == boolean.class) {
-				field = new BooleanField(accessor, mutator, name, model, annotationArray);
-			} else if(TemporalAccessor.class.isAssignableFrom(model.getType())) {
-				field = new TemporalField(accessor, mutator, name, model, annotationArray);
-			} else if (UUID.class.isAssignableFrom(model.getType())) {
-				field = new UUIDField(accessor, mutator, name, model, annotationArray);
+			Class<?> type = model.getType();
+
+			boolean hasSpecialist = type == double.class ||
+					type == float.class ||
+					type == int.class ||
+					type == long.class ||
+					type == boolean.class ||
+					type == String.class;
+
+			Class<?> targetType = hasSpecialist ? type : Object.class;
+
+			MethodHandle optAccessor = null;
+			MethodHandle optMutator = null;
+
+			if (accessor != null) {
+				optAccessor = accessor.asType(MethodType.methodType(targetType, Object.class));
 			}
-			else {
-				if (model instanceof ResolverModel rm && rm.getResolver() instanceof Resolver.Substitute rs  && rs.getSubstitute() != null) {
+
+			if (mutator != null) {
+				optMutator = mutator.asType(MethodType.methodType(void.class, Object.class, targetType));
+			}
+
+			if (type == String.class) {
+				field = new StringField(optAccessor, optMutator, name, model, annotationArray);
+			} else if (type == double.class) {
+				field = new DoubleField(optAccessor, optMutator, name, model, annotationArray);
+			} else if (type == float.class) {
+				field = new FloatField(optAccessor, optMutator, name, model, annotationArray);
+			} else if (type == int.class) {
+				field = new IntField(optAccessor, optMutator, name, model, annotationArray);
+			} else if (type == long.class) {
+				field = new LongField(optAccessor, optMutator, name, model, annotationArray);
+			} else if (type == boolean.class) {
+				field = new BooleanField(optAccessor, optMutator, name, model, annotationArray);
+			} else if (TemporalAccessor.class.isAssignableFrom(type)) {
+				field = new TemporalField(optAccessor, optMutator, name, model, annotationArray);
+			} else if (UUID.class.isAssignableFrom(type)) {
+				field = new UUIDField(optAccessor, optMutator, name, model, annotationArray);
+			} else {
+				if (model instanceof ResolverModel rm && rm.getResolver() instanceof Resolver.Substitute rs
+						&& rs.getSubstitute() != null) {
 					model = rs.getSubstitute();
 				}
 				if (model instanceof ObjectModel om) {
-					field = new ObjectField(accessor, mutator, name, om, annotationArray);
+					field = new ObjectField(optAccessor, optMutator, name, om, annotationArray);
 				} else if (model instanceof ListModel lm) {
-					field = new ListField(accessor, mutator, name, lm, annotationArray);
+					field = new ListField(optAccessor, optMutator, name, lm, annotationArray);
 				} else {
-					field = new BeanField(accessor, mutator, name, model, annotationArray);
+					field = new BeanField(optAccessor, optMutator, name, model, annotationArray);
 				}
 			}
+
 			if (accessor == null) {
 				field = new FilterField(field) {
 					@Override

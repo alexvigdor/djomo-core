@@ -16,6 +16,7 @@
 package com.bigcloud.djomo.simple;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Type;
 import java.util.Base64;
 
@@ -31,8 +32,8 @@ public class ByteArrayBasedModel<T> extends BaseModel<T> {
 
 	public ByteArrayBasedModel(Type type, ModelContext context, MethodHandle constructor, MethodHandle toByteArray) {
 		super(type, context);
-		this.constructor = constructor;
-		this.toByteArray = toByteArray;
+		this.constructor = constructor.asType(MethodType.methodType(Object.class, byte[].class));
+		this.toByteArray = toByteArray.asType(MethodType.methodType(byte[].class, Object.class));
 	}
 
 	@Override
@@ -44,7 +45,7 @@ public class ByteArrayBasedModel<T> extends BaseModel<T> {
 			return (T) o;
 		}
 		try {
-			return (T) constructor.invoke(Base64.getDecoder().decode(o.toString()));
+			return (T) constructor.invokeExact(Base64.getDecoder().decode(o.toString()));
 		} catch (Throwable e) {
 			throw new ModelException("Error converting " + o + " to " + type.getTypeName(), e);
 		}
@@ -53,7 +54,7 @@ public class ByteArrayBasedModel<T> extends BaseModel<T> {
 	@Override
 	public T parse(Parser parser) {
 		try {
-			return (T) constructor.invoke(Base64.getDecoder().decode(parser.parseString().toString()));
+			return (T) constructor.invokeExact(Base64.getDecoder().decode(parser.parseString().toString()));
 		} catch (Throwable e) {
 			throw new ModelException(
 					"Error constructing instance of " + type.getName() + " from base64", e);
@@ -62,9 +63,8 @@ public class ByteArrayBasedModel<T> extends BaseModel<T> {
 
 	@Override
 	public void visit(T obj, Visitor visitor) {
-		// TODO Auto-generated method stub
 		try {
-			visitor.visitString(Base64.getEncoder().encodeToString((byte[]) toByteArray.invoke(obj)));
+			visitor.visitString(Base64.getEncoder().encodeToString((byte[]) toByteArray.invokeExact(obj)));
 		} catch (Throwable e) {
 			throw new ModelException(
 					"Error visiting instance of " + type.getName() + " as base64", e);

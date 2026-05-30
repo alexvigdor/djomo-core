@@ -17,6 +17,7 @@ package com.bigcloud.djomo.list;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -45,10 +46,10 @@ public class ListModelFactory extends BaseModelFactory {
 				supplier = () -> new ArrayList(122);
 			} else if (constructor != null) {
 				try {
-					final MethodHandle handle = lookup.unreflectConstructor(constructor);
+					final MethodHandle handle = lookup.unreflectConstructor(constructor).asType(MethodType.methodType(Collection.class));
 					supplier = () -> {
 						try {
-							return (Collection) handle.invoke();
+							return (Collection) handle.invokeExact();
 						} catch (Throwable e) {
 							throw new RuntimeException("Failed to create collection of type " + rawType, e);
 						}
