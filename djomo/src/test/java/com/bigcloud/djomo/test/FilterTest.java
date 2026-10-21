@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -31,6 +32,8 @@ import org.testng.annotations.Test;
 
 import com.bigcloud.djomo.Json;
 import com.bigcloud.djomo.Models;
+import com.bigcloud.djomo.Resolver;
+import com.bigcloud.djomo.StaticType;
 import com.bigcloud.djomo.annotation.Parse;
 import com.bigcloud.djomo.annotation.Visit;
 import com.bigcloud.djomo.api.Filters;
@@ -51,6 +54,7 @@ import com.bigcloud.djomo.filter.parsers.ExcludeParser;
 import com.bigcloud.djomo.filter.parsers.FieldParser;
 import com.bigcloud.djomo.filter.parsers.IncludeParser;
 import com.bigcloud.djomo.filter.parsers.MultiFilterParser;
+import com.bigcloud.djomo.filter.parsers.OmitNullFieldParser;
 import com.bigcloud.djomo.filter.parsers.RenameParser;
 import com.bigcloud.djomo.filter.visitors.ExcludeVisitor;
 import com.bigcloud.djomo.filter.visitors.FieldVisitor;
@@ -397,4 +401,56 @@ public class FilterTest {
 		String str = json.toString(doc);
 		Assert.assertEquals(str, "{\"children\":[{\"title\":\"Child 1\"},{\"title\":\"Child 2\"},{\"title\":\"Child 3\"},{\"title\":\"Child 4\"},{\"title\":\"Child 5\"}],\"parent\":{\"title\":\"Parent\"},\"title\":\"Document\"}");
 	}
+
+	@Test
+	public void testConcurrentMapProtection() throws IOException {
+		Json json = Json.builder().models(
+				Models.builder()
+						.resolver(new Resolver.Substitute<>(Map.class, ConcurrentHashMap.class))
+						.build())
+				.parse(new OmitNullFieldParser())
+				.build();
+		Map map = json.fromString("{\"a\":null,\"b\":1}", Map.class);
+		Assert.assertTrue(map instanceof ConcurrentHashMap);
+		Assert.assertEquals(json.toString(map), "{\"b\":1}");
+	}
+
+	@Visit(OmitNullFieldVisitor.class)
+	@Parse(OmitNullFieldParser.class)
+	public static class UnTypedOmitNullConfiguration {}
+
+	@Visit(value = OmitNullFieldVisitor.class, type = GuidDoc.class)
+	@Parse(value = OmitNullFieldParser.class, type = GuidDoc.class)
+	public static class TypedOmitNullConfiguration {}
+
+	@Test
+	public void testUntypedOmitNull() throws IOException {
+		Json json = Json.builder().scan(UnTypedOmitNullConfiguration.class).build();
+		GuidDoc doc = GuidDoc.builder().title("Test").parent(null).children(null).build();
+		Map map = new LinkedHashMap();
+		map.put("doc", doc);
+		map.put("opt", null);
+		String str = json.toString(map);
+		Assert.assertEquals(str, "{\"doc\":{\"title\":\"Test\"}}");
+		var rmap = json.fromString("{\"doc\":{\"title\":\"Test\"},\"opt\":null}",
+				new StaticType<Map<String, GuidDoc>>() {});
+		Assert.assertEquals(rmap.get("doc"), doc);
+		Assert.assertFalse(rmap.containsKey("opt"));
+	}
+
+	@Test
+	public void testTypedOmitNull() throws IOException {
+		Json json = Json.builder().scan(TypedOmitNullConfiguration.class).build();
+		GuidDoc doc = GuidDoc.builder().title("Test").parent(null).children(null).build();
+		Map map = new LinkedHashMap();
+		map.put("doc", doc);
+		map.put("opt", null);
+		String str = json.toString(map);
+		Assert.assertEquals(str, "{\"doc\":{\"title\":\"Test\"},\"opt\":null}");
+		var rmap = json.fromString("{\"doc\":{\"title\":\"Test\"},\"opt\":null}",
+				new StaticType<Map<String, GuidDoc>>() {});
+		Assert.assertEquals(rmap.get("doc"), doc);
+		Assert.assertTrue(rmap.containsKey("opt"));
+	}
+
 }

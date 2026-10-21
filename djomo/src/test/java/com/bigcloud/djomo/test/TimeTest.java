@@ -33,8 +33,10 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAccessor;
 
 import org.testng.Assert;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import com.bigcloud.djomo.Json;
@@ -48,17 +50,35 @@ import lombok.Value;
 public class TimeTest {
 	Json Json = new Json();
 
-	@Test
-	public void testTime() throws IOException {
-		TimeBean bean = bean();
+	@DataProvider(name = "temporalProvider")
+	public Object[][] provideTemporalData() {
+		return new Object[][] {
+				{ LocalDate.now() },
+				{ LocalTime.now() },
+				{ LocalDateTime.now() },
+				{ Instant.now() },
+				{ ZonedDateTime.now() },
+				{ OffsetDateTime.now() },
+				{ OffsetTime.now() },
+				{ MonthDay.now() },
+				{ Year.now() },
+				{ YearMonth.now() },
+				{ ZoneOffset.ofHours(-7) },
+				{ ZoneOffset.UTC }
+		};
+	}
+
+	@Test(dataProvider = "temporalProvider")
+	public void testTime(TemporalAccessor temporalAccessor) throws IOException {
+		TimeBean bean = bean(temporalAccessor);
 		String json = Json.toString(bean, "  ");
 		TimeBean rt = Json.fromString(json, TimeBean.class);
 		Assert.assertEquals(rt, bean);
 	}
 
-	@Test
-	public void testFormat() throws IOException {
-		TimeBean bean = bean();
+	@Test(dataProvider = "temporalProvider")
+	public void testFormat(TemporalAccessor temporalAccessor) throws IOException {
+		TimeBean bean = bean(temporalAccessor);
 		String plain = Json.toString(bean, "  ");
 		var full = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL);
 		var medium = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM);
@@ -129,7 +149,7 @@ public class TimeTest {
 		models.get(ZonedDateTime.class).convert(Instant.now());
 	}
 
-	private static TimeBean bean() {
+	private static TimeBean bean(TemporalAccessor temporalAccessor) {
 		return TimeBean.builder()
 				.duration(Duration.of(17, ChronoUnit.MINUTES))
 				.period(Period.ofDays(2))
@@ -144,6 +164,8 @@ public class TimeTest {
 				.zonedDateTime(ZonedDateTime.now().truncatedTo(ChronoUnit.SECONDS))
 				.zoneId(ZoneId.systemDefault())
 				.zoneOffset(ZoneOffset.ofHours(-7))
+				.instant(Instant.now())
+				.temporalAccessor(temporalAccessor)
 				.build();
 	}
 
@@ -165,5 +187,7 @@ public class TimeTest {
 		ZonedDateTime zonedDateTime;
 		ZoneId zoneId;
 		ZoneOffset zoneOffset;
+		Instant instant;
+		TemporalAccessor temporalAccessor;
 	}
 }

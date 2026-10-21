@@ -35,9 +35,13 @@ import com.bigcloud.djomo.internal.FloatingParser;
 
 
 public class JsonParser extends BaseParser implements Parser {
+	private static final char[] NULL_TOKEN = { 'n', 'u', 'l', 'l' };
+	private static final char[] TRUE_TOKEN = { 't', 'r', 'u', 'e' };
+	private static final char[] FALSE_TOKEN = { 'f', 'a', 'l', 's', 'e' };
+	private static final char[] QUOTE = { '"' };
 	private static final ThreadLocal<char[]> localInput = new ThreadLocal<char[]>() {
 		public char[] initialValue() {
-			return new char[16384];
+			return new char[8192];
 		}
 	};
 
@@ -111,7 +115,7 @@ public class JsonParser extends BaseParser implements Parser {
 		return String.valueOf(input, start, end - start);
 	}
 
-	protected final void expect(char... target) {
+	protected final void expect(char[] target) {
 		int rp = readPosition;
 		var buf = input;
 		int tp = 0;
@@ -329,7 +333,7 @@ public class JsonParser extends BaseParser implements Parser {
 
 	@Override
 	public Object parseNull() {
-		expect(new char[] { 'n', 'u', 'l', 'l' });
+		expect(NULL_TOKEN);
 		return null;
 	}
 
@@ -454,10 +458,10 @@ public class JsonParser extends BaseParser implements Parser {
 	public boolean parseBoolean() {
 		switch (seek()) {
 		case 't':
-			expect(new char[] { 't', 'r', 'u', 'e' });
+			expect(TRUE_TOKEN);
 			return true;
 		case 'f':
-			expect(new char[] { 'f', 'a', 'l', 's', 'e' });
+			expect(FALSE_TOKEN);
 			return false;
 		default:
 			throw new ModelException("Unexpected input for boolean " + describe());
@@ -466,7 +470,7 @@ public class JsonParser extends BaseParser implements Parser {
 
 	@Override
 	public UUID parseUUID() {
-		expect('"');
+		expect(QUOTE);
 		int rp = readPosition;
 		var buf = input;
 		long msb = 0;
@@ -704,7 +708,7 @@ public class JsonParser extends BaseParser implements Parser {
 						outputLength = expandBuffer(outputLength, newPos, false);
 						output = Arrays.copyOf(output, outputLength);
 					}
-					System.arraycopy(input, inStart, output, writePos, rp - inStart);
+					System.arraycopy(input, inStart, output, writePos, len);
 					writePos = newPos;
 				}
 				refillStrict();
@@ -905,6 +909,7 @@ public class JsonParser extends BaseParser implements Parser {
 			parseTime(builder);
 		}
 		else if(c=='Z'){
+			++readPosition;
 			builder.format = TemporalType.Format.OFFSET;
 			builder.isUtc = true;
 		}

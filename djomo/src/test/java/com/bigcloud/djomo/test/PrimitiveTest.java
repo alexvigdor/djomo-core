@@ -20,6 +20,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.DoubleStream;
+import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 import org.testng.Assert;
@@ -156,6 +159,29 @@ public class PrimitiveTest {
 		int[] idata = { 7, 8, 9 };
 		int isum = (int) streamModel.convert(idata).collect(Collectors.summingInt(d -> (int) d));
 		Assert.assertEquals(isum, 24);
+	}
+
+	@Test
+	public void testPrimitiveArrays() throws IOException {
+		Json json = new Json();
+		long[] ldata = { 4, 5, 6 };
+		String jsonStr = json.toString(ldata);
+		long[] ldata2 = json.fromString(jsonStr, long[].class);
+		Assert.assertEquals(ldata, ldata2);
+		long[] ldata3 = json.fromString(jsonStr, ldata);
+		Assert.assertEquals(ldata3, LongStream.concat(Arrays.stream(ldata), Arrays.stream(ldata)).toArray());
+		int[] idata = { 7, 8, 9 };
+		jsonStr = json.toString(idata);
+		int[] idata2 = json.fromString(jsonStr, int[].class);
+		Assert.assertEquals(idata, idata2);
+		int[] idata3 = json.fromString(jsonStr, idata);
+		Assert.assertEquals(idata3, IntStream.concat(Arrays.stream(idata), Arrays.stream(idata)).toArray());
+		double[] ddata = { 1.0, 2.0, 3.1 };
+		jsonStr = json.toString(ddata);
+		double[] ddata2 = json.fromString(jsonStr, double[].class);
+		Assert.assertEquals(ddata, ddata2);
+		double[] ddata3 = json.fromString(jsonStr, ddata);
+		Assert.assertEquals(ddata3, DoubleStream.concat(Arrays.stream(ddata), Arrays.stream(ddata)).toArray());
 	}
 
 	@Builder

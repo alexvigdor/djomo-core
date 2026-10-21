@@ -18,9 +18,12 @@ package com.bigcloud.djomo.test;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 import java.util.TreeMap;
 import java.util.Vector;
@@ -37,6 +40,7 @@ import com.bigcloud.djomo.Resolver;
 import com.bigcloud.djomo.StaticType;
 import com.bigcloud.djomo.api.ListModel;
 import com.bigcloud.djomo.api.Model;
+import com.bigcloud.djomo.api.visitors.StringVisitor;
 import com.bigcloud.djomo.base.InstanceParser;
 
 public class CollectionTest {
@@ -57,15 +61,16 @@ public class CollectionTest {
 		Assert.assertEquals(parsed.getClass(), ConcurrentHashMap.class);
 		Assert.assertEquals(parsed.get("a").getClass(), String.class);
 		Assert.assertEquals(parsed.get("b").getClass(), TreeMap.class);
-		Assert.assertEquals(((Map)parsed.get("b")).get("c").getClass(), String.class);
-		parsed = json.fromString(data, new StaticType<ConcurrentHashMap<String, Object>>() {});
+		Assert.assertEquals(((Map) parsed.get("b")).get("c").getClass(), String.class);
+		parsed = json.fromString(data, new StaticType<ConcurrentHashMap<String, Object>>() {
+		});
 		Assert.assertEquals(parsed.getClass(), ConcurrentHashMap.class);
 		Assert.assertEquals(parsed.get("a").getClass(), String.class);
 		Assert.assertEquals(parsed.get("b").getClass(), TreeMap.class);
-		Assert.assertEquals(((Map)parsed.get("b")).get("c").getClass(), String.class);
-		Assert.assertEquals(((Map)parsed.get("b")).get("d").getClass(), Integer.class);
+		Assert.assertEquals(((Map) parsed.get("b")).get("c").getClass(), String.class);
+		Assert.assertEquals(((Map) parsed.get("b")).get("d").getClass(), Integer.class);
 	}
-	
+
 	@Test
 	public void testListType() throws IOException {
 		String data = "[1,2,[3,4]]";
@@ -77,17 +82,19 @@ public class CollectionTest {
 		Assert.assertEquals(parsed.getClass(), Stack.class);
 		Assert.assertEquals(parsed.get(2).getClass(), ArrayList.class);
 		Assert.assertEquals(parsed.get(1).getClass(), Integer.class);
-		parsed = json.fromString("[1.0,2,3]", new StaticType<Vector<Double>>() {});
+		parsed = json.fromString("[1.0,2,3]", new StaticType<Vector<Double>>() {
+		});
 		Assert.assertEquals(parsed.getClass(), Vector.class);
 		Assert.assertEquals(parsed.get(1).getClass(), Double.class);
 		Assert.assertEquals(parsed.get(2).getClass(), Double.class);
 	}
-	
+
 	@Test
 	public void testGeneric() throws IOException {
 		String data = "{\"a\":[{\"c\":{\"d\":\"e\"}}],\"b\":[{\"f\":\"g\"}]}";
 		Json json = new Json();
-		var parsed = json.fromString(data, new StaticType<TreeMap<String, List<Map>>>() {});
+		var parsed = json.fromString(data, new StaticType<TreeMap<String, List<Map>>>() {
+		});
 		Assert.assertEquals(parsed.getClass(), TreeMap.class);
 		var c = parsed.get("a").get(0).get("c");
 		Assert.assertEquals(c.getClass(), LinkedHashMap.class);
@@ -97,7 +104,8 @@ public class CollectionTest {
 	public void testConvertCollection() throws IOException {
 		Models models = new Models();
 		String[] data = { "1", "2", "3", "4" };
-		Model<List<Double>> model = models.get(new StaticType<ArrayList<Double>>() {});
+		Model<List<Double>> model = models.get(new StaticType<ArrayList<Double>>() {
+		});
 		List<Double> converted = model.convert(data);
 		Assert.assertEquals(converted.get(3), 4.0);
 		Assert.assertEquals(model.convert(null), null);
@@ -109,7 +117,8 @@ public class CollectionTest {
 	@Test(expectedExceptions = NumberFormatException.class)
 	public void testBadConvertCollection() throws IOException {
 		Models models = new Models();
-		Model<List<Double>> model = models.get(new StaticType<ArrayList<Double>>() {});
+		Model<List<Double>> model = models.get(new StaticType<ArrayList<Double>>() {
+		});
 		model.convert("test");
 	}
 
@@ -145,12 +154,55 @@ public class CollectionTest {
 	@Test
 	public void testStreams() {
 		Models models = new Models();
-		ListModel<Stream<Integer>> streamModel = models.get(new StaticType<Stream<Integer>>() {});
+		ListModel<Stream<Integer>> streamModel = models.get(new StaticType<Stream<Integer>>() {
+		});
 		Assert.assertNull(streamModel.convert(null));
 		var maker = streamModel.maker(Stream.of(1));
 		streamModel.parseItem(maker, new InstanceParser(models, 2));
 		Stream<Integer> s = streamModel.make(maker);
 		Assert.assertEquals(streamModel.convert(s).collect(Collectors.toList()), List.of(1, 2));
 		Assert.assertEquals(streamModel.convert("11").findFirst().orElseThrow(), 11);
+	}
+
+	public static record TagHolder(Set<String> tags) {
+	}
+
+	@Test
+	public void testStringCollection() throws IOException {
+		Json json = new Json();
+		HashSet<String> set = new HashSet<>(List.of("a", "b", "c"));
+		set.add(null);
+		TagHolder holder = new TagHolder(set);
+		String str = json.toString(holder);
+		TagHolder parsed = json.fromString(str, TagHolder.class);
+		Assert.assertEquals(parsed, holder);
+	}
+
+	@Test
+	public void testStringArray() throws IOException {
+		Json json = new Json();
+		String[] array = new String[] { "a", "b", "c", null };
+		String str = json.toString(array);
+		String[] parsed = json.fromString(str, String[].class);
+		Assert.assertTrue(Arrays.equals(parsed, array));
+	}
+
+	@Test
+	public void testArrayMerge() throws IOException {
+		Json json = new Json();
+		Object[] array = new Object[] { "a", "b", "c", null };
+		Object[] array2 = new Object[] { "d", "e", "f" };
+		String str = json.toString(array2);
+		Object[] parsed = json.fromString(str, array);
+		Assert.assertTrue(Arrays.equals(parsed, new Object[] { "a", "b", "c", null, "d", "e", "f" }));
+	}
+	
+	@Test
+	public void testSubstituteMap() throws IOException {
+		Json json = new Json(Models.builder()
+				.resolver(new Resolver.Substitute<Map, TreeMap>() {})
+				.build());
+		Map map = json.fromString("{\"a\":1,\"b\":2}", Map.class);
+		Assert.assertEquals(map.getClass(), TreeMap.class);
 	}
 }

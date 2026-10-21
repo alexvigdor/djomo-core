@@ -316,6 +316,18 @@ Here's an example showing these 4 additional annotations in use:
 ```
 @Value
 @Builder
+public static class Sender {
+	String firstName;
+	String lastName;
+
+	@Ignore
+	public String getFullName() {
+		return firstName + " " + lastName;
+	}
+}
+
+@Value
+@Builder
 @Order({ "message-title", "message-body" })
 public class Message {
 	@Property("message-title")
@@ -621,12 +633,11 @@ System.out.println(json.toString(roundTrip));
 You might want to customize a parse or visit operation for a specific field in other ways, like transforming or limiting the data.  Several base classes are provided to support these use cases - in this example, we have an object with two fields, and we use field filters to limit the size of a list in one field, and reverse a string value in another field.
 
 ```
-import com.bigcloud.djomo.filter.FieldParser;
-import com.bigcloud.djomo.filter.FieldParserFunction;
-import com.bigcloud.djomo.filter.FieldVisitor;
-import com.bigcloud.djomo.filter.FieldVisitorFunction;
-import com.bigcloud.djomo.filter.LimitParser;
-import com.bigcloud.djomo.filter.LimitVisitor;
+import com.bigcloud.djomo.api.Filters;
+import com.bigcloud.djomo.filter.parsers.FieldParser;
+import com.bigcloud.djomo.filter.visitors.FieldVisitor;
+import com.bigcloud.djomo.filter.parsers.LimitParser;
+import com.bigcloud.djomo.filter.visitors.LimitVisitor;
 
 public static record Feed(String name, List<String> ids) {}
 	
@@ -709,19 +720,19 @@ assertEquals(roundTrip, contact);
 In the basic form, the annotations take as a value the class of the VisitorFilter or ParserFilter to be invoked.  You can also provide `type` and `path` elements to the annotations which will automatically combine the specified filter with a Type or Path filter to limit the scope in which the filter is applied.  In this example, we set up filters to exclude a field by name from a java class, only when it is found under a given path.  We also inject the simple class name as a field for some types.
 
 ```
-import com.bigcloud.djomo.filter.ExcludeFilter;
-import com.bigcloud.djomo.filter.InjectFilter;
+import com.bigcloud.djomo.filter.visitors.ExcludeVisitor;
+import com.bigcloud.djomo.filter.visitors.InjectVisitor;
 
 public record Thing1(String name, String role) {}
 
 public record Thing2(String name, String role) {}
 
-@Visit(value = ExcludeFilter.class, path = "staff.**", type = Thing2.class, arg = "role")
+@Visit(value = ExcludeVisitor.class, path = "staff.**", type = Thing2.class, arg = "role")
 @Visit(value = InjectType.class, type = Thing1.class)
 @Visit(value = InjectType.class, type = Thing2.class)
 public interface FilterThings {}
 
-public class InjectType extends InjectFilter<Object> {
+public class InjectType extends InjectVisitor<Object> {
 	public InjectType() {
 		super("type");
 	}
@@ -758,7 +769,7 @@ com.bigcloud.djomo.rs.JsonBodyReader.class
 com.bigcloud.djomo.rs.JsonBodyWriter.class
 ```
 
-To customize the Json or Models used by the application, implement a custom ContextResolver<Json> and it will automatically be invoked to supply Json objects for reading and writing.  In this example, we customize the Models to resolve references to the Map interface with a ConcurrentHashMap, instead of the usual LinkedHashMap.  We also add an OmitNullParser filter, since ConcurrentHashMaps don't accept null values.
+To customize the Json or Models used by the application, implement a custom ContextResolver<Json> and it will automatically be invoked to supply Json objects for reading and writing.  In this example, we customize the Models to resolve references to the Map interface with a ConcurrentHashMap, instead of the usual LinkedHashMap.  We also add an OmitNullFieldParser filter, since ConcurrentHashMaps don't accept null values.
 
 ```
 import java.util.Map;
@@ -767,8 +778,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.bigcloud.djomo.Json;
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.Resolver;
-import com.bigcloud.djomo.filter.OmitNullParser;
-import com.bigcloud.djomo.filter.TypeParser;
+import com.bigcloud.djomo.filter.parsers.OmitNullFieldParser;
 
 import jakarta.ws.rs.ext.ContextResolver;
 
@@ -777,7 +787,7 @@ public class JsonResolver implements ContextResolver<Json> {
 			.models(Models.builder()
 					.resolver(new Resolver.Substitute<Map, ConcurrentHashMap>() {})
 					.build())
-			.parse(new TypeParser<Map>(new OmitNullParser()) {})
+			.parse(new OmitNullFieldParser(Map.class))
 			.build();
 
 	@Override
@@ -795,6 +805,8 @@ In this example we have an endpoint whose input and output is a flattened repres
 ```
 public record Thing<T>(String name, List<T> elements) {}
 
+import java.util.stream.Stream;
+
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.api.visitors.ObjectVisitor;
@@ -806,7 +818,6 @@ public class ThingFlattener implements ObjectVisitor<Thing<?>> {
 		visitor.visit( Stream.concat(Stream.of(obj.name()), obj.elements().stream()));
 	}
 }
-
 
 import com.bigcloud.djomo.api.ObjectModel;
 import com.bigcloud.djomo.api.Parser;
@@ -821,6 +832,7 @@ public class ThingUnflattener implements ObjectParser<Thing<?>> {
 	}
 }
 
+
 @Indent("  ")
 interface Pretty {}
 
@@ -829,7 +841,7 @@ interface Pretty {}
 @Consumes("application/json")
 @Produces("application/json")
 @Visit(ThingFlattener.class)
-@Visit(OmitNullVisitor.class)
+@Visit(OmitNullItemVisitor.class)
 public Response flatten(@Parse(ThingUnflattener.class) Thing body, @QueryParam("pretty") boolean pretty) {
 	var response = Response.ok();
 	if (pretty) {

@@ -29,11 +29,17 @@ import com.bigcloud.djomo.filter.FilterFieldObjectModels;
  *
  */
 public class OmitNullFieldVisitor extends BaseVisitorFilter {
-	FilterFieldObjectModels omitModels;
+	final FilterFieldObjectModels omitModels;
+	final Class type;
 
 	public OmitNullFieldVisitor() {
-		omitModels = new FilterFieldObjectModels(stream -> stream.map(this::filterField));
+		this(Object.class);
 	}
+	public OmitNullFieldVisitor(Class type) {
+		omitModels = new FilterFieldObjectModels(stream -> stream.map(this::filterField));
+		this.type = type;
+	}
+
 	
 	private Field filterField(Field field) {
 		if (field.model().getType().isPrimitive()) {
@@ -53,7 +59,10 @@ public class OmitNullFieldVisitor extends BaseVisitorFilter {
 	
 	@Override
 	public <O> void visitObject(O obj, ObjectModel<O> model) {
-		visitor.visitObject(obj, omitModels.getFilteredObjectModel(model));
+		if (type.isAssignableFrom(model.getType())) {
+			model = omitModels.getFilteredObjectModel(model);
+		}
+		visitor.visitObject(obj, model);
 	}
 
 }

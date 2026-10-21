@@ -98,6 +98,18 @@ public class DateTest {
 		Date rt = json.fromString(str, Date.class);
 		Assert.assertEquals(rt, date);
 	}
+	
+	@Test
+	public void testDateTimeFormat() throws IOException {
+		Models models = Models.builder()
+				.factory(new DateFormatModelFactory(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL), ZonedDateTime.class))
+				.build();
+		Json json = new Json(models);
+		ZonedDateTime zdt = ZonedDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+		String str = json.toString(zdt);
+		ZonedDateTime rt = json.fromString(str, ZonedDateTime.class);
+		Assert.assertEquals(rt, zdt);
+	}
 
 	@Test
 	public void testFormatConvert() {

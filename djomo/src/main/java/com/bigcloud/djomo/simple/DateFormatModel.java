@@ -27,6 +27,7 @@ import com.bigcloud.djomo.api.Parser;
 import com.bigcloud.djomo.api.Visitor;
 import com.bigcloud.djomo.base.BaseModel;
 import com.bigcloud.djomo.error.ModelException;
+import com.bigcloud.djomo.json.SafeStringBuilder;
 
 /**
  * Used to provide string formatting for legacy Date objects
@@ -65,6 +66,8 @@ public class DateFormatModel extends BaseModel<Date> {
 
 	@Override
 	public void visit(Date obj, Visitor visitor) {
-		visitor.visitString(format.format(ZonedDateTime.ofInstant(obj.toInstant(), ZoneId.systemDefault())));
+		var builder = new StringBuilder(32);
+		format.formatTo(ZonedDateTime.ofInstant(obj.toInstant(), ZoneId.systemDefault()), builder);
+		visitor.visitString(new SafeStringBuilder(builder));
 	}
 }

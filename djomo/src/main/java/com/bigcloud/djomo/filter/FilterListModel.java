@@ -76,9 +76,5 @@ public class FilterListModel<T> extends FilterModel<T> implements ListModel<T> {
 	public T make(Object maker) {
 		return listModel.make(maker);
 	}
-	@Override
-	public T parse(Parser parser) {
-		return (T) parser.parseList(this);
-	}
 
 }
