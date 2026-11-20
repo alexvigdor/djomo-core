@@ -127,7 +127,7 @@ public class SimpleModelFactory extends BaseModelFactory {
 			return magicString(URL.class, context, null,  String.class);
 		}
 		else if(Class.class == rawType) {
-			return magicString(Class.class, context, "forName",  String.class, "getName");
+			return new ClassModel(type, context);
 		}
 		else if(UUID.class == rawType) {
 			return new UUIDModel(rawType, context);

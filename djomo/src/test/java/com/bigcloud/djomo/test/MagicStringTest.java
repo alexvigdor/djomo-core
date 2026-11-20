@@ -40,13 +40,15 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import com.bigcloud.djomo.Json;
+import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.StaticType;
+import com.bigcloud.djomo.simple.ClassModel;
 
 import lombok.Builder;
 import lombok.Value;
 
 public class MagicStringTest {
-	Json Json = new Json();
+	Json Json = new Json(Models.builder().factory(Class.class, ClassModel.allowing(UUID.class)).build());
 	@Test
 	public void testMagicStrings() throws IOException {
 		MagicStringBean bean = MagicStringBean.builder()
