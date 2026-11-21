@@ -106,6 +106,12 @@ public class ClassModelTest {
 		Class<T[]> type;
 	}
 
+	// legal java classes with (and without) a non-ascii name; Cafeé's name is
+	// exactly Cafe's name plus a trailing é
+	public static class Cafe {}
+
+	public static class Cafeé {}
+
 	// ── Positive ─────────────────────────────────────────────────────────────
 
 	@Test
@@ -368,5 +374,38 @@ public class ClassModelTest {
 		// String[] was discarded → IAE
 		Assert.assertThrows(IllegalArgumentException.class,
 				() -> json.fromString("{\"type\":\"java.lang.String[]\"}", ArrayClassBean.class));
+	}
+
+	// ── Unicode class names ──────────────────────────────────────────────────
+	//
+	// Java identifiers may contain unicode letters, so class names like
+	// ...$Cafeé are legal and allow-listable: the ClassModel's name lookup
+	// matches non-ascii characters against their escape expansion, and a
+	// non-allow-listed name is rejected with the standard allow-list error.
+
+	/**
+	 * A legal class with a non-ascii name must be allow-listable and
+	 * round-trippable through the parser.
+	 */
+	@Test
+	public void testUnicodeClassNameRoundTrip() throws IOException {
+		Json json = jsonWith(Cafe.class, Cafeé.class);
+		AnyClassBean bean = AnyClassBean.builder().type(Cafeé.class).build();
+		String s = json.toString(bean);
+		AnyClassBean rt = json.fromString(s, AnyClassBean.class);
+		Assert.assertEquals(rt, bean);
+	}
+
+	/**
+	 * A non-ascii class name that is not allow-listed must be rejected with
+	 * the standard allow-list error. The query name extends the allow-listed
+	 * {@code Cafe} name by a trailing é, so the lookup must miss (not fail)
+	 * and the allow-list check must produce the rejection.
+	 */
+	@Test(expectedExceptions = IllegalArgumentException.class,
+			expectedExceptionsMessageRegExp = ".*not in the parser allowlist.*")
+	public void testUnicodeNameNotInAllowList() throws IOException {
+		Json json = jsonWith(Cafe.class);
+		json.fromString("{\"type\":\"" + Cafeé.class.getName() + "\"}", AnyClassBean.class);
 	}
 }
