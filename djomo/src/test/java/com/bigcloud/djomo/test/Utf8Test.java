@@ -94,6 +94,150 @@ public class Utf8Test {
 		Assert.assertEquals(rt.substring(4095), emojiStr);
 	}
 
+	//
+	// Sink: chars with bit 15 set (U+8000-U+FFFF, i.e. CJK, Hangul, BOM, and
+	// surrogates). The old 3-byte discriminator, (c & 0xfffd8000) == 0, only fired
+	// when bit 15 was clear, mis-routing all of these to the 4-byte branch, which
+	// combined them with their neighbor as if they were surrogate pairs.
+	//
+
+	//
+	// Sunk bytes are decoded through djomo's own reader: it round-trips unpaired
+	// surrogates as-is, while the JDK decoder would replace them with U+FFFD.
+	//
+
+	private static String decodeBytes(byte[] data) throws IOException {
+		char[] dest = new char[256];
+		var out = new StringBuilder();
+		Utf8StreamReader reader = new Utf8StreamReader(data);
+		int n;
+		while ((n = reader.read(dest)) > 0) {
+			out.append(dest, 0, n);
+		}
+		return out.toString();
+	}
+
+	private static String sinkToString(String text, boolean last) throws IOException {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		Utf8StreamSink sink = new Utf8StreamSink(baos);
+		char[] buf = text.toCharArray();
+		sink.buffer(buf);
+		if (last) {
+			sink.last(buf.length);
+		} else {
+			sink.next(buf.length);
+		}
+		return decodeBytes(baos.toByteArray());
+	}
+
+	@Test
+	public void testBit15CharMidBuffer() throws IOException {
+		// U+8000 is a 3-byte char with bit 15 set; it must not swallow the 'a'.
+		Assert.assertEquals(sinkToString("耀a", false), "耀a");
+	}
+
+	@Test
+	public void testBit15CharAtBufferEnd() throws IOException {
+		// A lone bit-15 char at the end of the chunk is written, not deferred to hi
+		// (and then dropped or combined with the neighbor of the next chunk).
+		Assert.assertEquals(sinkToString("가", false), "가");
+	}
+
+	@Test
+	public void testBomWrite() throws IOException {
+		Assert.assertEquals(sinkToString("\uFEFF", false), "\uFEFF");
+	}
+
+	@Test
+	public void testBit15Run() throws IOException {
+		Assert.assertEquals(sinkToString("耀가x", false), "耀가x");
+	}
+
+	@Test
+	public void testBit15CharLast() throws IOException {
+		Assert.assertEquals(sinkToString("가", true), "가");
+	}
+
+	@Test
+	public void testUnpairedHighMidBuffer() throws IOException {
+		// A lone high surrogate mid-buffer is 3 bytes UTF-8; it must not eat the 'a'.
+		Assert.assertEquals(sinkToString("\uD800a", false), "\uD800a");
+	}
+
+	@Test
+	public void testLoneLowSurrogate() throws IOException {
+		Assert.assertEquals(sinkToString("\uDC00", false), "\uDC00");
+	}
+
+	@Test
+	public void testUnpairedHighsAcrossCalls() throws IOException {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		Utf8StreamSink sink = new Utf8StreamSink(baos);
+		char[] buf = new char[2];
+		sink.buffer(buf);
+		buf[0] = '\ud800';
+		buf[1] = '\ud801';
+		sink.next(2);
+		buf[0] = 'a';
+		buf[1] = 'b';
+		sink.next(2);
+		// The high deferred at the first chunk end must be emitted in order, before 'ab'.
+		Assert.assertEquals(decodeBytes(baos.toByteArray()), "\ud800\ud801ab");
+	}
+
+	@Test
+	public void testDeferredHighFlushedInOrder() throws IOException {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		Utf8StreamSink sink = new Utf8StreamSink(baos);
+		char[] buf = new char[2];
+		sink.buffer(buf);
+		buf[0] = 'x';
+		buf[1] = '\ud800';
+		sink.next(2);
+		buf[0] = 'y';
+		buf[1] = 'z';
+		sink.next(2);
+		Assert.assertEquals(decodeBytes(baos.toByteArray()), "x\ud800yz");
+	}
+
+	@Test
+	public void testPairSplitAcrossCalls() throws IOException {
+		// A real supplementary pair split across chunks still combines (regression).
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		Utf8StreamSink sink = new Utf8StreamSink(baos);
+		char[] high = { '\uD83D' };
+		sink.buffer(high);
+		sink.next(1);
+		char[] low = { '\uDE00' };
+		sink.buffer(low);
+		sink.next(1);
+		Assert.assertEquals(decodeBytes(baos.toByteArray()), "\uD83D\uDE00");
+	}
+
+	@Test
+	public void testLastFlushesDeferredHigh() throws IOException {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		Utf8StreamSink sink = new Utf8StreamSink(baos);
+		char[] buf = { '\uD800' };
+		sink.buffer(buf);
+		sink.next(1);
+		// The document ends with the deferred high; last() must emit it.
+		sink.buffer(new char[0]);
+		sink.last(0);
+		Assert.assertEquals(decodeBytes(baos.toByteArray()), "\uD800");
+	}
+
+	@Test
+	public void testSinkReaderRoundTrip() throws IOException {
+		String sample = "a耀b가c\uFEFFd\u20AC\u00E9" + Character.toString(0x1F600) + "e";
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		Utf8StreamSink sink = new Utf8StreamSink(baos);
+		char[] buf = sample.toCharArray();
+		sink.buffer(buf);
+		sink.last(buf.length);
+		Assert.assertEquals(decodeBytes(baos.toByteArray()), sample);
+	}
+
 	@Test
 	public void testTwoByteRead() throws IOException {
 		Utf8StreamReader reader = new Utf8StreamReader("é".getBytes(StandardCharsets.UTF_8));
@@ -160,5 +304,56 @@ public class Utf8Test {
 			Assert.assertEquals(builder.toString().substring(8190), sample.substring(8190));
 		}
 
+	}
+
+	//
+	// SWAR regression: the tests above fill uniform 'a', which cannot expose a
+	// byte-ordering bug in the 8-char-wide SWAR pack/spread (a doubled or dropped
+	// char among identical fill is invisible). These use distinct ASCII instead.
+	//
+
+	@Test
+	public void testSwarPackDistinct() throws IOException {
+		// 8 chars = exactly one SWAR window; distinct values pin the byte ordering.
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		Utf8StreamSink sink = new Utf8StreamSink(baos);
+		char[] buf = "abcdefgh".toCharArray();
+		sink.buffer(buf);
+		sink.next(8);
+		byte[] out = baos.toByteArray();
+		Assert.assertEquals(out.length, 8);
+		Assert.assertEquals(new String(out, StandardCharsets.UTF_8), "abcdefgh");
+
+		// 100 chars = 12 SWAR windows + a 4-char scalar tail.
+		char[] wide = new char[100];
+		for (int i = 0; i < 100; i++) {
+			wide[i] = (char) ('a' + (i % 26));
+		}
+		ByteArrayOutputStream wideOut = new ByteArrayOutputStream();
+		Utf8StreamSink wideSink = new Utf8StreamSink(wideOut);
+		wideSink.buffer(wide);
+		wideSink.next(100);
+		Assert.assertEquals(decodeBytes(wideOut.toByteArray()), new String(wide));
+	}
+
+	@Test
+	public void testSwarReaderDistinct() throws IOException {
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < 1000; i++) {
+			sb.append((char) ('a' + (i % 26)));
+		}
+		String expected = sb.toString();
+		byte[] bytes = expected.getBytes(StandardCharsets.UTF_8);
+		// Odd cbuf sizes straddle the 16-byte and 8-byte SWAR windows.
+		for (int size : new int[] { 1, 7, 8, 15, 16, 17, 24, 33 }) {
+			Utf8StreamReader reader = new Utf8StreamReader(bytes);
+			char[] dest = new char[size];
+			StringBuilder out = new StringBuilder();
+			int n;
+			while ((n = reader.read(dest, 0, size)) > 0) {
+				out.append(dest, 0, n);
+			}
+			Assert.assertEquals(out.toString(), expected, "cbuf size " + size);
+		}
 	}
 }
