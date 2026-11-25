@@ -17,10 +17,19 @@ package com.bigcloud.djomo.io;
 
 import java.util.Arrays;
 
+/**
+ * A {@link CharSink} that accumulates the entire stream as a char array.
+ *
+ * <p>
+ * Every chunk is copied out of the supplied buffer as it arrives. In particular the final
+ * chunk is copied eagerly in {@link #last(int)}: the buffer is owned by the writing
+ * {@link com.bigcloud.djomo.json.BaseJsonWriter} and is returned to the shared buffer
+ * pool as soon as {@code last()} returns, so it must never be read after that point.
+ * </p>
+ */
 public class CharArraySink implements CharSink {
 	private char[] sunk;
 	private char[] buffer;
-	private int last = -1;
 
 	@Override
 	public void buffer(char[] buffer) {
@@ -29,6 +38,17 @@ public class CharArraySink implements CharSink {
 
 	@Override
 	public void next(int len) {
+		append(len);
+	}
+
+	@Override
+	public void last(int len) {
+		// Copy eagerly; the buffer is recycled by the writer's buffer pool
+		// as soon as this call returns and must not be retained.
+		append(len);
+	}
+
+	private void append(int len) {
 		if (sunk == null) {
 			sunk = Arrays.copyOf(buffer, len);
 		} else {
@@ -39,20 +59,7 @@ public class CharArraySink implements CharSink {
 	}
 
 	@Override
-	public void last(int len) {
-		if (sunk == null) {
-			last = len;
-		} else {
-			int sl = sunk.length;
-			sunk = Arrays.copyOf(sunk, sl + len);
-			System.arraycopy(buffer, 0, sunk, sl, len);
-		}
-	}
-
 	public String toString() {
-		if (last > 0) {
-			return new String(buffer, 0, last);
-		}
-		return new String(sunk);
+		return sunk == null ? "" : new String(sunk);
 	}
 }

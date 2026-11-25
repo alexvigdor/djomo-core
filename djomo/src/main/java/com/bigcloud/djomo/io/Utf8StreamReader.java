@@ -22,6 +22,8 @@ import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 import java.nio.ByteOrder;
 
+import com.bigcloud.djomo.internal.ByteBufferPool;
+
 /**
  * A {@link Reader} over a UTF-8 byte source.
  *
@@ -34,15 +36,14 @@ import java.nio.ByteOrder;
  * nothing else is available in it; the pending bytes complete on the next read.
  */
 public class Utf8StreamReader extends Reader {
-	private static final int BUF_LEN = 8192;
 	private static final ValueLayout.OfLong LONG_LE =
 			ValueLayout.JAVA_LONG_UNALIGNED.withOrder(ByteOrder.LITTLE_ENDIAN);
-
-	private static final ThreadLocal<byte[]> localUtf8Buffer = ThreadLocal.withInitial(() -> new byte[BUF_LEN]);
 
 	private final byte[] utf8Buffer;
 	private final MemorySegment ubufSeg;
 	final InputStream stream;
+	private boolean pooled;
+	private boolean eof;
 
 	private char[] lastCbuf;
 	private MemorySegment cbufSeg;
@@ -55,8 +56,9 @@ public class Utf8StreamReader extends Reader {
 
 	public Utf8StreamReader(InputStream stream) {
 		this.stream = stream;
-		this.utf8Buffer = localUtf8Buffer.get();
+		this.utf8Buffer = ByteBufferPool.acquire();
 		this.ubufSeg = MemorySegment.ofArray(utf8Buffer);
+		this.pooled = true;
 	}
 
 	public Utf8StreamReader(byte[] data) {
@@ -64,6 +66,14 @@ public class Utf8StreamReader extends Reader {
 		this.utf8Buffer = data;
 		this.ubufSeg = MemorySegment.ofArray(data);
 		this.limit = data.length;
+		this.pooled = false;
+	}
+
+	private void releaseBuffer() {
+		if (pooled) {
+			pooled = false;
+			ByteBufferPool.release(utf8Buffer);
+		}
 	}
 
 	private static long unpackLo(long w) {
@@ -98,11 +108,13 @@ public class Utf8StreamReader extends Reader {
 			wrote++;
 		}
 		if (p == lim) {
-			if (stream == null) {
+			if (stream == null || eof) {
 				return wrote > 0 ? wrote : -1;
 			}
 			lim = stream.read(ubuf);
 			if (lim == -1) {
+				eof = true;
+				releaseBuffer();
 				return wrote > 0 ? wrote : -1;
 			}
 			p = 0;
@@ -264,5 +276,15 @@ public class Utf8StreamReader extends Reader {
 
 	@Override
 	public void close() throws IOException {
+		// Return the pooled buffer even when the stream has not reached EOF (the usual case
+		// for a reader positioned past the end of the document), and invalidate any pending
+		// window so a read after close can never touch a buffer that may already have been
+		// re-acquired by another reader.
+		releaseBuffer();
+		eof = true;
+		pointer = limit;
+		remaining = 0;
+		leftoverCode = 0;
+		trail = -1;
 	}
 }

@@ -28,22 +28,14 @@ import java.util.UUID;
 import com.bigcloud.djomo.Models;
 import com.bigcloud.djomo.api.VisitorFilterFactory;
 import com.bigcloud.djomo.base.BaseVisitor;
+import com.bigcloud.djomo.internal.CharBufferPool;
+import com.bigcloud.djomo.internal.CharBufferPool.CharPair;
 import com.bigcloud.djomo.internal.DoublePrinter;
 import com.bigcloud.djomo.internal.FloatPrinter;
 import com.bigcloud.djomo.io.CharSink;
 
 public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseable {
-	protected static final int BUF_LEN = 4096;
-	private static final ThreadLocal<char[]> localBuffer = new ThreadLocal<>() {
-		public char[] initialValue() {
-			return new char[BUF_LEN];
-		}
-	};
-	private static final ThreadLocal<char[]> localStrBuffer = new ThreadLocal<>() {
-		public char[] initialValue() {
-			return new char[BUF_LEN];
-		}
-	};
+	public static final int BUF_LEN = CharBufferPool.IO_BUFFER_SIZE;
 	private static final char[] MIN_LONG_CHARS = { '-', '9', '2', '2', '3', '3', '7', '2', '0', '3', '6', '8', '5', '4',
 			'7', '7', '5', '8', '0', '8' };
 	private static final char[] MIN_INT_CHARS = { '-', '2', '1', '4', '7', '4', '8', '3', '6', '4', '8' };
@@ -60,15 +52,20 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 		special['\u2028'] = true;
 		special['\u2029'] = true;
 	}
-	protected final char[] buffer = localBuffer.get();
-	protected final char[] strBuffer = localStrBuffer.get();
+	protected final CharPair buffers;
+	protected final char[] buffer;
+	protected final char[] strBuffer;
 	protected final CharSink sink;
 	int pos = 0;
 	boolean first;
+	private boolean closed;
 
 	public BaseJsonWriter(Models context, CharSink sink, VisitorFilterFactory... filters) {
 		super(context, filters);
 		this.sink = sink;
+		buffers = CharBufferPool.acquire();
+		buffer = buffers.io;
+		strBuffer = buffers.scratch;
 		sink.buffer(buffer);
 	}
 
@@ -299,7 +296,14 @@ public abstract class BaseJsonWriter extends BaseVisitor implements AutoCloseabl
 
 	@Override
 	public void close() {
-		sink.last(pos);
+		if (!closed) {
+			closed = true;
+			try {
+				sink.last(pos);
+			} finally {
+				CharBufferPool.release(buffers);
+			}
+		}
 	}
 
 	@Override

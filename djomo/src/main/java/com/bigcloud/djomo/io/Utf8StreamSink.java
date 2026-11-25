@@ -21,6 +21,8 @@ import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 import java.nio.ByteOrder;
 
+import com.bigcloud.djomo.internal.ByteBufferPool;
+
 /**
  * A {@link CharSink} that writes UTF-8 to an {@link OutputStream}.
  *
@@ -30,6 +32,11 @@ import java.nio.ByteOrder;
  * chunk is deferred and combined with the start of the next chunk if it is the
  * pair's low half; otherwise it is emitted in order at the start of the next
  * call.
+ *
+ * <p>
+ * The sink's internal UTF-8 buffer is drawn from a shared buffer pool. It is
+ * returned to the pool when {@link #last(int)} completes, so a sink must not be
+ * used after {@code last()}; repeated calls to {@code last()} are ignored.
  */
 public class Utf8StreamSink implements CharSink {
 	private static final int BUF_LEN = 4096;
@@ -39,14 +46,13 @@ public class Utf8StreamSink implements CharSink {
 
 	private static final ValueLayout.OfLong LONG_UNALIGNED = ValueLayout.JAVA_LONG_UNALIGNED;
 
-	private static final ThreadLocal<byte[]> localUtf8Buffer = ThreadLocal.withInitial(() -> new byte[BUF_LEN]);
-
-	private final byte[] utf8Buffer = localUtf8Buffer.get();
+	private final byte[] utf8Buffer = ByteBufferPool.acquire();
 	private final MemorySegment utf8Seg = MemorySegment.ofArray(utf8Buffer);
 	private final OutputStream out;
 	char[] buffer;
 	private MemorySegment bufSeg;
 	int hi = -1;
+	private boolean done;
 
 	public Utf8StreamSink(OutputStream out) {
 		this.out = out;
@@ -65,7 +71,17 @@ public class Utf8StreamSink implements CharSink {
 
 	@Override
 	public void last(int len) {
-		writeChunk(len, true);
+		if (done) {
+			return;
+		}
+		done = true;
+		try {
+			writeChunk(len, true);
+		}
+		finally {
+			// Release the pooled buffer exactly once, even if writeChunk fails.
+			ByteBufferPool.release(utf8Buffer);
+		}
 	}
 
 	private void writeChunk(int len, boolean isLast) {

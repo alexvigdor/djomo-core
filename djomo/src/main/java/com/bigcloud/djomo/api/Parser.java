@@ -38,6 +38,18 @@ public interface Parser {
 	float parseFloat();
 	double parseDouble();
 	boolean parseBoolean();
+	/**
+	 * Parses a JSON string.
+	 *
+	 * <p>
+	 * <b>Warning:</b> the returned {@link CharSequence} may be backed by a pooled,
+	 * reusable scratch buffer and is only guaranteed to be valid while this parser is
+	 * open and in use. A consumer that needs to retain the value (for example a model
+	 * constructor that stores the returned {@link CharSequence}) must copy it, such as
+	 * via {@link CharSequence#toString()}. Implementations that do not parse from a
+	 * shared buffer (for example parsers over pre-existing objects) are exempt.
+	 * </p>
+	 */
 	CharSequence parseString();
 	UUID parseUUID();
 	Object parseNull();

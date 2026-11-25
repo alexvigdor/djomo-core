@@ -31,40 +31,46 @@ import com.bigcloud.djomo.api.TemporalType;
 import com.bigcloud.djomo.base.BaseParser;
 import com.bigcloud.djomo.error.ModelException;
 import com.bigcloud.djomo.internal.CharArraySequence;
+import com.bigcloud.djomo.internal.CharBufferPool;
+import com.bigcloud.djomo.internal.CharBufferPool.CharPair;
 import com.bigcloud.djomo.internal.FloatingParser;
 
 
-public class JsonParser extends BaseParser implements Parser {
+public class JsonParser extends BaseParser implements Parser, AutoCloseable {
 	private static final char[] NULL_TOKEN = { 'n', 'u', 'l', 'l' };
 	private static final char[] TRUE_TOKEN = { 't', 'r', 'u', 'e' };
 	private static final char[] FALSE_TOKEN = { 'f', 'a', 'l', 's', 'e' };
 	private static final char[] QUOTE = { '"' };
-	private static final ThreadLocal<char[]> localInput = new ThreadLocal<char[]>() {
-		public char[] initialValue() {
-			return new char[8192];
-		}
-	};
-
-	private static final ThreadLocal<char[]> localOverflow = new ThreadLocal<char[]>() {
-		public char[] initialValue() {
-			return new char[4096];
-		}
-	};
 	 // Scale to 9 digits: index 0 (0 digits) to index 9 (9 digits)
 	private static final int[] SCALE = { 0, 100_000_000, 10_000_000, 1_000_000, 100_000, 10_000, 1_000, 100, 10, 1 };
-	final char[] input = localInput.get();
-	final char[] overflow = localOverflow.get();
-	protected final CharArraySequence charArraySequence = new CharArraySequence(input);
+
+	protected final CharPair buffers;
+	final char[] input;
+	final char[] overflow;
+	protected final CharArraySequence charArraySequence;
 	protected final Reader source;
 	protected int readPosition;
 	protected int inputLength;
+	private boolean closed;
 
 	public JsonParser(Models context, Reader source, ParserFilterFactory... filters) {
 		super(context, filters);
 		this.source = source;
+		buffers = CharBufferPool.acquire();
+		input = buffers.io;
+		overflow = buffers.scratch;
+		charArraySequence = new CharArraySequence(input);
 	}
 
-	public boolean refill() {
+	@Override
+	public void close() {
+		if (!closed) {
+			closed = true;
+			CharBufferPool.release(buffers);
+		}
+	}
+
+	private boolean refill() {
 		try {
 			inputLength = source.read(input);
 		} catch (IOException e) {
@@ -77,13 +83,13 @@ public class JsonParser extends BaseParser implements Parser {
 		return true;
 	}
 
-	public void refillStrict() {
+	private void refillStrict() {
 		if (!refill()) {
 			throw new ModelException("Unexpected EOF");
 		}
 	}
 
-	protected final char seek() {
+	private char seek() {
 		int rp = readPosition;
 		var buf = input;
 		while (true) {
@@ -115,7 +121,7 @@ public class JsonParser extends BaseParser implements Parser {
 		return String.valueOf(input, start, end - start);
 	}
 
-	protected final void expect(char[] target) {
+	private void expect(char[] target) {
 		int rp = readPosition;
 		var buf = input;
 		int tp = 0;
@@ -685,7 +691,7 @@ public class JsonParser extends BaseParser implements Parser {
 		return seq;
 	}
 
-	protected final CharSequence parseCharSequence(int inStart, int inBreak) {
+	private CharSequence parseCharSequence(int inStart, int inBreak) {
 		var output = overflow;
 		int outputLength = overflow.length;
 		var input = this.input;
@@ -699,7 +705,7 @@ public class JsonParser extends BaseParser implements Parser {
 			System.arraycopy(input, inStart, output, 0, writePos);
 		}
 		int rp = inStart = inBreak;
-		OUTER: while (true) {
+		while (true) {
 			if (rp == inputLength) {
 				if (rp > inStart) {
 					int len = rp - inStart;
@@ -861,7 +867,7 @@ public class JsonParser extends BaseParser implements Parser {
 		}
 	}
 
-	protected int expandBuffer(int curSize, int targetSize, boolean terminal) {
+	private int expandBuffer(int curSize, int targetSize, boolean terminal) {
 		if (targetSize > 268435456) {
 			throw new ModelException("Target string length " + targetSize + " is too large, the input is suspicious");
 		}

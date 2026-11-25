@@ -112,18 +112,23 @@ public class Json {
 
 	public <T> T read(Reader reader, T destination, ParserFilterFactory... filters) throws IOException {
 		if(destination == null) {
-			return (T) new JsonParser(models, reader, filters(filters)).parse();
+			try(var parser = new JsonParser(models, reader, filters(filters))) {
+				return (T) parser.parse();
+			}
 		}
 		var m = models;
-		return (T) new MergeJsonParser(m, reader, destination, filters(filters)).parse(m.get(destination.getClass()));
+		try(var parser = new MergeJsonParser(m, reader, destination, filters(filters))) {
+			return (T) parser.parse(m.get(destination.getClass()));
+		}
 	}
 
 	private <T> T read(Reader reader, Model<T> definition, ParserFilterFactory... filters) {
-		JsonParser parser = new JsonParser(models, reader, filters(filters));
-		if (definition == null) {
-			return (T) parser.parse();
+		try(JsonParser parser = new JsonParser(models, reader, filters(filters))){
+			if (definition == null) {
+				return (T) parser.parse();
+			}
+			return (T) parser.parse(definition);
 		}
-		return (T) parser.parse(definition);
 	}
 
 	public Object read(InputStream in, ParserFilterFactory... filters) throws IOException {
